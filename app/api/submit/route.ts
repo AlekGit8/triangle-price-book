@@ -7,10 +7,11 @@ const MAX_INVOICE_BYTES = 8 * 1024 * 1024; // 8 MB
 
 /**
  * POST /api/submit — accepts the /submit form.
- * Inserts the report UNVERIFIED + UNMODERATED (invisible until a moderator
- * approves it), optionally uploads an invoice to the private bucket and
- * links a verification row. Uses the service role server-side so the
- * browser never needs elevated keys.
+ * A quote/invoice document is REQUIRED. The report is published immediately
+ * as verified (the document is the verification) — there is no moderation
+ * queue for new submissions. The invoice is uploaded to the private bucket
+ * and linked via a verification row. Uses the service role server-side so
+ * the browser never needs elevated keys.
  */
 export async function POST(req: Request) {
   try {
@@ -45,6 +46,7 @@ export async function POST(req: Request) {
 
     const sb = getServiceSupabase();
 
+    const now = new Date().toISOString();
     const { data: report, error: repErr } = await sb
       .from("reports")
       .insert({
@@ -57,29 +59,42 @@ export async function POST(req: Request) {
         service_date: serviceDate,
         notes,
         submitter_email: submitterEmail,
-        verification_status: "unverified",
-        moderated_at: null, // sits in the moderation queue until approved
+        // A source document is required, so entries publish immediately
+        // as verified. Takedowns happen via /admin if abuse appears.
+        verification_status: "verified",
+        moderated_at: now,
       })
       .select("id")
       .single();
     if (repErr) throw repErr;
 
-    // Optional invoice upload -> private bucket + verification row.
+    // Invoice upload is required — it is the verification.
     const invoice = form.get("invoice");
-    if (invoice instanceof File && invoice.size > 0) {
-      if (invoice.size > MAX_INVOICE_BYTES)
-        return NextResponse.json({ ok: false, error: "Invoice file must be under 8 MB." }, { status: 400 });
-      const ext = invoice.name.split(".").pop()?.toLowerCase() ?? "bin";
-      const path = `${report.id}/${Date.now()}.${ext}`;
-      const { error: upErr } = await sb.storage
-        .from("invoices")
-        .upload(path, invoice, { contentType: invoice.type || "application/octet-stream" });
-      if (upErr) throw upErr;
-      const { error: verErr } = await sb
-        .from("verifications")
-        .insert({ report_id: report.id, invoice_path: path });
-      if (verErr) throw verErr;
+    if (!(invoice instanceof File) || invoice.size === 0) {
+      // Roll back the published report: no document, no entry.
+      await sb.from("reports").delete().eq("id", report.id);
+      return NextResponse.json(
+        { ok: false, error: "A quote or invoice document is required." },
+        { status: 400 }
+      );
     }
+    if (invoice.size > MAX_INVOICE_BYTES) {
+      await sb.from("reports").delete().eq("id", report.id);
+      return NextResponse.json({ ok: false, error: "Invoice file must be under 8 MB." }, { status: 400 });
+    }
+    const ext = invoice.name.split(".").pop()?.toLowerCase() ?? "bin";
+    const path = `${report.id}/${Date.now()}.${ext}`;
+    const { error: upErr } = await sb.storage
+      .from("invoices")
+      .upload(path, invoice, { contentType: invoice.type || "application/octet-stream" });
+    if (upErr) {
+      await sb.from("reports").delete().eq("id", report.id);
+      throw upErr;
+    }
+    const { error: verErr } = await sb
+      .from("verifications")
+      .insert({ report_id: report.id, invoice_path: path });
+    if (verErr) throw verErr;
 
     return NextResponse.json({ ok: true, id: report.id });
   } catch (err) {

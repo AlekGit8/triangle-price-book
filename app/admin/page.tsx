@@ -25,17 +25,23 @@ export default function AdminPage() {
   const [key, setKey] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [reports, setReports] = useState<QueueReport[]>([]);
+  const [published, setPublished] = useState<QueueReport[]>([]);
+  const [tab, setTab] = useState<"queue" | "published">("queue");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function load(k: string) {
+  async function load(k: string, scope: "queue" | "published" = "queue") {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/reports", { headers: { "x-admin-key": k } });
+      const res = await fetch(`/api/admin/reports?scope=${scope}`, { headers: { "x-admin-key": k } });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Failed to load");
-      setReports(json.reports);
+      if (scope === "published") {
+        setPublished(json.reports);
+      } else {
+        setReports(json.reports);
+      }
       setUnlocked(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
@@ -44,7 +50,7 @@ export default function AdminPage() {
     }
   }
 
-  async function moderate(id: string, action: Action) {
+  async function moderate(id: string, action: Action, from: "queue" | "published" = "queue") {
     try {
       const res = await fetch("/api/admin/moderate", {
         method: "POST",
@@ -53,7 +59,11 @@ export default function AdminPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Failed");
-      setReports((rs) => rs.filter((r) => r.id !== id));
+      if (from === "published") {
+        setPublished((rs) => rs.filter((r) => r.id !== id));
+      } else {
+        setReports((rs) => rs.filter((r) => r.id !== id));
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Moderation failed");
     }
@@ -70,7 +80,8 @@ export default function AdminPage() {
           className="mt-4 flex gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            load(key);
+            load(key, "queue");
+            load(key, "published");
           }}
         >
           <input
@@ -96,22 +107,39 @@ export default function AdminPage() {
   return (
     <div className="py-10">
       <div className="flex items-baseline justify-between">
-        <h1 className="text-3xl font-extrabold text-brand-900">Moderation queue</h1>
-        <button onClick={() => load(key)} className="text-sm font-semibold text-brand-700 hover:underline">
+        <h1 className="text-3xl font-extrabold text-brand-900">Moderation</h1>
+        <button onClick={() => load(key, tab)} className="text-sm font-semibold text-brand-700 hover:underline">
           Refresh
         </button>
       </div>
       <p className="mt-2 text-stone-600">
-        {reports.length} report{reports.length === 1 ? "" : "s"} awaiting review.
+        New submissions publish instantly with a document attached. Use this page
+        to review the queue and take down anything abusive.
       </p>
 
+      <div className="mt-4 flex gap-2">
+        {(["queue", "published"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => { setTab(t); load(key, t); }}
+            className={`rounded-full px-4 py-2 text-sm font-semibold ${
+              tab === t
+                ? "bg-brand-700 text-white"
+                : "border border-stone-300 text-stone-700 hover:border-brand-600"
+            }`}
+          >
+            {t === "queue" ? `Review queue (${reports.length})` : `Published (${published.length})`}
+          </button>
+        ))}
+      </div>
+
       <div className="mt-6 space-y-4">
-        {reports.map((r) => (
+        {(tab === "queue" ? reports : published).map((r) => (
           <article key={r.id} className="rounded-xl border border-stone-200 bg-white p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  {r.category} · {r.report_type}
+                  {r.category} · {r.report_type} · {r.verification_status}
                 </p>
                 <h3 className="font-semibold text-stone-900">{r.service_name}</h3>
                 <p className="text-sm text-stone-600">
@@ -137,29 +165,46 @@ export default function AdminPage() {
               </p>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                onClick={() => moderate(r.id, "verify")}
-                className="rounded-full bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
-              >
-                Verify &amp; publish
-              </button>
-              <button
-                onClick={() => moderate(r.id, "publish_unverified")}
-                className="rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700 hover:border-brand-600"
-              >
-                Publish unverified
-              </button>
-              <button
-                onClick={() => moderate(r.id, "reject")}
-                className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
-              >
-                Reject
-              </button>
+              {tab === "queue" ? (
+                <>
+                  <button
+                    onClick={() => moderate(r.id, "verify", "queue")}
+                    className="rounded-full bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
+                  >
+                    Verify &amp; publish
+                  </button>
+                  <button
+                    onClick={() => moderate(r.id, "publish_unverified", "queue")}
+                    className="rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700 hover:border-brand-600"
+                  >
+                    Publish unverified
+                  </button>
+                  <button
+                    onClick={() => moderate(r.id, "reject", "queue")}
+                    className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+                  >
+                    Reject
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (confirm("Take down this published entry? It will be hidden from the site.")) {
+                      moderate(r.id, "reject", "published");
+                    }
+                  }}
+                  className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+                >
+                  Take down
+                </button>
+              )}
             </div>
           </article>
         ))}
-        {reports.length === 0 && (
-          <p className="text-stone-600">Queue is empty. Nice.</p>
+        {(tab === "queue" ? reports : published).length === 0 && (
+          <p className="text-stone-600">
+            {tab === "queue" ? "Queue is empty. Nice." : "Nothing published yet."}
+          </p>
         )}
       </div>
     </div>

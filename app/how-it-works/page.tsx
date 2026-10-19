@@ -52,14 +52,15 @@ export default function HowItWorksPage() {
 
         <Section n="3" title="Verification">
           <p>
-            Entries marked <strong>Verified</strong> had an invoice or receipt uploaded
-            and checked by a moderator: the amount, service, and date match the entry.
-            Invoices stay private — only moderators ever see them.
+            Every entry marked <strong>Verified</strong> was submitted with a
+            source document — a quote or invoice — attached. Documents are
+            required: you can’t publish a price without one. That’s what keeps
+            the numbers real.
           </p>
           <p>
-            Entries without an invoice are published as <strong>unverified community
-            reports</strong>, clearly labeled. We’d rather show an honest unverified
-            report than hide useful data.
+            Entries publish <strong>instantly</strong> once submitted. Documents
+            stay private — only moderators ever see them — and moderators
+            spot-check entries and remove anything abusive or fake.
           </p>
         </Section>
 

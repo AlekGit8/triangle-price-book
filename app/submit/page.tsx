@@ -132,10 +132,10 @@ export default function SubmitPage() {
   if (status === "done") {
     return (
       <div className="py-16 max-w-xl mx-auto text-center">
-        <h1 className="text-3xl font-extrabold text-brand-900">Thank you!</h1>
+        <h1 className="text-3xl font-extrabold text-brand-900">Published!</h1>
         <p className="mt-3 text-stone-600">
-          Your price is in the moderation queue. Once reviewed it will appear
-          anonymously — no business names, no identities, just the price.
+          Your price is live — anonymously, with a Verified badge thanks to your
+          uploaded document. Thank you for contributing.
         </p>
         <a href="/browse" className="mt-6 inline-block font-semibold text-brand-700 hover:underline">
           Browse prices →
@@ -148,8 +148,9 @@ export default function SubmitPage() {
     <div className="py-10 max-w-2xl mx-auto">
       <h1 className="text-3xl font-extrabold text-brand-900">Submit a price</h1>
       <p className="mt-2 text-stone-600">
-        The fastest way: snap a photo of your quote or invoice and we’ll fill in
-        the form for you. Review everything, then submit.
+        Upload a photo or PDF of your quote or invoice — <strong>required</strong>.
+        We’ll fill in the details, you review them, and your price publishes
+        instantly with a Verified badge.
       </p>
 
       {/* Smart upload card */}
@@ -170,7 +171,7 @@ export default function SubmitPage() {
             {extractState === "reading" ? "…" : "📄"}
           </span>
           <span className="font-bold text-brand-900">
-            {docFile ? docFile.name : "Upload a quote or invoice"}
+            {docFile ? docFile.name : "Upload a quote or invoice (required)"}
           </span>
           <span className="text-sm text-stone-600">
             {extractState === "reading"
@@ -196,8 +197,7 @@ export default function SubmitPage() {
         )}
         {docFile && extractState !== "reading" && (
           <p className="mt-2 text-xs text-stone-500 text-center">
-            Attached as your invoice — it earns a “Verified” badge after moderator review.
-            Files stay private.
+            Attached as your proof — it publishes with a Verified badge. Files stay private.
           </p>
         )}
       </div>
@@ -337,13 +337,18 @@ export default function SubmitPage() {
 
         <button
           type="submit"
-          disabled={status === "sending"}
+          disabled={status === "sending" || !docFile}
           className="w-full rounded-full bg-brand-700 px-6 py-3 font-bold text-white hover:bg-brand-800 disabled:opacity-50"
         >
-          {status === "sending" ? "Submitting…" : "Submit for review"}
+          {status === "sending" ? "Publishing…" : "Review above, then publish"}
         </button>
+        {!docFile && (
+          <p className="-mt-2 text-xs text-amber-700 text-center">
+            Upload your quote or invoice above to enable publishing.
+          </p>
+        )}
         <p className="text-xs text-stone-500 text-center">
-          Submissions enter a moderation queue and are published anonymously after review.
+          Your price publishes instantly and anonymously with a Verified badge.
         </p>
       </form>
     </div>

@@ -100,9 +100,9 @@ supabase/migrations/0002_remove_business_names.sql  # Drops businesses table, bu
 - **Anonymity model:** no business names are collected at all (removed Oct 2026).
   `submitter_email` is private. Public reads go through RLS (approved reports
   only) and the `service_aggregates` view.
-- **Moderation:** everything submitted is invisible (`moderated_at IS NULL`) until
-  a moderator acts in `/admin`. Three actions: verify & publish, publish
-  unverified, reject.
+- **Moderation:** a source document is required — entries publish instantly as
+  verified. `/admin` (ADMIN_KEY) has a review queue plus a published list for
+  takedowns; rejected entries are hidden from all public views.
 - **No business editing of entries:** moderators remove or keep; never rewrite
   (preserves Section 230 posture — see `/how-it-works`).
 - **Smart upload on /submit:** users can upload a quote/invoice photo or PDF and
