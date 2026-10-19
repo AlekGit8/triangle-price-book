@@ -58,9 +58,12 @@ export default function HowItWorksPage() {
             the numbers real.
           </p>
           <p>
-            Entries publish <strong>instantly</strong> once submitted. Documents
-            stay private — only moderators ever see them — and moderators
-            spot-check entries and remove anything abusive or fake.
+            Entries publish <strong>instantly</strong> once submitted. Our system
+            checks that the uploaded file is actually a home-services quote or
+            invoice with readable details — anything else is rejected before it
+            can publish. Documents stay private — only moderators ever see
+            them — and moderators spot-check entries and remove anything abusive
+            or fake.
           </p>
         </Section>
 

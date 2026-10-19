@@ -27,7 +27,13 @@ const EXTRACTION_PROMPT = `You are extracting structured data from a home-servic
 Rules:
 - Never invent values. Use null for anything you cannot determine from the document.
 - Prefer the grand total / amount due. Ignore line-item subtotals.
-- The user will review every field before submitting, so completeness beats caution — but never guess a number.`;
+- The user will review every field before submitting, so completeness beats caution — but never guess a number.
+
+Finally, include a relevance verdict:
+"documentCheck": {
+  "isRelevant": true ONLY if this document is a quote, estimate, invoice, or receipt for a HOME SERVICE (HVAC, plumbing, electrical, roofing, appliances, pest control, landscaping, handyman, remodeling, etc.) that contains a service description and a price. False for anything else — restaurant or retail receipts, random photos, screenshots of text conversations, blank or unreadable pages, etc.,
+  "reason": "if isRelevant is false, one short sentence saying what the document actually appears to be; otherwise null"
+}`;
 
 /**
  * POST /api/extract — accepts a quote/invoice document (photo or PDF),
@@ -155,6 +161,27 @@ export async function POST(req: Request) {
 
     // Sanitize: only pass through known fields with sane types.
     const categories = siteConfig.categories as readonly string[];
+
+    // Relevance gate: the document must actually be a home-services
+    // quote/invoice. Anything else is rejected outright.
+    const docCheck = fields.documentCheck as
+      | { isRelevant?: boolean; reason?: string }
+      | undefined;
+    if (docCheck && docCheck.isRelevant === false) {
+      const reason =
+        typeof docCheck.reason === "string" && docCheck.reason
+          ? docCheck.reason
+          : "it doesn't look like a home-services quote or invoice";
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "rejected",
+          reason: `This document was rejected: ${reason}. Please upload a quote or invoice for a home service.`,
+        },
+        { status: 422 }
+      );
+    }
+
     const clean: Record<string, string | number | null> = {
       serviceName:
         typeof fields.serviceName === "string" ? fields.serviceName.slice(0, 120) : null,
@@ -176,6 +203,20 @@ export async function POST(req: Request) {
       reportType: fields.reportType === "quote" ? "quote" : "paid",
       notes: typeof fields.notes === "string" ? fields.notes.slice(0, 500) : null,
     };
+
+    // Usefulness gate: without at least a service description and an amount,
+    // there is nothing worth publishing — the photo was likely unreadable.
+    if (!clean.serviceName && clean.amount === null) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "rejected",
+          reason:
+            "We couldn't read any service details or price from this document. Please try a clearer photo or a PDF.",
+        },
+        { status: 422 }
+      );
+    }
 
     return NextResponse.json({ ok: true, fields: clean });
   } catch (err) {

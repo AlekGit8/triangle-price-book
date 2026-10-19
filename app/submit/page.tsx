@@ -16,7 +16,7 @@ const inputCls =
   "w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 focus:border-brand-600 focus:outline-none";
 const labelCls = "block text-sm font-semibold text-stone-700 mb-1";
 
-type ExtractState = "idle" | "reading" | "done" | "error" | "unavailable";
+type ExtractState = "idle" | "reading" | "done" | "error" | "rejected" | "unavailable";
 
 interface FormFields {
   category: string;
@@ -76,6 +76,18 @@ export default function SubmitPage() {
         setExtractState("unavailable");
         return;
       }
+      if (res.status === 422 && json.error === "rejected") {
+        // Document failed the relevance check — do not attach it.
+        setDocFile(null);
+        if (docInputRef.current) docInputRef.current.value = "";
+        setExtractState("rejected");
+        setExtractMsg(
+          typeof json.reason === "string"
+            ? json.reason
+            : "This document doesn't look like a home-services quote or invoice."
+        );
+        return;
+      }
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Could not read the document.");
       const f = json.fields as Record<string, string | number | null>;
       setFields((prev) => ({
@@ -93,6 +105,9 @@ export default function SubmitPage() {
     } catch (err) {
       setExtractState("error");
       setExtractMsg(err instanceof Error ? err.message : "Could not read the document.");
+      // Reset the input so the user can retry the same file.
+      if (docInputRef.current) docInputRef.current.value = "";
+      setDocFile(null);
     }
   }
 
@@ -187,7 +202,12 @@ export default function SubmitPage() {
         )}
         {extractState === "error" && (
           <p className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800 text-center">
-            {extractMsg} Your file is still attached — just fill in the form manually.
+            {extractMsg} Please try uploading again.
+          </p>
+        )}
+        {extractState === "rejected" && (
+          <p className="mt-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800 text-center">
+            {extractMsg}
           </p>
         )}
         {extractState === "unavailable" && (
@@ -337,14 +357,17 @@ export default function SubmitPage() {
 
         <button
           type="submit"
-          disabled={status === "sending" || !docFile}
+          disabled={
+            status === "sending" ||
+            !(docFile && (extractState === "done" || extractState === "unavailable"))
+          }
           className="w-full rounded-full bg-brand-700 px-6 py-3 font-bold text-white hover:bg-brand-800 disabled:opacity-50"
         >
           {status === "sending" ? "Publishing…" : "Review above, then publish"}
         </button>
-        {!docFile && (
+        {!(docFile && (extractState === "done" || extractState === "unavailable")) && (
           <p className="-mt-2 text-xs text-amber-700 text-center">
-            Upload your quote or invoice above to enable publishing.
+            Upload a valid quote or invoice above to enable publishing.
           </p>
         )}
         <p className="text-xs text-stone-500 text-center">
