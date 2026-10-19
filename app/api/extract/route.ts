@@ -37,6 +37,8 @@ Rules:
  * Requires GEMINI_API_KEY (free at https://aistudio.google.com/apikey).
  * Returns { ok: false, error: "not_configured" } (HTTP 501) when the key
  * is missing so the UI can fall back to the manual form gracefully.
+ * Tries gemini-3.6-flash first, falling back to gemini-3.5-flash —
+ * Google retires older versioned models for new API keys.
  */
 export async function POST(req: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -90,42 +92,57 @@ export async function POST(req: Request) {
     const bytes = Buffer.from(await file.arrayBuffer());
     const base64 = bytes.toString("base64");
 
-    const aiRes = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "x-goog-api-key": apiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: EXTRACTION_PROMPT },
-                { inline_data: { mime_type: mime, data: base64 } },
-              ],
-            },
-          ],
-          generationConfig: {
-            response_mime_type: "application/json",
-            maxOutputTokens: 600,
+    // Model fallback chain: Google retires older versioned models for new
+    // API keys, and the newest models can be capacity-throttled (503).
+    // Try in order; first success wins.
+    const MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"];
+    let aiJson: Record<string, unknown> | null = null;
+    let lastStatus = 0;
+    for (const model of MODELS) {
+      const aiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": apiKey,
+            "Content-Type": "application/json",
           },
-        }),
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: EXTRACTION_PROMPT },
+                  { inline_data: { mime_type: mime, data: base64 } },
+                ],
+              },
+            ],
+            generationConfig: {
+              response_mime_type: "application/json",
+              maxOutputTokens: 600,
+            },
+          }),
+        }
+      );
+      lastStatus = aiRes.status;
+      if (aiRes.ok) {
+        aiJson = (await aiRes.json()) as Record<string, unknown>;
+        break;
       }
-    );
+      console.error(`extract: Gemini model ${model} error`, aiRes.status);
+    }
 
-    if (!aiRes.ok) {
-      console.error("extract: Gemini error", aiRes.status);
+    if (!aiJson) {
+      console.error("extract: all Gemini models failed, last status", lastStatus);
       return NextResponse.json(
         { ok: false, error: "Could not read the document. Please fill in the form manually." },
         { status: 502 }
       );
     }
 
-    const aiJson = await aiRes.json();
-    const raw =
-      aiJson.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+    const candidates = aiJson.candidates as
+      | Array<{ content?: { parts?: Array<{ text?: string }> } }>
+      | undefined;
+    const raw = candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
     let fields: Record<string, unknown>;
     try {
       fields = JSON.parse(raw);

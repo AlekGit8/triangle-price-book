@@ -106,7 +106,8 @@ supabase/migrations/0002_remove_business_names.sql  # Drops businesses table, bu
 - **No business editing of entries:** moderators remove or keep; never rewrite
   (preserves Section 230 posture — see `/how-it-works`).
 - **Smart upload on /submit:** users can upload a quote/invoice photo or PDF and
-  `/api/extract` pre-fills the form via Gemini 2.5 Flash vision (free tier).
+  `/api/extract` pre-fills the form via Gemini vision (free tier;
+  gemini-3.6-flash with gemini-3.5-flash fallback).
   Requires `GEMINI_API_KEY`; without it the upload still attaches as the invoice
   and the form works manually. The uploaded file doubles as the verification invoice.
 
