@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { siteConfig } from "@/lib/site-config";
 
 const nav = [
@@ -12,9 +13,13 @@ export default function SiteHeader() {
     <header className="border-b border-stone-200 bg-white/90 backdrop-blur sticky top-0 z-10">
       <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-700 text-white font-bold">
-            $
-          </span>
+          <Image
+            src="/logo.svg"
+            alt="Triangle Price Book logo"
+            width={32}
+            height={32}
+            className="rounded-lg"
+          />
           <span className="font-bold text-brand-900 text-lg leading-tight">
             {siteConfig.siteName}
           </span>
