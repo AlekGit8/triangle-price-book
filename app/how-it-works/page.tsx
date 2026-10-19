@@ -39,15 +39,14 @@ export default function HowItWorksPage() {
 
         <Section n="2" title="The anonymity model">
           <p>
-            <strong>Individual price entries never name the business.</strong> When you
-            submit, we ask for the business name — but it is used only for aggregate
-            statistics (like “how many reports mention this business”) and is never
-            shown on any individual entry, to anyone.
+            <strong>We don’t collect business names at all.</strong> The submission
+            form asks for the service, the price, the town, and the date — nothing
+            that identifies who did the work or who paid for it.
           </p>
           <p>
-            Submitter identities are private too. Public entries are attributed only as
-            “reported by a verified homeowner in {`{town}`},” never by name, address, or
-            contact info.
+            Public entries are attributed only as “reported by a verified homeowner
+            in {`{town}`},” never by name, address, or contact info. There is no
+            business directory here, no rankings, no profiles — just prices.
           </p>
         </Section>
 
@@ -64,39 +63,39 @@ export default function HowItWorksPage() {
           </p>
         </Section>
 
-        <Section n="4" title="How aggregates and rankings work">
+        <Section n="4" title="How aggregates work">
           <p>
             Per-service cards show the <strong>range, median, and count</strong> of
             verified reports — computed directly from the database, no editorial
             judgment. Paid prices and quotes are counted separately and labeled.
           </p>
           <p>
-            Business rankings unlock only after a business accumulates{" "}
-            <strong>{siteConfig.rankingThreshold} verified reports</strong>. One report
-            can never define a business, and stuffing the ballot is expensive. Rankings
-            show <em>reported ranges</em>, never “this is what they charge.”
+            That’s the whole product: what a service costs around here, from real
+            reports. No business comparisons, no leaderboards — we deliberately
+            don’t track who charged what.
           </p>
         </Section>
 
         <Section n="5" title="For businesses">
           <p>
-            Business profiles, dispute flows, and owner responses are{" "}
-            <strong>under consideration</strong> — not live yet. For now, a business
-            that believes an entry is false can contact us and we’ll review it under
-            the takedown process in our Terms of Service.
+            There are no business profiles, no dispute flows, and no owner responses —
+            the site doesn’t track businesses at all, so there’s nothing to claim or
+            dispute. A business that believes a specific entry is false can still
+            contact us and we’ll review it under the takedown process in our Terms
+            of Service.
           </p>
         </Section>
 
         <Section n="6" title="Money and independence">
           <p>
-            The site runs with <strong>no ads and no pay-to-play rankings</strong>.
-            Businesses cannot pay to appear cheaper, higher, or more favorably anywhere
-            on the site.
+            The site runs with <strong>no ads and no pay-to-play placement</strong>.
+            There is nothing for a business to buy here — no rankings, no profiles,
+            no featured slots tied to price data.
           </p>
           <p>
             If sponsored placements ever exist in the future, they will be{" "}
             <strong>clearly labeled as sponsored</strong> and will never affect price
-            data or rankings. Rankings can never be bought — full stop.
+            data. The numbers stay independent — full stop.
           </p>
         </Section>
 

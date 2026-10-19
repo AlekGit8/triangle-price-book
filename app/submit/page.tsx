@@ -49,7 +49,7 @@ export default function SubmitPage() {
         <h1 className="text-3xl font-extrabold text-brand-900">Thank you!</h1>
         <p className="mt-3 text-stone-600">
           Your price is in the moderation queue. Once reviewed it will appear
-          anonymously — your identity and the business name stay private.
+          anonymously — no business names, no identities, just the price.
         </p>
         <a href="/browse" className="mt-6 inline-block font-semibold text-brand-700 hover:underline">
           Browse prices →
@@ -62,8 +62,8 @@ export default function SubmitPage() {
     <div className="py-10 max-w-2xl mx-auto">
       <h1 className="text-3xl font-extrabold text-brand-900">Submit a price</h1>
       <p className="mt-2 text-stone-600">
-        Share what you paid or were quoted. Individual entries never name the
-        business — the business name is used only for aggregate statistics.
+        Share what you paid or were quoted. Everything is anonymous — we don’t
+        collect business names or your identity at all.
       </p>
 
       <form ref={formRef} onSubmit={onSubmit} className="mt-8 space-y-5">
@@ -114,18 +114,6 @@ export default function SubmitPage() {
               <input type="radio" name="reportType" value="quote" className="accent-green-700" /> Quote
             </label>
           </div>
-        </div>
-
-        <div>
-          <label className={labelCls} htmlFor="businessName">Business name *</label>
-          <input
-            id="businessName" name="businessName" required className={inputCls}
-            placeholder="e.g. Michael & Son"
-            maxLength={120}
-          />
-          <p className="mt-1 text-xs text-stone-500">
-            Used only for aggregate statistics — never shown on individual entries.
-          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

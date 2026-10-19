@@ -23,9 +23,6 @@ export const siteConfig = {
   /** Region long name for SEO/legal copy. */
   regionLongName: "Raleigh-Durham Triangle, North Carolina",
 
-  /** Number of verified reports a business needs before appearing in rankings. */
-  rankingThreshold: 5,
-
   /** Report categories. Keep in sync with the DB check constraint in 0001_init.sql. */
   categories: ["HVAC", "Plumbing", "Electrical", "Roofing", "Appliances", "Other"] as const,
 

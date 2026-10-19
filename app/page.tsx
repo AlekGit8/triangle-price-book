@@ -102,7 +102,7 @@ export default async function HomePage() {
         <h2 className="text-2xl font-bold">How it works</h2>
         <ol className="mt-4 space-y-3 text-brand-100">
           <li><strong className="text-white">1.</strong> Neighbors submit what they paid or were quoted — optionally with an invoice.</li>
-          <li><strong className="text-white">2.</strong> Entries are reviewed and published anonymously. Businesses are never named on individual entries.</li>
+          <li><strong className="text-white">2.</strong> Entries are reviewed and published anonymously. No business names are collected at all.</li>
           <li><strong className="text-white">3.</strong> Everyone sees real local prices before hiring.</li>
         </ol>
         <Link

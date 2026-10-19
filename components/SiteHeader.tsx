@@ -3,7 +3,6 @@ import { siteConfig } from "@/lib/site-config";
 
 const nav = [
   { href: "/browse", label: "Browse Prices" },
-  { href: "/rankings", label: "Rankings" },
   { href: "/how-it-works", label: "How This Works" },
   { href: "/submit", label: "Submit a Price" },
 ];

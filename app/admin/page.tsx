@@ -16,7 +16,6 @@ interface QueueReport {
   verification_status: string;
   submitter_email: string | null;
   created_at: string;
-  businesses: { name: string } | null;
   verifications: Array<{ id: string; invoice_path: string; created_at: string }>;
 }
 
@@ -103,8 +102,7 @@ export default function AdminPage() {
         </button>
       </div>
       <p className="mt-2 text-stone-600">
-        {reports.length} report{reports.length === 1 ? "" : "s"} awaiting review. The business
-        name shown here is private — it never appears on public entries.
+        {reports.length} report{reports.length === 1 ? "" : "s"} awaiting review.
       </p>
 
       <div className="mt-6 space-y-4">
@@ -117,7 +115,7 @@ export default function AdminPage() {
                 </p>
                 <h3 className="font-semibold text-stone-900">{r.service_name}</h3>
                 <p className="text-sm text-stone-600">
-                  Business (private): <strong>{r.businesses?.name ?? "—"}</strong> · {r.town}
+                  {r.town}
                   {r.service_date ? ` · ${formatMonthYear(r.service_date)}` : ""}
                 </p>
                 {r.notes && <p className="mt-1 text-sm text-stone-600">{r.notes}</p>}

@@ -20,7 +20,6 @@ export async function GET(req: Request) {
       .select(
         `id, service_name, category, amount_cents, amount_note, report_type, town,
          service_date, notes, verification_status, submitter_email, created_at,
-         businesses ( name ),
          verifications ( id, invoice_path, created_at )`
       )
       .is("moderated_at", null)

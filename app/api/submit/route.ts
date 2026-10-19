@@ -43,7 +43,6 @@ export async function POST(req: Request) {
     const serviceName = String(form.get("serviceName") ?? "").trim();
     const amountRaw = String(form.get("amount") ?? "").trim();
     const reportType = String(form.get("reportType") ?? "");
-    const businessName = String(form.get("businessName") ?? "").trim();
     const town = String(form.get("town") ?? "").trim();
     const amountNote = String(form.get("amountNote") ?? "").trim() || null;
     const serviceDate = String(form.get("serviceDate") ?? "").trim() || null;
@@ -52,8 +51,8 @@ export async function POST(req: Request) {
 
     if (!siteConfig.categories.includes(category as never))
       return NextResponse.json({ ok: false, error: "Invalid category." }, { status: 400 });
-    if (!serviceName || !businessName || !town)
-      return NextResponse.json({ ok: false, error: "Service, business, and town are required." }, { status: 400 });
+    if (!serviceName || !town)
+      return NextResponse.json({ ok: false, error: "Service and town are required." }, { status: 400 });
     if (!["paid", "quote"].includes(reportType))
       return NextResponse.json({ ok: false, error: "Report type must be paid or quote." }, { status: 400 });
     const amountCents = Math.round(Number(amountRaw) * 100);
@@ -61,26 +60,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Amount must be a positive number." }, { status: 400 });
 
     const sb = getServiceSupabase();
-
-    // Find-or-create the business (case-insensitive) for aggregate stats.
-    let businessId: string | null = null;
-    const { data: existing } = await sb
-      .from("businesses")
-      .select("id")
-      .ilike("name", businessName)
-      .limit(1)
-      .maybeSingle();
-    if (existing) {
-      businessId = existing.id;
-    } else {
-      const { data: created, error: bizErr } = await sb
-        .from("businesses")
-        .insert({ name: businessName, category })
-        .select("id")
-        .single();
-      if (bizErr) throw bizErr;
-      businessId = created.id;
-    }
 
     const { data: report, error: repErr } = await sb
       .from("reports")
@@ -93,7 +72,6 @@ export async function POST(req: Request) {
         town,
         service_date: serviceDate,
         notes,
-        business_id: businessId,
         submitter_email: submitterEmail,
         verification_status: "unverified",
         moderated_at: null, // sits in the moderation queue until approved

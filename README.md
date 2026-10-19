@@ -1,8 +1,8 @@
 # Triangle Price Book
 
 Crowdsourced, anonymized home-services price transparency for the Raleigh-Durham
-Triangle, NC. Neighbors share what they paid or were quoted; individual entries
-never name the business.
+Triangle, NC. Neighbors share what they paid or were quoted. No business names
+are collected at all — just prices, towns, and dates.
 
 > **Branding note:** the site name is being verified for trademark/domain
 > availability. **All branding lives in `lib/site-config.ts`** — renaming the
@@ -76,7 +76,6 @@ app/
   page.tsx            # Home: hero, stats, aggregates, anonymized callout
   browse/page.tsx     # Filterable report feed (client-side, anon-safe)
   submit/page.tsx     # Submission form (+ Turnstile when configured)
-  rankings/page.tsx   # 5-report rule, progress bars, locked example
   how-it-works/page.tsx  # The 8-section transparency page
   terms/page.tsx      # Draft ToS (attestation, takedown process)
   privacy/page.tsx    # Draft privacy policy
@@ -93,20 +92,19 @@ lib/
   supabase-server.ts  # Service-role client (API routes only, never browser)
   format.ts           # formatCents, formatMonthYear
 supabase/migrations/0001_init.sql  # Schema, RLS, views, seeds, bucket
+supabase/migrations/0002_remove_business_names.sql  # Drops businesses table, business_id, rankings view
 ```
 
 ## Key design decisions
 
-- **Anonymity model:** `reports.business_id` and `submitter_email` are private.
-  Public reads go through RLS (approved reports only) and aggregate views.
-  Business names appear only on `/rankings` progress bars, never on entries.
+- **Anonymity model:** no business names are collected at all (removed Oct 2026).
+  `submitter_email` is private. Public reads go through RLS (approved reports
+  only) and the `service_aggregates` view.
 - **Moderation:** everything submitted is invisible (`moderated_at IS NULL`) until
   a moderator acts in `/admin`. Three actions: verify & publish, publish
   unverified, reject.
 - **No business editing of entries:** moderators remove or keep; never rewrite
   (preserves Section 230 posture — see `/how-it-works`).
-- **Ranking threshold:** `siteConfig.rankingThreshold` (5). Change it in one place;
-  the SQL view and UI both respect it.
 
 ## Extending with an AI coding assistant
 
@@ -119,8 +117,6 @@ or any similar tool works out of the box. Useful prompts:
 - “Add email notifications on new submissions” → extend `app/api/submit/route.ts`
   (Resend free tier works well here).
 - “Add magic-link login for submitters” → Supabase Auth + gate `/submit`.
-- “Build the per-business ranking view” → new SQL view joining
-  `business_report_counts` to per-service medians; render on `/rankings`.
 
 ### Future migrations
 Put new SQL in `supabase/migrations/0002_*.sql` and run in the Supabase SQL editor.

@@ -27,13 +27,6 @@ export interface ServiceAggregate {
   median_cents: number;
 }
 
-export interface BusinessCount {
-  id: string;
-  name: string;
-  category: string;
-  report_count: number;
-}
-
 /**
  * All fetchers degrade to empty arrays when Supabase isn't configured
  * or unreachable, so `next build` and local dev never crash.
@@ -68,20 +61,6 @@ export async function getServiceAggregates(): Promise<ServiceAggregate[]> {
       .order("report_count", { ascending: false });
     if (error) throw error;
     return (data ?? []) as ServiceAggregate[];
-  } catch {
-    return [];
-  }
-}
-
-export async function getBusinessReportCounts(): Promise<BusinessCount[]> {
-  try {
-    const sb = getServiceSupabase();
-    const { data, error } = await sb
-      .from("business_report_counts")
-      .select("*")
-      .order("report_count", { ascending: false });
-    if (error) throw error;
-    return (data ?? []) as BusinessCount[];
   } catch {
     return [];
   }
