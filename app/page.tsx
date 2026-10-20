@@ -53,8 +53,8 @@ export default async function HomePage() {
           who&rsquo;s honest. Sound familiar? Google gives you national
           averages that mean nothing in the Triangle. This exists so you
           don&rsquo;t have to guess &mdash; just real, verified prices
-          from local homeowners who&rsquo;ve already paid for the same
-          work.
+          paid by your neighbors in North Carolina&rsquo;s Raleigh-Durham
+          Triangle and surrounding areas.
         </p>
       </section>
 
