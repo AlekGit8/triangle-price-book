@@ -63,11 +63,12 @@ export default async function HomePage() {
             Same scope, two quotes, {formatCents(gap)} apart.
           </p>
           <p className="mt-2 text-stone-600">
-            Two verified {interlock.category.toLowerCase()} reports from
-            Fuquay-Varina for “{interlock.service_name}” — one quote of{" "}
-            {formatCents(interlock.min_cents)}, another of{" "}
-            {formatCents(interlock.max_cents)}. No names attached; the numbers
-            speak for themselves.
+            Three quotes, three wildly different numbers, zero idea
+            who&rsquo;s honest. Sound familiar? Google gives you national
+            averages that mean nothing in the Triangle. This exists so you
+            don&rsquo;t have to guess &mdash; just real, verified prices
+            from local homeowners who&rsquo;ve already paid for the same
+            work.
           </p>
         </section>
       )}
