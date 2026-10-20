@@ -15,7 +15,7 @@ const EXTRACTION_PROMPT = `You are extracting structured data from a home-servic
 
 {
   "serviceName": "short description of the work, e.g. 'Tankless water heater install (Rinnai RX199)'",
-  "category": one of ["HVAC", "Plumbing", "Electrical", "Roofing", "Appliances", "Other"],
+  "category": one of ["HVAC", "Plumbing", "Electrical", "Roofing", "Appliances", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Handyman/Other"],
   "amount": grand total as a number with no commas or currency symbols, e.g. 5253.36,
   "amountNote": "+ tax" if tax is NOT included in the total, "incl. tax" if it is, or null if unclear,
   "town": town where the work was performed (the customer's town, not the business's), or null if unclear,
@@ -188,7 +188,7 @@ export async function POST(req: Request) {
       category:
         typeof fields.category === "string" && categories.includes(fields.category)
           ? fields.category
-          : "Other",
+          : "Handyman/Other",
       amount:
         typeof fields.amount === "number" && Number.isFinite(fields.amount) && fields.amount > 0
           ? Math.round(fields.amount * 100) / 100

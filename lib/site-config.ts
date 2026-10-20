@@ -24,7 +24,7 @@ export const siteConfig = {
   regionLongName: "Raleigh-Durham Triangle, North Carolina",
 
   /** Report categories. Keep in sync with the DB check constraint in 0001_init.sql. */
-  categories: ["HVAC", "Plumbing", "Electrical", "Roofing", "Appliances", "Other"] as const,
+  categories: ["HVAC", "Plumbing", "Electrical", "Roofing", "Appliances", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Handyman/Other"] as const,
 
   /** Contact email placeholder (replace once a real inbox exists). */
   contactEmail: "hello@trianglepricebook.com",
