@@ -3,21 +3,11 @@ import { siteConfig } from "@/lib/site-config";
 import { getServiceAggregates } from "@/lib/data";
 import StatsStrip from "@/components/StatsStrip";
 import AggregateCard from "@/components/AggregateCard";
-import { formatCents } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const aggregates = await getServiceAggregates();
-
-  // Find the two generator-interlock quotes to power the anonymized callout.
-  const interlock = aggregates.find((a) =>
-    a.service_name.toLowerCase().includes("generator interlock")
-  );
-  const gap =
-    interlock && interlock.report_count >= 2
-      ? interlock.max_cents - interlock.min_cents
-      : null;
 
   return (
     <div className="py-10">
@@ -53,25 +43,20 @@ export default async function HomePage() {
         <StatsStrip aggregates={aggregates} />
       </section>
 
-      {/* Anonymized comparison callout */}
-      {gap !== null && interlock && (
-        <section className="mt-10 rounded-2xl border-2 border-accent-400 bg-amber-50 p-6">
-          <p className="text-sm font-bold uppercase tracking-wide text-accent-600">
-            Why this exists
-          </p>
-          <p className="mt-2 text-xl font-semibold text-stone-900">
-            Same scope, two quotes, {formatCents(gap)} apart.
-          </p>
-          <p className="mt-2 text-stone-600">
-            Three quotes, three wildly different numbers, zero idea
-            who&rsquo;s honest. Sound familiar? Google gives you national
-            averages that mean nothing in the Triangle. This exists so you
-            don&rsquo;t have to guess &mdash; just real, verified prices
-            from local homeowners who&rsquo;ve already paid for the same
-            work.
-          </p>
-        </section>
-      )}
+      {/* Why this exists */}
+      <section className="mt-10 rounded-2xl border-2 border-accent-400 bg-amber-50 p-6">
+        <p className="text-sm font-bold uppercase tracking-wide text-accent-600">
+          Why this exists
+        </p>
+        <p className="mt-2 text-stone-600">
+          Three quotes, three wildly different numbers, zero idea
+          who&rsquo;s honest. Sound familiar? Google gives you national
+          averages that mean nothing in the Triangle. This exists so you
+          don&rsquo;t have to guess &mdash; just real, verified prices
+          from local homeowners who&rsquo;ve already paid for the same
+          work.
+        </p>
+      </section>
 
       {/* Aggregates */}
       <section className="mt-10">
