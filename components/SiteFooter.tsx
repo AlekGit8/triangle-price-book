@@ -12,6 +12,9 @@ export default function SiteFooter() {
               Crowdsourced, anonymized home-services prices for{" "}
               {siteConfig.regionLongName}.
             </p>
+            <p className="mt-2 italic">
+              Built by a local Triangle homeowner to make all our lives easier.
+            </p>
           </div>
           <nav className="flex flex-col gap-2">
             <Link href="/how-it-works" className="hover:text-brand-800">
