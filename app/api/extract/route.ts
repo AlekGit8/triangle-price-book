@@ -15,7 +15,7 @@ const EXTRACTION_PROMPT = `You are extracting structured data from a home-servic
 
 {
   "serviceName": "short description of the work, e.g. 'Tankless water heater install (Rinnai RX199)'",
-  "category": one of ["HVAC", "Plumbing", "Electrical", "Roofing", "Appliances", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Handyman/Other"],
+  "category": one of ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Septic Systems", "Handyman/Other"],
   "amount": grand total as a number with no commas or currency symbols, e.g. 5253.36,
   "amountNote": "+ tax" if tax is NOT included in the total, "incl. tax" if it is, or null if unclear,
   "town": town where the work was performed (the customer's town, not the business's), or null if unclear,
@@ -31,7 +31,7 @@ Rules:
 
 Finally, include a relevance verdict:
 "documentCheck": {
-  "isRelevant": true ONLY if this document is a quote, estimate, invoice, or receipt for a HOME SERVICE (HVAC, plumbing, electrical, roofing, appliances, pest control, landscaping, handyman, remodeling, etc.) that contains a service description and a price. False for anything else — restaurant or retail receipts, random photos, screenshots of text conversations, blank or unreadable pages, etc.,
+  "isRelevant": true ONLY if this document is a quote, estimate, invoice, or receipt for a HOME SERVICE (HVAC, plumbing, electrical, roofing, septic, pest control, landscaping, handyman, remodeling, etc.) that contains a service description and a price. False for anything else — restaurant or retail receipts, random photos, screenshots of text conversations, blank or unreadable pages, etc.,
   "reason": "if isRelevant is false, one short sentence saying what the document actually appears to be; otherwise null"
 }`;
 
