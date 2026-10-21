@@ -39,9 +39,9 @@ export default function HowItWorksPage() {
 
         <Section n="2" title="The anonymity model">
           <p>
-            <strong>We don’t collect business names at all.</strong> The submission
-            form asks for the service, the price, the town, and the date — nothing
-            that identifies who did the work or who paid for it.
+            The submission form asks for the service, the price, the town, and
+            the date — nothing that identifies who did the work or who paid
+            for it.
           </p>
           <p>
             Public entries are attributed only as “reported by a homeowner

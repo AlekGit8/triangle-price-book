@@ -32,8 +32,7 @@ export default function SiteFooter() {
           </nav>
         </div>
         <p className="mt-8 text-xs text-stone-400">
-          Prices are community-reported; verify before hiring. Business names
-          are never collected — entries are anonymous by design.
+          Prices are community-reported and anonymous; verify before hiring.
         </p>
       </div>
     </footer>

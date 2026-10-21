@@ -17,8 +17,7 @@ export default function TermsPage() {
           <p className="mt-2">
             {siteConfig.siteName} (“the Site”) is a community platform where people in{" "}
             {siteConfig.regionLongName} share prices they paid or were quoted for home
-            services. Individual entries are published anonymously; business names
-            are never collected.
+            services. Individual entries are published anonymously.
           </p>
         </section>
 
@@ -39,7 +38,7 @@ export default function TermsPage() {
         <section>
           <h2 className="text-lg font-bold text-stone-900">3. How we handle entries</h2>
           <ul className="mt-2 list-disc pl-5 space-y-1">
-            <li>Submissions enter a moderation queue and are published only after review.</li>
+            <li>Entries publish instantly upon submission.</li>
             <li>We publish entries as-is; we do not rewrite user content.</li>
             <li>Entries proven false are removed. See the takedown process below.</li>
           </ul>

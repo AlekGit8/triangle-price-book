@@ -47,7 +47,7 @@ function BrowseInner() {
     <div className="py-10">
       <h1 className="text-3xl font-extrabold text-brand-900">Browse prices</h1>
       <p className="mt-2 text-stone-600">
-        Every entry is anonymous — businesses are never named on individual reports.
+        Every entry is anonymous.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
