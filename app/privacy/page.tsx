@@ -23,7 +23,6 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-bold text-stone-900">2. What we collect when you submit</h2>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li><strong>Price report details:</strong> service, category, amount, paid/quote, town, date, notes — published anonymously after moderation.</li>
-            <li><strong>Business name:</strong> used only for aggregate statistics; never shown on individual entries.</li>
             <li><strong>Invoice/receipt uploads (optional):</strong> stored in a private bucket visible only to moderators; used solely to verify the entry.</li>
             <li><strong>Email (optional):</strong> used only to follow up about your submission if needed.</li>
           </ul>

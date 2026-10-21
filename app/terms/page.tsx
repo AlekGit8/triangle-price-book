@@ -17,8 +17,8 @@ export default function TermsPage() {
           <p className="mt-2">
             {siteConfig.siteName} (“the Site”) is a community platform where people in{" "}
             {siteConfig.regionLongName} share prices they paid or were quoted for home
-            services. Individual entries are published anonymously; business names are
-            collected only for aggregate statistics.
+            services. Individual entries are published anonymously; business names
+            are never collected.
           </p>
         </section>
 
@@ -48,8 +48,7 @@ export default function TermsPage() {
         <section>
           <h2 className="text-lg font-bold text-stone-900">4. Takedown and dispute process</h2>
           <p className="mt-2">
-            Anyone — including a business named in aggregate statistics — may dispute an
-            entry by contacting {siteConfig.contactEmail} with the entry details and the
+            Anyone who believes an entry is false may dispute it by contacting {siteConfig.contactEmail} with the entry details and the
             basis for the dispute. We will:
           </p>
           <ol className="mt-2 list-decimal pl-5 space-y-1">
