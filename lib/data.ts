@@ -31,6 +31,11 @@ export interface ServiceAggregate {
  * All fetchers degrade to empty arrays when Supabase isn't configured
  * or unreachable, so `next build` and local dev never crash.
  */
+/**
+ * Reports visible to the public: verified entries plus unverified community
+ * reports. Rejected entries never surface. (Currently unused by pages —
+ * /browse queries Supabase directly — but kept truthful for future callers.)
+ */
 export async function getApprovedReports(category?: string): Promise<Report[]> {
   try {
     const sb = getServiceSupabase();
@@ -39,8 +44,7 @@ export async function getApprovedReports(category?: string): Promise<Report[]> {
       .select(
         "id, service_name, category, amount_cents, amount_note, report_type, town, service_date, notes, verification_status, created_at"
       )
-      .eq("verification_status", "verified")
-      .not("moderated_at", "is", null)
+      .neq("verification_status", "rejected")
       .order("created_at", { ascending: false })
       .limit(200);
     if (category && category !== "All") q = q.eq("category", category);

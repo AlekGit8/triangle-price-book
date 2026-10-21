@@ -13,23 +13,33 @@ export default function AggregateCard({ agg }: { agg: ServiceAggregate }) {
       </p>
       <h3 className="mt-1 font-semibold text-stone-900">{agg.service_name}</h3>
       <div className="mt-4 flex items-end justify-between">
-        <div>
-          <p className="text-xs text-stone-500">Range</p>
-          <p className="font-bold text-stone-900">
-            {formatCents(agg.min_cents)} – {formatCents(agg.max_cents)}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs text-stone-500">Median</p>
-          <p className="text-xl font-bold text-brand-800">
-            {formatCents(agg.median_cents)}
-          </p>
-        </div>
+        {agg.report_count > 1 ? (
+          <>
+            <div>
+              <p className="text-xs text-stone-500">Range</p>
+              <p className="font-bold text-stone-900">
+                {formatCents(agg.min_cents)} – {formatCents(agg.max_cents)}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-stone-500">Median</p>
+              <p className="text-xl font-bold text-brand-800">
+                {formatCents(agg.median_cents)}
+              </p>
+            </div>
+          </>
+        ) : (
+          <div>
+            <p className="text-xs text-stone-500">Price</p>
+            <p className="font-bold text-stone-900">
+              {formatCents(agg.min_cents)}
+            </p>
+          </div>
+        )}
       </div>
       <p className="mt-3 text-xs text-stone-500">
-        {agg.report_count} report{agg.report_count === 1 ? "" : "s"} ·{" "}
-        {agg.verified_count} verified · {agg.paid_count} paid · {agg.quote_count}{" "}
-        quotes
+        {agg.verified_count} verified report{agg.verified_count === 1 ? "" : "s"} ·{" "}
+        {agg.paid_count} paid · {agg.quote_count} quote{agg.quote_count === 1 ? "" : "s"}
       </p>
     </article>
   );

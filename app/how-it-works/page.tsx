@@ -44,7 +44,7 @@ export default function HowItWorksPage() {
             that identifies who did the work or who paid for it.
           </p>
           <p>
-            Public entries are attributed only as “reported by a verified homeowner
+            Public entries are attributed only as “reported by a homeowner
             in {`{town}`},” never by name, address, or contact info. There is no
             business directory here, no rankings, no profiles — just prices.
           </p>
@@ -53,17 +53,18 @@ export default function HowItWorksPage() {
         <Section n="3" title="Verification">
           <p>
             Every entry marked <strong>Verified</strong> was submitted with a
-            source document — a quote or invoice — attached. Documents are
-            required: you can’t publish a price without one. That’s what keeps
-            the numbers real.
+            source document — a quote or invoice — attached. Documents stay
+            private: only moderators ever see them.
           </p>
           <p>
-            Entries publish <strong>instantly</strong> once submitted. Our system
-            checks that the uploaded file is actually a home-services quote or
-            invoice with readable details — anything else is rejected before it
-            can publish. Documents stay private — only moderators ever see
-            them — and moderators spot-check entries and remove anything abusive
-            or fake.
+            You can also submit a price <strong>without</strong> a document.
+            Those entries publish instantly as <strong>unverified community
+            reports</strong> — clearly labeled, and never counted in the range
+            and median figures, which come from verified reports only. Our
+            system checks uploaded files to make sure they’re actually
+            home-services quotes or invoices with readable details — anything
+            else is rejected before it can publish. Moderators spot-check
+            entries and remove anything abusive or fake.
           </p>
         </Section>
 
@@ -71,7 +72,8 @@ export default function HowItWorksPage() {
           <p>
             Per-service cards show the <strong>range, median, and count</strong> of
             verified reports — computed directly from the database, no editorial
-            judgment. Paid prices and quotes are counted separately and labeled.
+            judgment. The median appears once a service has two or more verified
+            reports. Paid prices and quotes are counted separately and labeled.
           </p>
           <p>
             That’s the whole product: what a service costs around here, from real

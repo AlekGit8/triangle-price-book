@@ -52,9 +52,10 @@ export default async function HomePage() {
           Three quotes, three wildly different numbers, zero idea
           who&rsquo;s honest. Sound familiar? Google gives you national
           averages that mean nothing in the Triangle. This exists so you
-          don&rsquo;t have to guess &mdash; just real, verified prices
-          paid by your neighbors in North Carolina&rsquo;s Raleigh-Durham
-          Triangle and surrounding areas.
+          don&rsquo;t have to guess &mdash; just real prices paid by your
+          neighbors in North Carolina&rsquo;s Raleigh-Durham Triangle and
+          surrounding areas. Entries backed by a source document are marked
+          Verified.
         </p>
       </section>
 

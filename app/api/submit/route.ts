@@ -7,11 +7,17 @@ const MAX_INVOICE_BYTES = 8 * 1024 * 1024; // 8 MB
 
 /**
  * POST /api/submit — accepts the /submit form.
- * A quote/invoice document is REQUIRED. The report is published immediately
- * as verified (the document is the verification) — there is no moderation
- * queue for new submissions. The invoice is uploaded to the private bucket
- * and linked via a verification row. Uses the service role server-side so
- * the browser never needs elevated keys.
+ *
+ * Two paths:
+ *  - With a quote/invoice document: the report publishes immediately as
+ *    verified (the document is the verification) and the file is stored in
+ *    the private bucket, linked via a verification row.
+ *  - Without a document: the report publishes immediately as unverified
+ *    (a community report, clearly badged in the UI). Aggregates
+ *    (range/median) are computed from verified reports only.
+ * There is no moderation queue for new submissions; takedowns happen via
+ * /admin if abuse appears. Uses the service role server-side so the browser
+ * never needs elevated keys.
  */
 export async function POST(req: Request) {
   try {
@@ -47,6 +53,9 @@ export async function POST(req: Request) {
     const sb = getServiceSupabase();
 
     const now = new Date().toISOString();
+    const invoice = form.get("invoice");
+    const hasInvoice = invoice instanceof File && invoice.size > 0;
+
     const { data: report, error: repErr } = await sb
       .from("reports")
       .insert({
@@ -59,34 +68,31 @@ export async function POST(req: Request) {
         service_date: serviceDate,
         notes,
         submitter_email: submitterEmail,
-        // A source document is required, so entries publish immediately
-        // as verified. Takedowns happen via /admin if abuse appears.
-        verification_status: "verified",
-        moderated_at: now,
+        // A source document means instant verification. Without one, the
+        // entry publishes as an unverified community report (badged in the
+        // UI, excluded from aggregates). Takedowns happen via /admin.
+        verification_status: hasInvoice ? "verified" : "unverified",
+        moderated_at: hasInvoice ? now : null,
       })
       .select("id")
       .single();
     if (repErr) throw repErr;
 
-    // Invoice upload is required — it is the verification.
-    const invoice = form.get("invoice");
-    if (!(invoice instanceof File) || invoice.size === 0) {
-      // Roll back the published report: no document, no entry.
-      await sb.from("reports").delete().eq("id", report.id);
-      return NextResponse.json(
-        { ok: false, error: "A quote or invoice document is required." },
-        { status: 400 }
-      );
+    if (!hasInvoice) {
+      return NextResponse.json({ ok: true, id: report.id, verified: false });
     }
-    if (invoice.size > MAX_INVOICE_BYTES) {
+
+    // Invoice path: validate, store in the private bucket, link a verification.
+    const inv = invoice as File;
+    if (inv.size > MAX_INVOICE_BYTES) {
       await sb.from("reports").delete().eq("id", report.id);
       return NextResponse.json({ ok: false, error: "Invoice file must be under 8 MB." }, { status: 400 });
     }
-    const ext = invoice.name.split(".").pop()?.toLowerCase() ?? "bin";
+    const ext = inv.name.split(".").pop()?.toLowerCase() ?? "bin";
     const path = `${report.id}/${Date.now()}.${ext}`;
     const { error: upErr } = await sb.storage
       .from("invoices")
-      .upload(path, invoice, { contentType: invoice.type || "application/octet-stream" });
+      .upload(path, inv, { contentType: inv.type || "application/octet-stream" });
     if (upErr) {
       await sb.from("reports").delete().eq("id", report.id);
       throw upErr;
@@ -96,7 +102,7 @@ export async function POST(req: Request) {
       .insert({ report_id: report.id, invoice_path: path });
     if (verErr) throw verErr;
 
-    return NextResponse.json({ ok: true, id: report.id });
+    return NextResponse.json({ ok: true, id: report.id, verified: true });
   } catch (err) {
     console.error("submit error:", err);
     return NextResponse.json(

@@ -48,6 +48,7 @@ export default function SubmitPage() {
   const [extractState, setExtractState] = useState<ExtractState>("idle");
   const [extractMsg, setExtractMsg] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
+  const [submittedVerified, setSubmittedVerified] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const docInputRef = useRef<HTMLInputElement>(null);
 
@@ -133,6 +134,7 @@ export default function SubmitPage() {
       const res = await fetch("/api/submit", { method: "POST", body: form });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Submission failed");
+      setSubmittedVerified(json.verified !== false);
       setStatus("done");
       setFields(emptyFields);
       setDocFile(null);
@@ -149,8 +151,18 @@ export default function SubmitPage() {
       <div className="py-16 max-w-xl mx-auto text-center">
         <h1 className="text-3xl font-extrabold text-brand-900">Published!</h1>
         <p className="mt-3 text-stone-600">
-          Your price is live — anonymously, with a Verified badge thanks to your
-          uploaded document. Thank you for contributing.
+          {submittedVerified ? (
+            <>
+              Your price is live — anonymously, with a Verified badge thanks to
+              your uploaded document. Thank you for contributing.
+            </>
+          ) : (
+            <>
+              Your price is live — anonymously, as an unverified community
+              report. Thank you for contributing. (Uploading a document next
+              time earns a Verified badge.)
+            </>
+          )}
         </p>
         <a href="/browse" className="mt-6 inline-block font-semibold text-brand-700 hover:underline">
           Browse prices →
@@ -163,13 +175,16 @@ export default function SubmitPage() {
     <div className="py-10 max-w-2xl mx-auto">
       <h1 className="text-3xl font-extrabold text-brand-900">Submit a price</h1>
       <p className="mt-2 text-stone-600">
-        Upload a photo or PDF of your quote or invoice — <strong>required</strong>.
-        We’ll fill in the details, you review them, and your price publishes
-        instantly with a Verified badge.
+        Two ways to contribute. <strong>Uploading</strong> a quote or invoice
+        gets your entry a Verified badge — but a manual entry still helps your
+        neighbors.
       </p>
 
-      {/* Smart upload card */}
-      <div className="mt-6 rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 p-5">
+      {/* Option 1: smart upload card */}
+      <p className="mt-6 text-sm font-bold uppercase tracking-wide text-brand-800">
+        Option 1 · Upload a document (preferred)
+      </p>
+      <div className="mt-2 rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 p-5">
         <input
           ref={docInputRef}
           id="docUpload"
@@ -186,7 +201,7 @@ export default function SubmitPage() {
             {extractState === "reading" ? "…" : "📄"}
           </span>
           <span className="font-bold text-brand-900">
-            {docFile ? docFile.name : "Upload a quote or invoice (required)"}
+            {docFile ? docFile.name : "Upload a quote or invoice"}
           </span>
           <span className="text-sm text-stone-600">
             {extractState === "reading"
@@ -224,7 +239,10 @@ export default function SubmitPage() {
 
       <div className="my-6 flex items-center gap-3 text-sm text-stone-400">
         <span className="h-px flex-1 bg-stone-200" />
-        or fill in manually
+        <span className="text-center">
+          <span className="font-bold uppercase tracking-wide text-stone-500">Option 2 · </span>
+          no document? Fill in the form — it publishes as an unverified community report
+        </span>
         <span className="h-px flex-1 bg-stone-200" />
       </div>
 
@@ -357,21 +375,19 @@ export default function SubmitPage() {
 
         <button
           type="submit"
-          disabled={
-            status === "sending" ||
-            !(docFile && (extractState === "done" || extractState === "unavailable"))
-          }
+          disabled={status === "sending"}
           className="w-full rounded-full bg-brand-700 px-6 py-3 font-bold text-white hover:bg-brand-800 disabled:opacity-50"
         >
-          {status === "sending" ? "Publishing…" : "Review above, then publish"}
+          {status === "sending"
+            ? "Publishing…"
+            : docFile
+              ? "Review above, then publish"
+              : "Publish as unverified report"}
         </button>
-        {!(docFile && (extractState === "done" || extractState === "unavailable")) && (
-          <p className="-mt-2 text-xs text-amber-700 text-center">
-            Upload a valid quote or invoice above to enable publishing.
-          </p>
-        )}
         <p className="text-xs text-stone-500 text-center">
-          Your price publishes instantly and anonymously with a Verified badge.
+          {docFile
+            ? "Your price publishes instantly and anonymously with a Verified badge."
+            : "Your price publishes instantly and anonymously as an unverified community report — no document needed."}
         </p>
       </form>
     </div>

@@ -28,8 +28,7 @@ function BrowseInner() {
         .select(
           "id, service_name, category, amount_cents, amount_note, report_type, town, service_date, notes, verification_status, created_at"
         )
-        .eq("verification_status", "verified")
-        .not("moderated_at", "is", null)
+        .neq("verification_status", "rejected")
         .order("created_at", { ascending: false })
         .limit(200);
       if (!error && data) setReports(data as Report[]);
