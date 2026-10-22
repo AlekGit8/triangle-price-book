@@ -4,18 +4,75 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { siteConfig } from "@/lib/site-config";
 
 const MAX_INVOICE_BYTES = 8 * 1024 * 1024; // 8 MB
+const MAX_BATCH = 20;
+
+interface ReportInput {
+  category: unknown;
+  serviceName: unknown;
+  amount: unknown;
+  amountNote: unknown;
+  reportType: unknown;
+  town: unknown;
+  serviceDate: unknown;
+  notes: unknown;
+}
+
+function bad(error: string, status = 400) {
+  return NextResponse.json({ ok: false, error }, { status });
+}
+
+/** Validate one report's fields; returns the DB row or an error. */
+function validateReport(
+  input: ReportInput
+): { row: Record<string, unknown> } | { error: string } {
+  const category = String(input.category ?? "");
+  const serviceName = String(input.serviceName ?? "").trim();
+  const amountRaw = String(input.amount ?? "").trim();
+  const reportType = String(input.reportType ?? "");
+  const town = String(input.town ?? "").trim();
+  const amountNote = String(input.amountNote ?? "").trim() || null;
+  const serviceDate = String(input.serviceDate ?? "").trim() || null;
+  const notes = String(input.notes ?? "").trim() || null;
+
+  if (!siteConfig.categories.includes(category as never))
+    return { error: "Invalid category." };
+  if (!serviceName || !town)
+    return { error: "Service and town are required." };
+  if (!["paid", "quote"].includes(reportType))
+    return { error: "Report type must be paid or quote." };
+  const amountCents = Math.round(Number(amountRaw) * 100);
+  if (!Number.isFinite(amountCents) || amountCents <= 0)
+    return { error: "Amount must be a positive number." };
+
+  return {
+    row: {
+      service_name: serviceName,
+      category,
+      amount_cents: amountCents,
+      amount_note: amountNote,
+      report_type: reportType,
+      town,
+      service_date: serviceDate,
+      notes,
+    },
+  };
+}
 
 /**
  * POST /api/submit — accepts the /submit form.
  *
- * Two paths:
- *  - With a quote/invoice document: the report publishes immediately as
- *    verified (the document is the verification) and the file is stored in
- *    the private bucket, linked via a verification row.
- *  - Without a document: the report publishes immediately as unverified
- *    (a community report, clearly badged in the UI). Aggregates
- *    (range/median) are computed from verified reports only.
- * There is no moderation queue for new submissions; takedowns happen via
+ * Two modes:
+ *  - Single: flat form fields (the manual no-document form). One report.
+ *  - Batch: a "reports" field containing a JSON array of report objects, plus
+ *    one shared "invoice" file. Used when an uploaded document contained
+ *    multiple quotes — each becomes its own report, all verified against the
+ *    same stored document.
+ *
+ * With a quote/invoice document, reports publish immediately as verified
+ * (the document is the verification) and the file is stored in the private
+ * bucket, linked via verification rows. Without a document, entries publish
+ * immediately as unverified community reports (badged in the UI, excluded
+ * from aggregates). There is no moderation queue; takedowns happen via
  * /admin if abuse appears. Uses the service role server-side so the browser
  * never needs elevated keys.
  */
@@ -24,49 +81,101 @@ export async function POST(req: Request) {
     const form = await req.formData();
 
     // Spam check (only enforced when Turnstile keys are configured).
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
-    const turnstileOk = await verifyTurnstile(String(form.get("turnstileToken") ?? ""), ip);
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+    const turnstileOk = await verifyTurnstile(
+      String(form.get("turnstileToken") ?? ""),
+      ip
+    );
     if (!turnstileOk) {
-      return NextResponse.json({ ok: false, error: "Spam check failed. Please try again." }, { status: 400 });
+      return bad("Spam check failed. Please try again.");
     }
 
-    const category = String(form.get("category") ?? "");
-    const serviceName = String(form.get("serviceName") ?? "").trim();
-    const amountRaw = String(form.get("amount") ?? "").trim();
-    const reportType = String(form.get("reportType") ?? "");
-    const town = String(form.get("town") ?? "").trim();
-    const amountNote = String(form.get("amountNote") ?? "").trim() || null;
-    const serviceDate = String(form.get("serviceDate") ?? "").trim() || null;
-    const notes = String(form.get("notes") ?? "").trim() || null;
-    const submitterEmail = String(form.get("submitterEmail") ?? "").trim() || null;
-
-    if (!siteConfig.categories.includes(category as never))
-      return NextResponse.json({ ok: false, error: "Invalid category." }, { status: 400 });
-    if (!serviceName || !town)
-      return NextResponse.json({ ok: false, error: "Service and town are required." }, { status: 400 });
-    if (!["paid", "quote"].includes(reportType))
-      return NextResponse.json({ ok: false, error: "Report type must be paid or quote." }, { status: 400 });
-    const amountCents = Math.round(Number(amountRaw) * 100);
-    if (!Number.isFinite(amountCents) || amountCents <= 0)
-      return NextResponse.json({ ok: false, error: "Amount must be a positive number." }, { status: 400 });
-
-    const sb = getServiceSupabase();
-
-    const now = new Date().toISOString();
+    const submitterEmail =
+      String(form.get("submitterEmail") ?? "").trim() || null;
     const invoice = form.get("invoice");
     const hasInvoice = invoice instanceof File && invoice.size > 0;
+    const now = new Date().toISOString();
+    const sb = getServiceSupabase();
+
+    // ---- Batch mode: N reports, one shared invoice ----
+    const reportsRaw = form.get("reports");
+    if (typeof reportsRaw === "string") {
+      let items: unknown;
+      try {
+        items = JSON.parse(reportsRaw);
+      } catch {
+        return bad("Invalid reports payload.");
+      }
+      if (!Array.isArray(items) || items.length === 0 || items.length > MAX_BATCH) {
+        return bad(`Expected between 1 and ${MAX_BATCH} reports.`);
+      }
+
+      // Validate everything before writing anything — no partial batches.
+      const rows: Record<string, unknown>[] = [];
+      for (const item of items) {
+        const v = validateReport((item ?? {}) as ReportInput);
+        if ("error" in v) return bad(v.error);
+        rows.push({
+          ...v.row,
+          submitter_email: submitterEmail,
+          // A source document means instant verification for every report.
+          verification_status: hasInvoice ? "verified" : "unverified",
+          moderated_at: hasInvoice ? now : null,
+        });
+      }
+
+      const { data: inserted, error: insErr } = await sb
+        .from("reports")
+        .insert(rows)
+        .select("id");
+      if (insErr) throw insErr;
+      const ids = ((inserted ?? []) as Array<{ id: string }>).map((r) => r.id);
+
+      if (!hasInvoice) {
+        return NextResponse.json({ ok: true, ids, verified: false });
+      }
+
+      // Upload the document once; link every report to the same file.
+      const inv = invoice as File;
+      if (inv.size > MAX_INVOICE_BYTES) {
+        await sb.from("reports").delete().in("id", ids);
+        return bad("Invoice file must be under 8 MB.");
+      }
+      const ext = inv.name.split(".").pop()?.toLowerCase() ?? "bin";
+      const path = `shared/${crypto.randomUUID()}/${Date.now()}.${ext}`;
+      const { error: upErr } = await sb.storage
+        .from("invoices")
+        .upload(path, inv, { contentType: inv.type || "application/octet-stream" });
+      if (upErr) {
+        await sb.from("reports").delete().in("id", ids);
+        throw upErr;
+      }
+      const { error: verErr } = await sb
+        .from("verifications")
+        .insert(ids.map((id) => ({ report_id: id, invoice_path: path })));
+      if (verErr) throw verErr;
+
+      return NextResponse.json({ ok: true, ids, verified: true });
+    }
+
+    // ---- Single mode: flat fields (manual form) ----
+    const v = validateReport({
+      category: form.get("category"),
+      serviceName: form.get("serviceName"),
+      amount: form.get("amount"),
+      amountNote: form.get("amountNote"),
+      reportType: form.get("reportType"),
+      town: form.get("town"),
+      serviceDate: form.get("serviceDate"),
+      notes: form.get("notes"),
+    });
+    if ("error" in v) return bad(v.error);
 
     const { data: report, error: repErr } = await sb
       .from("reports")
       .insert({
-        service_name: serviceName,
-        category,
-        amount_cents: amountCents,
-        amount_note: amountNote,
-        report_type: reportType,
-        town,
-        service_date: serviceDate,
-        notes,
+        ...v.row,
         submitter_email: submitterEmail,
         // A source document means instant verification. Without one, the
         // entry publishes as an unverified community report (badged in the
@@ -86,7 +195,7 @@ export async function POST(req: Request) {
     const inv = invoice as File;
     if (inv.size > MAX_INVOICE_BYTES) {
       await sb.from("reports").delete().eq("id", report.id);
-      return NextResponse.json({ ok: false, error: "Invoice file must be under 8 MB." }, { status: 400 });
+      return bad("Invoice file must be under 8 MB.");
     }
     const ext = inv.name.split(".").pop()?.toLowerCase() ?? "bin";
     const path = `${report.id}/${Date.now()}.${ext}`;

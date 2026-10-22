@@ -11,34 +11,41 @@ const ALLOWED_IMAGE_TYPES = [
   "image/heif",
 ];
 
-const EXTRACTION_PROMPT = `You are extracting structured data from a home-services quote or invoice/receipt document (photo or PDF). Return ONLY a JSON object with these exact keys:
+const EXTRACTION_PROMPT = `You are extracting structured data from a home-services document (photo or PDF). The document may contain ONE quote/invoice OR MULTIPLE distinct quotes, estimates, invoices, or receipts (for example a comparison sheet, or several receipts photographed together).
+
+Return ONLY a JSON object with these exact keys:
 
 {
-  "serviceName": "short description of the work, e.g. 'Tankless water heater install (Rinnai RX199)'",
-  "category": one of ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Septic Systems", "Handyman/Other"],
-  "amount": grand total as a number with no commas or currency symbols, e.g. 5253.36,
-  "amountNote": "+ tax" if tax is NOT included in the total, "incl. tax" if it is, or null if unclear,
-  "town": town where the work was performed (the customer's town, not the business's), or null if unclear,
-  "serviceDate": date of service or quote as YYYY-MM-DD, or null if unclear,
-  "reportType": "paid" if this is an invoice/receipt for completed paid work, "quote" if it is an estimate/quote,
-  "notes": one-line summary of the scope of work, or null
+  "documentCheck": {
+    "isRelevant": true ONLY if this document is a quote, estimate, invoice, or receipt for a HOME SERVICE (HVAC, plumbing, electrical, roofing, septic, pest control, landscaping, handyman, remodeling, etc.) that contains at least one service description and price. False for anything else — restaurant or retail receipts, random photos, screenshots of text conversations, blank or unreadable pages, etc.,
+    "reason": "if isRelevant is false, one short sentence saying what the document actually appears to be; otherwise null"
+  },
+  "quotes": [
+    {
+      "serviceName": "short description of the work, e.g. 'Tankless water heater install (Rinnai RX199)'",
+      "category": one of ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Septic Systems", "Handyman/Other"],
+      "amount": grand total as a number with no commas or currency symbols, e.g. 5253.36,
+      "amountNote": "+ tax" if tax is NOT included in the total, "incl. tax" if it is, or null if unclear,
+      "town": town where the work was performed (the customer's town, not the business's), or null if unclear,
+      "serviceDate": date of service or quote as YYYY-MM-DD, or null if unclear,
+      "reportType": "paid" if this is an invoice/receipt for completed paid work, "quote" if it is an estimate/quote,
+      "notes": one-line summary of the scope of work, or null
+    }
+  ]
 }
 
 Rules:
+- Return ONE object per distinct quote/invoice/receipt in the document, in document order. A document with a single quote returns an array with exactly one object.
 - Never invent values. Use null for anything you cannot determine from the document.
-- Prefer the grand total / amount due. Ignore line-item subtotals.
-- The user will review every field before submitting, so completeness beats caution — but never guess a number.
-
-Finally, include a relevance verdict:
-"documentCheck": {
-  "isRelevant": true ONLY if this document is a quote, estimate, invoice, or receipt for a HOME SERVICE (HVAC, plumbing, electrical, roofing, septic, pest control, landscaping, handyman, remodeling, etc.) that contains a service description and a price. False for anything else — restaurant or retail receipts, random photos, screenshots of text conversations, blank or unreadable pages, etc.,
-  "reason": "if isRelevant is false, one short sentence saying what the document actually appears to be; otherwise null"
-}`;
+- Prefer the grand total / amount due for each quote. Ignore line-item subtotals.
+- The user will review every field before submitting, so completeness beats caution — but never guess a number.`;
 
 /**
  * POST /api/extract — accepts a quote/invoice document (photo or PDF),
- * runs it through Gemini (free tier) vision, and returns structured fields
- * to pre-fill the /submit form. The user always reviews before submitting.
+ * runs it through Gemini (free tier) vision, and returns one structured
+ * object per distinct quote found: { ok: true, quotes: [...] }.
+ * A single-quote document returns an array with one object.
+ * The user always reviews before submitting.
  *
  * Requires GEMINI_API_KEY (free at https://aistudio.google.com/apikey).
  * Returns { ok: false, error: "not_configured" } (HTTP 501) when the key
@@ -124,7 +131,7 @@ export async function POST(req: Request) {
             ],
             generationConfig: {
               response_mime_type: "application/json",
-              maxOutputTokens: 600,
+              maxOutputTokens: 1500,
             },
           }),
         }
@@ -182,43 +189,57 @@ export async function POST(req: Request) {
       );
     }
 
-    const clean: Record<string, string | number | null> = {
-      serviceName:
-        typeof fields.serviceName === "string" ? fields.serviceName.slice(0, 120) : null,
-      category:
-        typeof fields.category === "string" && categories.includes(fields.category)
-          ? fields.category
-          : "Handyman/Other",
-      amount:
-        typeof fields.amount === "number" && Number.isFinite(fields.amount) && fields.amount > 0
-          ? Math.round(fields.amount * 100) / 100
-          : null,
-      amountNote:
-        typeof fields.amountNote === "string" ? fields.amountNote.slice(0, 20) : null,
-      town: typeof fields.town === "string" ? fields.town.slice(0, 80) : null,
-      serviceDate:
-        typeof fields.serviceDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fields.serviceDate)
-          ? fields.serviceDate
-          : null,
-      reportType: fields.reportType === "quote" ? "quote" : "paid",
-      notes: typeof fields.notes === "string" ? fields.notes.slice(0, 500) : null,
+    // The model should return { quotes: [...] }, but tolerate the legacy
+    // flat shape (a single quote object) in case of model variance.
+    const rawQuotes = Array.isArray(fields.quotes)
+      ? (fields.quotes as Array<Record<string, unknown>>)
+      : "serviceName" in fields || "amount" in fields
+        ? [fields]
+        : [];
+
+    const cleanQuote = (q: Record<string, unknown>): Record<string, string | number | null> => {
+      return {
+        serviceName:
+          typeof q.serviceName === "string" ? q.serviceName.slice(0, 120) : null,
+        category:
+          typeof q.category === "string" && categories.includes(q.category)
+            ? q.category
+            : "Handyman/Other",
+        amount:
+          typeof q.amount === "number" && Number.isFinite(q.amount) && q.amount > 0
+            ? Math.round(q.amount * 100) / 100
+            : null,
+        amountNote:
+          typeof q.amountNote === "string" ? q.amountNote.slice(0, 20) : null,
+        town: typeof q.town === "string" ? q.town.slice(0, 80) : null,
+        serviceDate:
+          typeof q.serviceDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q.serviceDate)
+            ? q.serviceDate
+            : null,
+        reportType: q.reportType === "quote" ? "quote" : "paid",
+        notes: typeof q.notes === "string" ? q.notes.slice(0, 500) : null,
+      };
     };
 
-    // Usefulness gate: without at least a service description and an amount,
-    // there is nothing worth publishing — the photo was likely unreadable.
-    if (!clean.serviceName && clean.amount === null) {
+    // Usefulness gate: keep only quotes with at least a service description
+    // or an amount — without either there is nothing worth publishing.
+    const quotes = rawQuotes.map(cleanQuote).filter(
+      (q) => q.serviceName || q.amount !== null
+    );
+
+    if (quotes.length === 0) {
       return NextResponse.json(
         {
           ok: false,
           error: "rejected",
           reason:
-            "We couldn't read any service details or price from this document. Please try a clearer photo or a PDF.",
+            "We couldn't read any service details or prices from this document. Please try a clearer photo or a PDF.",
         },
         { status: 422 }
       );
     }
 
-    return NextResponse.json({ ok: true, fields: clean });
+    return NextResponse.json({ ok: true, quotes });
   } catch (err) {
     console.error("extract error:", err);
     return NextResponse.json(
