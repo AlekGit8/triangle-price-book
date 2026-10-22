@@ -8,7 +8,7 @@ export const siteConfig = {
   siteName: "Triangle Price Book",
 
   /** Short tagline under the hero headline. */
-  tagline: "What do home services actually cost in the Triangle?",
+  tagline: "What do home services actually cost in the NC Triangle?",
 
   /** Supporting line under the tagline. */
   subTagline:
