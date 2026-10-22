@@ -117,9 +117,11 @@ export default function HomepageBody({ aggregates }: { aggregates: ServiceAggreg
           who&rsquo;s honest. Sound familiar? The idea is simple: when
           everyone can see what things actually cost around here, we all make
           more informed decisions &mdash; and nobody overpays just because they
-          were guessing. Real local prices paid by your neighbors in North
-          Carolina&rsquo;s Raleigh-Durham Triangle and surrounding areas.
-          Entries backed by a source document are marked Verified.
+          were guessing or unsure of whether they should negotiate. The more
+          that people contribute, the more useful this becomes. Real local
+          prices paid by your neighbors in North Carolina&rsquo;s
+          Raleigh-Durham Triangle and surrounding areas. Entries backed by a
+          source document are marked Verified.
         </p>
       </section>
 
