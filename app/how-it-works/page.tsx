@@ -26,13 +26,14 @@ export default function HowItWorksPage() {
       <div className="mt-8 space-y-5">
         <Section n="1" title="Where the data comes from">
           <p>
-            Prices come from neighbors in {siteConfig.regionLongName} who submit what
-            they <strong>paid</strong> or were <strong>quoted</strong> — every entry is
-            labeled one or the other.
+            Crowdsourcing. Neighbors in {siteConfig.regionLongName} share what
+            they <strong>paid</strong> or were <strong>quoted</strong> for home
+            services — every entry is labeled one or the other.
           </p>
           <p>
-            We never scrape prices from business websites, never invent entries, and
-            never present a national average as a local price.
+            The idea is simple: when everyone can see what things actually cost
+            around here, we all make more informed decisions — and nobody
+            overpays just because they were guessing.
           </p>
         </Section>
 
@@ -70,21 +71,7 @@ export default function HowItWorksPage() {
           </p>
         </Section>
 
-        <Section n="4" title="How aggregates work">
-          <p>
-            Per-service cards show the <strong>range, median, and count</strong> of
-            verified reports — computed directly from the database, no editorial
-            judgment. The median appears once a service has two or more verified
-            reports. Paid prices and quotes are counted separately and labeled.
-          </p>
-          <p>
-            That’s the whole product: what a service costs around here, from real
-            reports. No business comparisons, no leaderboards — we deliberately
-            don’t track who charged what.
-          </p>
-        </Section>
-
-        <Section n="5" title="For businesses">
+        <Section n="4" title="For businesses">
           <p>
             There are no business profiles, no dispute flows, and no owner responses —
             the site doesn’t track businesses at all, so there’s nothing to claim or
@@ -94,39 +81,19 @@ export default function HowItWorksPage() {
           </p>
         </Section>
 
-        <Section n="6" title="Money and independence">
+        <Section n="5" title="Money and independence">
           <p>
-            The site runs with <strong>no ads and no pay-to-play placement</strong>.
-            There is nothing for a business to buy here — no rankings, no profiles,
-            no featured slots tied to price data.
+            This site runs ads. That’s the deal that keeps it free and
+            accessible to everyone — the ads simply keep the site running.
           </p>
           <p>
-            If sponsored placements ever exist in the future, they will be{" "}
-            <strong>clearly labeled as sponsored</strong> and will never affect price
-            data. The numbers stay independent — full stop.
-          </p>
-        </Section>
-
-        <Section n="7" title="The legal basis, in plain English">
-          <p>
-            Sharing a price you paid or were quoted is sharing <strong>your own
-            experience</strong> — not a trade secret. In the U.S., truthful price
-            reporting is protected speech.
-          </p>
-          <p>
-            The federal <strong>Consumer Review Fairness Act (2016)</strong> makes it
-            illegal for businesses to use form contracts to gag honest customer reviews.
-            As a platform for user-submitted content, the site is shielded by{" "}
-            <strong>Section 230</strong> of the Communications Decency Act.
-          </p>
-          <p>
-            That protection doesn’t cover falsehoods: entries proven false are removed,
-            and submitters attest under the Terms of Service that their entries are
-            truthful.
+            Ads never affect the price data. There is nothing for a business to
+            buy here: no rankings, no profiles, no featured slots tied to the
+            numbers. The data stays independent — full stop.
           </p>
         </Section>
 
-        <Section n="8" title="What we don't do">
+        <Section n="6" title="What we don't do">
           <ul className="list-disc pl-5 space-y-1">
             <li>We never publish homeowners’ personal data — no names, addresses, or phone numbers.</li>
             <li>We never sell personal data to anyone.</li>
