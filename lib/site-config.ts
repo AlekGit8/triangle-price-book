@@ -17,6 +17,13 @@ export const siteConfig = {
   /** Placeholder until a real domain is registered. */
   domainPlaceholder: "trianglepricebook.com",
 
+  /**
+   * Canonical base URL used for sitemap.xml, robots.txt, and metadata.
+   * Currently the Vercel production URL — change to
+   * "https://trianglepricebook.com" once the domain is bought and connected.
+   */
+  siteUrl: "https://triangle-price-book.vercel.app",
+
   /** Human-readable region label used in copy. */
   regionName: "the Triangle",
 
