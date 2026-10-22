@@ -35,3 +35,26 @@ export const siteConfig = {
 } as const;
 
 export type Category = (typeof siteConfig.categories)[number];
+
+/** URL slugs for per-category landing pages (/hvac, /plumbing, …). */
+export const categorySlugs = {
+  HVAC: "hvac",
+  Plumbing: "plumbing",
+  Electrical: "electrical",
+  Roofing: "roofing",
+  "Windows & Doors": "windows-doors",
+  Painting: "painting",
+  Flooring: "flooring",
+  Landscaping: "landscaping",
+  Fencing: "fencing",
+  "Tree Service": "tree-service",
+  "Septic Systems": "septic-systems",
+  "Handyman/Other": "handyman",
+} as const satisfies Record<Category, string>;
+
+export function categoryFromSlug(slug: string): Category | undefined {
+  const entry = (Object.entries(categorySlugs) as Array<[Category, string]>).find(
+    ([, s]) => s === slug
+  );
+  return entry?.[0];
+}

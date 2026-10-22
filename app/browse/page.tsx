@@ -10,7 +10,9 @@ import ReportCard from "@/components/ReportCard";
 function BrowseInner() {
   const searchParams = useSearchParams();
   const initial = searchParams.get("category") ?? "All";
+  const initialService = searchParams.get("service") ?? "";
   const [category, setCategory] = useState(initial);
+  const [service, setService] = useState(initialService);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [unconfigured, setUnconfigured] = useState(false);
@@ -36,10 +38,16 @@ function BrowseInner() {
     })();
   }, []);
 
-  const filtered = useMemo(
-    () => (category === "All" ? reports : reports.filter((r) => r.category === category)),
-    [reports, category]
-  );
+  const filtered = useMemo(() => {
+    let rs = category === "All" ? reports : reports.filter((r) => r.category === category);
+    if (service) rs = rs.filter((r) => r.service_name === service);
+    return rs;
+  }, [reports, category, service]);
+
+  function pickCategory(c: string) {
+    setCategory(c);
+    setService("");
+  }
 
   const chips = ["All", ...siteConfig.categories];
 
@@ -54,7 +62,7 @@ function BrowseInner() {
         {chips.map((c) => (
           <button
             key={c}
-            onClick={() => setCategory(c)}
+            onClick={() => pickCategory(c)}
             className={`rounded-full px-4 py-2 text-sm font-medium border ${
               category === c
                 ? "bg-brand-700 text-white border-brand-700"
@@ -65,6 +73,21 @@ function BrowseInner() {
           </button>
         ))}
       </div>
+
+      {service && (
+        <div className="mt-4">
+          <span className="inline-flex items-center gap-2 rounded-full bg-brand-100 px-4 py-2 text-sm font-medium text-brand-900">
+            {service}
+            <button
+              onClick={() => setService("")}
+              aria-label="Clear service filter"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-200 text-brand-900 hover:bg-brand-300"
+            >
+              ×
+            </button>
+          </span>
+        </div>
+      )}
 
       <div className="mt-6">
         {loading ? (
@@ -79,7 +102,13 @@ function BrowseInner() {
           </div>
         ) : filtered.length === 0 ? (
           <p className="text-stone-600">
-            No reports in this category yet.{" "}
+            {service ? (
+              <>
+                No reports for &ldquo;{service}&rdquo; yet.{" "}
+              </>
+            ) : (
+              <>No reports in this category yet.{" "}</>
+            )}
             <a href="/submit" className="font-semibold text-brand-700 hover:underline">
               Be the first to share one.
             </a>

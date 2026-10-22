@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
-import { siteConfig } from "@/lib/site-config";
+import { siteConfig, categorySlugs } from "@/lib/site-config";
 import type { ServiceAggregate } from "@/lib/data";
 import StatsStrip from "@/components/StatsStrip";
 import AggregateCard from "@/components/AggregateCard";
@@ -85,7 +85,7 @@ export default function HomepageBody({ aggregates }: { aggregates: ServiceAggreg
           {siteConfig.categories.map((c) => (
             <Link
               key={c}
-              href={`/browse?category=${encodeURIComponent(c)}`}
+              href={`/${categorySlugs[c]}`}
               className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:border-brand-600 hover:text-brand-800"
             >
               {c}

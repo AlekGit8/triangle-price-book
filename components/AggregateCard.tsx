@@ -1,13 +1,20 @@
+import Link from "next/link";
 import { formatCents } from "@/lib/format";
 import type { ServiceAggregate } from "@/lib/data";
 
 /**
  * Per-service aggregate card: range, median, report counts.
+ * Links to the browse page filtered to this service's reports.
  * No business names appear anywhere on this card.
  */
 export default function AggregateCard({ agg }: { agg: ServiceAggregate }) {
+  const href = `/browse?category=${encodeURIComponent(agg.category)}&service=${encodeURIComponent(agg.service_name)}`;
   return (
-    <article className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+    <Link
+      href={href}
+      aria-label={`See all ${agg.service_name} price reports`}
+      className="block rounded-xl border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-400 hover:shadow-md"
+    >
       <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
         {agg.category}
       </p>
@@ -41,6 +48,9 @@ export default function AggregateCard({ agg }: { agg: ServiceAggregate }) {
         {agg.verified_count} verified report{agg.verified_count === 1 ? "" : "s"} ·{" "}
         {agg.paid_count} paid · {agg.quote_count} quote{agg.quote_count === 1 ? "" : "s"}
       </p>
-    </article>
+      <p className="mt-3 text-sm font-semibold text-brand-700">
+        See reports →
+      </p>
+    </Link>
   );
 }
