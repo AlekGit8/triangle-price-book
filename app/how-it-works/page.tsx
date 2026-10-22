@@ -28,8 +28,7 @@ export default function HowItWorksPage() {
           <p>
             Prices come from neighbors in {siteConfig.regionLongName} who submit what
             they <strong>paid</strong> or were <strong>quoted</strong> — every entry is
-            labeled one or the other. We also seed the database with public permit
-            valuations where available, clearly labeled as such.
+            labeled one or the other.
           </p>
           <p>
             We never scrape prices from business websites, never invent entries, and
@@ -40,8 +39,11 @@ export default function HowItWorksPage() {
         <Section n="2" title="The anonymity model">
           <p>
             The submission form asks for the service, the price, the town, and
-            the date — nothing that identifies who did the work or who paid
-            for it.
+            the date. If you attach a quote or invoice, the document itself may
+            contain names or other details — but none of that is ever listed
+            publicly. No addresses where work was done, no customer names, no
+            business names: public entries show only the price, the service,
+            the town, and the date.
           </p>
           <p>
             Public entries are attributed only as “reported by a homeowner

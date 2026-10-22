@@ -33,7 +33,7 @@ export default async function HomePage() {
             href="/submit"
             className="inline-block rounded-full bg-accent-500 px-6 py-3 font-bold text-white hover:bg-accent-600"
           >
-            Share what you paid
+            Share what you paid, anonymously
           </Link>
         </div>
       </section>
@@ -50,9 +50,8 @@ export default async function HomePage() {
         </p>
         <p className="mt-2 text-stone-600">
           Three quotes, three wildly different numbers, zero idea
-          who&rsquo;s honest. Sound familiar? Google gives you national
-          averages that mean nothing in the Triangle. This exists so you
-          don&rsquo;t have to guess &mdash; just real prices paid by your
+          who&rsquo;s honest. Sound familiar? This exists so you
+          don&rsquo;t have to guess &mdash; just real local prices paid by your
           neighbors in North Carolina&rsquo;s Raleigh-Durham Triangle and
           surrounding areas. Entries backed by a source document are marked
           Verified.
