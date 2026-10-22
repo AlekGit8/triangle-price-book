@@ -496,13 +496,13 @@ export default function SubmitPage() {
       <p className="mt-6 text-sm font-bold uppercase tracking-wide text-brand-800">
         Option 1 · Upload a document (preferred)
       </p>
-      <div className="mt-2 rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 p-5">
+      <div className="mt-2 rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 p-5 focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-200">
         <input
           ref={docInputRef}
           id="docUpload"
           type="file"
           accept="image/*,.pdf"
-          className="hidden"
+          className="sr-only"
           onChange={handleDocChange}
         />
         <label
