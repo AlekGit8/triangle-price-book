@@ -9,8 +9,8 @@ export default function SiteFooter() {
           <div className="max-w-sm">
             <p className="font-bold text-brand-900">{siteConfig.siteName}</p>
             <p className="mt-2">
-              Crowdsourced, anonymized home-services prices for{" "}
-              {siteConfig.regionLongName}.
+              Crowdsourced, anonymized home-services prices for The Triangle,
+              North Carolina.
             </p>
             <p className="mt-2 italic">
               Built by a local Triangle homeowner to make all our lives easier.
