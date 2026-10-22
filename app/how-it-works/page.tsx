@@ -97,8 +97,7 @@ export default function HowItWorksPage() {
           <ul className="list-disc pl-5 space-y-1">
             <li>We never publish homeowners’ personal data — no names, addresses, or phone numbers.</li>
             <li>We never sell personal data to anyone.</li>
-            <li>We don’t run fake entries, and moderated-out fakes never reach the public site.</li>
-            <li>We don’t edit user entries — we remove or keep them.</li>
+            <li>We don’t edit user entries — we remove obviously fake entries, or keep real entries.</li>
           </ul>
         </Section>
       </div>
