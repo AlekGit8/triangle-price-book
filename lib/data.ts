@@ -46,6 +46,9 @@ export async function getApprovedReports(category?: string): Promise<Report[]> {
       )
       .neq("verification_status", "rejected")
       .order("created_at", { ascending: false })
+      // created_at ties (e.g. the seed rows, all inserted in one migration
+      // transaction) — break them by most recent service date, dateless last.
+      .order("service_date", { ascending: false, nullsFirst: false })
       .limit(200);
     if (category && category !== "All") q = q.eq("category", category);
     const { data, error } = await q;

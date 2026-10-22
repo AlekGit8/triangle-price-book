@@ -23,10 +23,25 @@ function Badge({
 }
 
 /**
+ * Owner seed markers ("Owner seed data…") are internal bookkeeping from the
+ * site's initial data load. Strip any sentence carrying one so visitors never
+ * see it, keeping the rest of the note.
+ */
+function publicNote(notes: string | null): string | null {
+  if (!notes) return null;
+  const kept = notes
+    .split(/(?<=[.!?])\s+/)
+    .filter((s) => !(/owner/i.test(s) && /seed/i.test(s)));
+  const cleaned = kept.join(" ").replace(/\s+/g, " ").trim();
+  return cleaned ? cleaned : null;
+}
+
+/**
  * One anonymized price entry. Never renders a business name —
  * attribution is always "a verified homeowner in {town}".
  */
 export default function ReportCard({ report }: { report: Report }) {
+  const note = publicNote(report.notes);
   return (
     <article className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -57,8 +72,8 @@ export default function ReportCard({ report }: { report: Report }) {
           {report.service_date ? ` · ${formatMonthYear(report.service_date)}` : ""}
         </span>
       </div>
-      {report.notes && (
-        <p className="mt-3 text-sm text-stone-600">{report.notes}</p>
+      {note && (
+        <p className="mt-3 text-sm text-stone-600">{note}</p>
       )}
       <p className="mt-3 text-xs italic text-stone-400">
         Reported by {report.verification_status === "verified" ? "a verified" : "a"}{" "}
