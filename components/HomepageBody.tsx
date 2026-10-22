@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { siteConfig, categorySlugs } from "@/lib/site-config";
-import type { ServiceAggregate } from "@/lib/data";
+import type { ServiceAggregate, Report } from "@/lib/data";
 import StatsStrip from "@/components/StatsStrip";
-import AggregateCard from "@/components/AggregateCard";
+import ReportCard from "@/components/ReportCard";
 
 function normalize(s: string): string {
   return s
@@ -19,22 +19,31 @@ function singularize(w: string): string {
   return w.length > 3 && w.endsWith("s") ? w.slice(0, -1) : w;
 }
 
-/** Every word in the query (plural-insensitive) must appear in the service name or category. */
-function matchesService(agg: ServiceAggregate, query: string): boolean {
+/** Every word in the query (plural-insensitive) must appear in the service name, category, or town. */
+function matchesReport(
+  report: { service_name: string; category: string; town: string },
+  query: string
+): boolean {
   const tokens = normalize(query).split(" ").filter(Boolean).map(singularize);
   if (tokens.length === 0) return true;
-  const haystack = normalize(`${agg.service_name} ${agg.category}`);
+  const haystack = normalize(`${report.service_name} ${report.category} ${report.town}`);
   return tokens.every((t) => haystack.includes(t));
 }
 
-export default function HomepageBody({ aggregates }: { aggregates: ServiceAggregate[] }) {
+export default function HomepageBody({
+  aggregates,
+  recentReports,
+}: {
+  aggregates: ServiceAggregate[];
+  recentReports: Report[];
+}) {
   const [query, setQuery] = useState("");
   const resultsRef = useRef<HTMLElement>(null);
 
   const isFiltering = normalize(query).length > 0;
   const filtered = useMemo(
-    () => aggregates.filter((a) => matchesService(a, query)),
-    [aggregates, query]
+    () => recentReports.filter((r) => matchesReport(r, query)),
+    [recentReports, query]
   );
 
   function scrollToResults(e: React.FormEvent) {
@@ -120,7 +129,7 @@ export default function HomepageBody({ aggregates }: { aggregates: ServiceAggreg
         </p>
       </section>
 
-      {/* Aggregates */}
+      {/* Recently reported */}
       <section ref={resultsRef} className="mt-10 scroll-mt-6">
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-2xl font-bold text-brand-900">
@@ -129,7 +138,7 @@ export default function HomepageBody({ aggregates }: { aggregates: ServiceAggreg
                 Results for &ldquo;{query.trim()}&rdquo;
               </>
             ) : (
-              "Price ranges by service"
+              "Recently reported services"
             )}
           </h2>
           <Link href="/browse" className="shrink-0 text-sm font-semibold text-brand-700 hover:underline">
@@ -138,14 +147,14 @@ export default function HomepageBody({ aggregates }: { aggregates: ServiceAggreg
         </div>
         {isFiltering && (
           <p className="mt-2 text-sm text-stone-500">
-            {filtered.length} service{filtered.length === 1 ? "" : "s"} found
+            {filtered.length} report{filtered.length === 1 ? "" : "s"} found
           </p>
         )}
         {filtered.length === 0 ? (
           <p className="mt-4 text-stone-600">
             {isFiltering ? (
               <>
-                No prices for &ldquo;{query.trim()}&rdquo; yet. Be the first to{" "}
+                No reports for &ldquo;{query.trim()}&rdquo; yet. Be the first to{" "}
                 <Link href="/submit" className="font-semibold text-brand-700 hover:underline">
                   share what you paid
                 </Link>
@@ -153,7 +162,7 @@ export default function HomepageBody({ aggregates }: { aggregates: ServiceAggreg
               </>
             ) : (
               <>
-                No approved reports yet. Be the first to{" "}
+                No reports yet. Be the first to{" "}
                 <Link href="/submit" className="font-semibold text-brand-700 hover:underline">
                   share what you paid
                 </Link>
@@ -162,9 +171,9 @@ export default function HomepageBody({ aggregates }: { aggregates: ServiceAggreg
             )}
           </p>
         ) : (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((agg) => (
-              <AggregateCard key={`${agg.category}-${agg.service_name}`} agg={agg} />
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {filtered.map((report) => (
+              <ReportCard key={report.id} report={report} />
             ))}
           </div>
         )}
