@@ -19,10 +19,9 @@ export const siteConfig = {
 
   /**
    * Canonical base URL used for sitemap.xml, robots.txt, and metadata.
-   * Currently the Vercel production URL — change to
-   * "https://trianglepricebook.com" once the domain is bought and connected.
+   * Custom domain connected Oct 22, 2026 — apex 308-redirects to www (Vercel recommended).
    */
-  siteUrl: "https://triangle-price-book.vercel.app",
+  siteUrl: "https://www.trianglepricebook.com",
 
   /** Human-readable region label used in copy. */
   regionName: "the Triangle",
