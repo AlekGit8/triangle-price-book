@@ -7,6 +7,18 @@ import { siteConfig } from "@/lib/site-config";
 import type { Report } from "@/lib/data";
 import ReportCard from "@/components/ReportCard";
 
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function singularize(w: string): string {
+  return w.length > 3 && w.endsWith("s") ? w.slice(0, -1) : w;
+}
+
 function BrowseInner() {
   const searchParams = useSearchParams();
   const initial = searchParams.get("category") ?? "All";
@@ -14,6 +26,7 @@ function BrowseInner() {
   const [category, setCategory] = useState(initial);
   const [service, setService] = useState(initialService);
   const [sort, setSort] = useState<"date-desc" | "date-asc" | "price-desc" | "price-asc">("date-desc");
+  const [query, setQuery] = useState("");
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [unconfigured, setUnconfigured] = useState(false);
@@ -42,8 +55,15 @@ function BrowseInner() {
   const filtered = useMemo(() => {
     let rs = category === "All" ? reports : reports.filter((r) => r.category === category);
     if (service) rs = rs.filter((r) => r.service_name === service);
+    const tokens = normalize(query).split(" ").filter(Boolean).map(singularize);
+    if (tokens.length > 0) {
+      rs = rs.filter((r) => {
+        const haystack = normalize(`${r.service_name} ${r.category} ${r.town}`);
+        return tokens.every((t) => haystack.includes(t));
+      });
+    }
     return rs;
-  }, [reports, category, service]);
+  }, [reports, category, service, query]);
 
   const effectiveDate = (r: Report) => r.service_date ?? r.created_at.slice(0, 10);
 
@@ -88,6 +108,36 @@ function BrowseInner() {
       <p className="mt-2 text-stone-600">
         Every entry is anonymous.
       </p>
+
+      <form
+        className="mt-6"
+        role="search"
+        onSubmit={(e) => e.preventDefault()}
+      >
+        <label htmlFor="browse-search" className="text-sm font-semibold text-stone-700">
+          What prices are you searching for?
+        </label>
+        <div className="mt-2 flex gap-2">
+          <input
+            id="browse-search"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder='Try "water heater" or "roof"'
+            autoComplete="off"
+            className="w-full rounded-full border border-stone-300 bg-white px-5 py-3 text-stone-900 placeholder:text-stone-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="shrink-0 rounded-full border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-600 hover:border-stone-400 hover:text-stone-800"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </form>
 
       <div className="mt-6 flex flex-wrap gap-2">
         {chips.map((c) => (
@@ -153,7 +203,11 @@ function BrowseInner() {
             </p>
           </div>
         ) : filtered.length === 0 ? (          <p className="text-stone-600">
-            {service ? (
+            {query ? (
+              <>
+                No reports match &ldquo;{query}&rdquo;.{" "}
+              </>
+            ) : service ? (
               <>
                 No reports for &ldquo;{service}&rdquo; yet.{" "}
               </>
