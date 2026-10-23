@@ -98,9 +98,6 @@ export default function AdminPage() {
     return (
       <div className="py-16 max-w-sm mx-auto">
         <h1 className="text-2xl font-extrabold text-brand-900">Moderation</h1>
-        <p className="mt-2 text-sm text-stone-600">
-          Enter the admin key from your <code>.env.local</code> (ADMIN_KEY).
-        </p>
         <form
           className="mt-4 flex gap-2"
           onSubmit={(e) => {
