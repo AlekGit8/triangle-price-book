@@ -19,6 +19,12 @@ interface QueueReport {
   verifications: Array<{ id: string; invoice_path: string; created_at: string }>;
 }
 
+interface Signup {
+  email: string;
+  wants_updates: boolean;
+  created_at: string;
+}
+
 type Action = "verify" | "publish_unverified" | "reject";
 
 export default function AdminPage() {
@@ -26,9 +32,28 @@ export default function AdminPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [reports, setReports] = useState<QueueReport[]>([]);
   const [published, setPublished] = useState<QueueReport[]>([]);
-  const [tab, setTab] = useState<"queue" | "published">("queue");
+  const [tab, setTab] = useState<"queue" | "published" | "signups">("queue");
+  const [signups, setSignups] = useState<Signup[]>([]);
+  const [signupStats, setSignupStats] = useState({ total: 0, updatesOptIn: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  async function loadSignups(k: string) {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/signups", { headers: { "x-admin-key": k } });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "Failed to load");
+      setSignups(json.signups);
+      setSignupStats({ total: json.total, updatesOptIn: json.updatesOptIn });
+      setUnlocked(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function load(k: string, scope: "queue" | "published" = "queue") {
     setLoading(true);
@@ -82,6 +107,7 @@ export default function AdminPage() {
             e.preventDefault();
             load(key, "queue");
             load(key, "published");
+            loadSignups(key);
           }}
         >
           <input
@@ -108,7 +134,7 @@ export default function AdminPage() {
     <div className="py-10">
       <div className="flex items-baseline justify-between">
         <h1 className="text-3xl font-extrabold text-brand-900">Moderation</h1>
-        <button onClick={() => load(key, tab)} className="text-sm font-semibold text-brand-700 hover:underline">
+        <button onClick={() => { if (tab === "signups") loadSignups(key); else load(key, tab); }} className="text-sm font-semibold text-brand-700 hover:underline">
           Refresh
         </button>
       </div>
@@ -117,22 +143,60 @@ export default function AdminPage() {
         to review the queue and take down anything abusive.
       </p>
 
-      <div className="mt-4 flex gap-2">
-        {(["queue", "published"] as const).map((t) => (
+      <div className="mt-4 flex flex-wrap gap-2">
+        {(["queue", "published", "signups"] as const).map((t) => (
           <button
             key={t}
-            onClick={() => { setTab(t); load(key, t); }}
+            onClick={() => { setTab(t); if (t === "signups") loadSignups(key); else load(key, t); }}
             className={`rounded-full px-4 py-2 text-sm font-semibold ${
               tab === t
                 ? "bg-brand-700 text-white"
                 : "border border-stone-300 text-stone-700 hover:border-brand-600"
             }`}
           >
-            {t === "queue" ? `Review queue (${reports.length})` : `Published (${published.length})`}
+            {t === "queue"
+              ? `Review queue (${reports.length})`
+              : t === "published"
+                ? `Published (${published.length})`
+                : `Launch signups (${signupStats.total})`}
           </button>
         ))}
       </div>
 
+      {tab === "signups" ? (
+        <div className="mt-6">
+          <div className="grid grid-cols-2 gap-4 max-w-md">
+            <div className="rounded-xl border border-stone-200 bg-white p-5">
+              <p className="text-3xl font-bold text-brand-800">{signupStats.total}</p>
+              <p className="text-sm text-stone-600">Launch notifications</p>
+            </div>
+            <div className="rounded-xl border border-stone-200 bg-white p-5">
+              <p className="text-3xl font-bold text-brand-800">{signupStats.updatesOptIn}</p>
+              <p className="text-sm text-stone-600">Opted into updates</p>
+            </div>
+          </div>
+          <div className="mt-6 space-y-2">
+            {signups.map((s) => (
+              <div key={s.email} className="flex items-center justify-between rounded-lg border border-stone-200 bg-white px-4 py-2.5">
+                <span className="text-sm text-stone-800">{s.email}</span>
+                <span className="flex items-center gap-3">
+                  {s.wants_updates && (
+                    <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-semibold text-brand-800">
+                      Updates
+                    </span>
+                  )}
+                  <span className="text-xs text-stone-400">
+                    {new Date(s.created_at).toLocaleDateString()}
+                  </span>
+                </span>
+              </div>
+            ))}
+            {signups.length === 0 && (
+              <p className="text-stone-600">No signups yet.</p>
+            )}
+          </div>
+        </div>
+      ) : (
       <div className="mt-6 space-y-4">
         {(tab === "queue" ? reports : published).map((r) => (
           <article key={r.id} className="rounded-xl border border-stone-200 bg-white p-5">
@@ -207,6 +271,7 @@ export default function AdminPage() {
           </p>
         )}
       </div>
+      )}
     </div>
   );
 }
