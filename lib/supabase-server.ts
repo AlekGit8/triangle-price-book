@@ -13,5 +13,12 @@ export function getServiceSupabase(): SupabaseClient {
       "Missing Supabase env vars. Copy .env.example to .env.local and fill in NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
     );
   }
-  return createClient(url, serviceKey);
+  return createClient(url, serviceKey, {
+    global: {
+      // Bypass Next.js Data Cache for Supabase fetches: reports must always
+      // reflect the live database, never a cached response.
+      fetch: (input, init) =>
+        fetch(input, { ...init, cache: "no-store" }),
+    },
+  });
 }
