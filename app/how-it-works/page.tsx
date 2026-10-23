@@ -14,92 +14,114 @@ function Section({ n, title, children }: { n: string; title: string; children: R
   );
 }
 
+function PlainSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-xl border border-stone-200 bg-white p-6">
+      <h2 className="text-xl font-bold text-brand-900">{title}</h2>
+      <div className="mt-3 space-y-3 text-stone-600 text-[15px] leading-relaxed">{children}</div>
+    </section>
+  );
+}
+
+export const metadata = {
+  title: `How ${siteConfig.siteName} works`,
+  description:
+    "Real prices from real neighbors. How submissions, verification, and privacy work on Triangle Price Book.",
+};
+
 export default function HowItWorksPage() {
   return (
     <div className="py-10 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-extrabold text-brand-900">How this works</h1>
-      <p className="mt-3 text-stone-600">
-        Full transparency on where the data comes from, what we do with it, and how
-        the site stays honest. No fine print.
+      <h1 className="text-3xl font-extrabold text-brand-900">How {siteConfig.siteName} works</h1>
+      <p className="mt-3 text-lg text-stone-600">
+        Real prices from real neighbors. Free, no accounts, no catch.
       </p>
 
       <div className="mt-8 space-y-5">
-        <Section n="1" title="Where the data comes from">
+        <Section n="1" title="Homeowners share what they paid">
           <p>
-            Crowdsourcing. Neighbors in {siteConfig.regionLongName} share what
-            they <strong>paid</strong> or were <strong>quoted</strong> for home
-            services — every entry is labeled one or the other.
-          </p>
-          <p>
-            The idea is simple: when everyone can see what things actually cost
-            around here, we all make more informed decisions — and nobody
-            overpays just because they were guessing.
+            Anyone in the Triangle can post what they paid or were quoted for a
+            home project: HVAC, plumbing, roofing, fencing, whatever. It takes
+            about a minute, and you don&rsquo;t need an account.
           </p>
         </Section>
 
-        <Section n="2" title="The anonymity model">
-          <p>
-            The submission form asks for the service, the price, the town, and
-            the date. If you attach a quote or invoice, the document itself may
-            contain names or other details — but none of that is ever listed
-            publicly. No addresses where work was done, no customer names, no
-            business names: public entries show only the price, the service,
-            the town, and the date.
+        <Section n="2" title="Verified or not, it goes up">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-[15px]">
+              <thead>
+                <tr className="border-b border-stone-200">
+                  <th className="py-2 pr-4 font-semibold text-stone-400 w-28"></th>
+                  <th className="py-2 pr-4 font-bold text-brand-900">Verified</th>
+                  <th className="py-2 font-bold text-brand-900">Not verified</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-stone-100">
+                  <td className="py-2 pr-4 font-semibold text-stone-700">What it means</td>
+                  <td className="py-2 pr-4">Submitted with a quote or invoice</td>
+                  <td className="py-2">Submitted without a document</td>
+                </tr>
+                <tr className="border-b border-stone-100">
+                  <td className="py-2 pr-4 font-semibold text-stone-700">Published?</td>
+                  <td className="py-2 pr-4">Yes</td>
+                  <td className="py-2">Yes, clearly labeled</td>
+                </tr>
+                <tr>
+                  <td className="py-2 pr-4 font-semibold text-stone-700">Why</td>
+                  <td className="py-2 pr-4">Backed by paperwork</td>
+                  <td className="py-2">Still useful, and we&rsquo;d rather share it than hide it</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="font-semibold text-stone-700">
+            Price ranges and medians are calculated from Verified entries only.
           </p>
           <p>
-            Public entries are attributed only as “reported by a homeowner
-            in {`{town}`},” never by name, address, or contact info. There is no
-            business directory here, no rankings, no profiles — just prices.
-          </p>
-        </Section>
-
-        <Section n="3" title="Verification">
-          <p>
-            Every entry marked <strong>Verified</strong> was submitted with a
-            source document — a quote or invoice — attached. Documents stay
-            private: only moderators ever see them.
-          </p>
-          <p>
-            You can also submit a price <strong>without</strong> a document.
-            Those entries publish instantly as <strong>unverified community
-            reports</strong> — clearly labeled, and never counted in the range
-            and median figures, which come from verified reports only. Our
-            system checks uploaded files to make sure they’re actually
-            home-services quotes or invoices with readable details — anything
-            else is rejected before it can publish. Moderators spot-check
-            entries and remove anything abusive or fake.
-          </p>
-        </Section>
-
-        <Section n="4" title="For businesses">
-          <p>
-            There are no business profiles, no dispute flows, and no owner responses —
-            the site doesn’t track businesses at all, so there’s nothing to claim or
-            dispute. A business that believes a specific entry is false can still
-            contact us and we’ll review it under the takedown process in our Terms
-            of Service.
+            Your document is only used to check the price is real. It&rsquo;s
+            never shown publicly.
           </p>
         </Section>
 
-        <Section n="5" title="Money and independence">
+        <Section n="3" title="Your privacy is protected">
           <p>
-            This site runs ads. That’s the deal that keeps it free and
-            accessible to everyone — the ads simply keep the site running.
-          </p>
-          <p>
-            Ads never affect the price data. There is nothing for a business to
-            buy here: no rankings, no profiles, no featured slots tied to the
-            numbers. The data stays independent — full stop.
+            Public entries show only the <strong>service, price, town, and date</strong>.
+            We never post names, addresses, or business names, so you can share
+            freely and nobody gets called out.
           </p>
         </Section>
 
-        <Section n="6" title="What we don't do">
-          <ul className="list-disc pl-5 space-y-1">
-            <li>We never publish homeowners’ personal data — no names, addresses, or phone numbers.</li>
-            <li>We never sell personal data to anyone.</li>
-            <li>We don’t edit user entries — we remove obviously fake entries, or keep real entries.</li>
-          </ul>
-        </Section>
+        <PlainSection title="Why it's free">
+          <p>
+            This site exists for the public good: when everyone can see what
+            things really cost, nobody overpays. To cover hosting costs, we run
+            ads, and we hope they&rsquo;re useful ones, like local home-service
+            deals. Ads are separate from the price data and have no influence on
+            what gets posted.
+          </p>
+        </PlainSection>
+
+        <PlainSection title="Quick answers">
+          <dl className="space-y-3">
+            <div>
+              <dt className="font-semibold text-stone-800">Do I need an account?</dt>
+              <dd>No.</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-stone-800">Is it really free?</dt>
+              <dd>Yes. Ads keep the lights on.</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-stone-800">Can a business pay to change or remove prices?</dt>
+              <dd>No. There are no business profiles, rankings, or paid placements.</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-stone-800">Think an entry is wrong?</dt>
+              <dd>Contact us and we&rsquo;ll review it.</dd>
+            </div>
+          </dl>
+        </PlainSection>
       </div>
     </div>
   );
