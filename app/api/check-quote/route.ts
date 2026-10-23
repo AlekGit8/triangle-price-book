@@ -18,7 +18,7 @@ function tokens(s: string): Set<string> {
 /** Shared significant tokens between the user's description and a report name. */
 function matchScore(query: Set<string>, name: Set<string>): number {
   let shared = 0;
-  for (const t of query) if (name.has(t)) shared++;
+  query.forEach((t) => { if (name.has(t)) shared++; });
   return shared;
 }
 
@@ -81,9 +81,9 @@ export async function POST(req: Request) {
       min_cents: min,
       median_cents: median,
       max_cents: max,
-      matched: queryTokens.size > 0 ? [...queryTokens].filter((t) =>
+      matched: Array.from(queryTokens).filter((t) =>
         scored.some((r) => tokens(r.service_name).has(t))
-      ) : [],
+      ),
       samples: scored.slice(0, 12).map((r) => ({
         amount_cents: r.amount_cents,
         service_name: r.service_name,
