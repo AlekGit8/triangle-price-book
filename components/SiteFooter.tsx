@@ -35,6 +35,9 @@ export default function SiteFooter() {
           Operated by {siteConfig.operatorName}. Prices are community-reported
           and anonymous; verify before hiring.
         </p>
+        <p className="mt-2 text-xs text-stone-400">
+          © 2026 {siteConfig.operatorName}. All rights reserved.
+        </p>
       </div>
     </footer>
   );
