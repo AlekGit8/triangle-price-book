@@ -3,7 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { siteConfig } from "@/lib/site-config";
-import { formatCents } from "@/lib/format";
+import { formatCents, formatMonthYear } from "@/lib/format";
+
+interface Sample {
+  amount_cents: number;
+  service_name: string;
+  town: string;
+  service_date: string | null;
+}
 
 interface CheckResult {
   ok: boolean;
@@ -12,6 +19,8 @@ interface CheckResult {
   min_cents?: number;
   median_cents?: number;
   max_cents?: number;
+  matched?: string[];
+  samples?: Sample[];
   error?: string;
 }
 
@@ -19,35 +28,36 @@ function verdictFor(priceCents: number, r: CheckResult): { headline: string; det
   const min = r.min_cents!, median = r.median_cents!, max = r.max_cents!;
   if (priceCents < min)
     return {
-      headline: "Below the typical Triangle range",
-      detail: `Your quote is under the lowest verified price we've seen (${formatCents(min)}). That looks like a strong deal — just make sure the scope of work matches what others reported.`,
+      headline: "Below the typical range for this job",
+      detail: `Your quote is under the lowest similar verified price (${formatCents(min)}). That looks like a strong deal — just confirm the scope matches.`,
       tone: "text-green-700",
     };
   if (priceCents <= median)
     return {
-      headline: "Within the typical Triangle range",
-      detail: `Your quote sits at or below the middle of verified Triangle prices (median ${formatCents(median)}). Looks fair.`,
+      headline: "Within the typical range for this job",
+      detail: `Your quote sits at or below the middle of similar verified prices (median ${formatCents(median)}). Looks fair.`,
       tone: "text-green-700",
     };
   if (priceCents <= max)
     return {
-      headline: "Above the typical Triangle range",
-      detail: `Your quote is above the median verified price (${formatCents(median)}). Not necessarily unfair — scope and materials matter — but a second quote is worth getting.`,
+      headline: "Above the typical range for this job",
+      detail: `Your quote is above the median for similar jobs (${formatCents(median)}). Not necessarily unfair — scope and materials matter — but a second quote is worth getting.`,
       tone: "text-amber-700",
     };
   return {
-    headline: "Above the typical Triangle range",
-    detail: `Your quote tops the highest verified price we've seen (${formatCents(max)}). Definitely get at least one more quote before committing.`,
+    headline: "Above the typical range for this job",
+    detail: `Your quote tops the highest similar verified price (${formatCents(max)}). Definitely get at least one more quote before committing.`,
     tone: "text-red-700",
   };
 }
 
 export default function CheckQuotePage() {
   const [category, setCategory] = useState<string>(siteConfig.categories[0]);
+  const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [result, setResult] = useState<CheckResult | null>(null);
   const [submittedPrice, setSubmittedPrice] = useState(0);
-  const [submittedCategory, setSubmittedCategory] = useState("");
+  const [submittedDescription, setSubmittedDescription] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -60,17 +70,21 @@ export default function CheckQuotePage() {
       setError("Please enter a valid price.");
       return;
     }
+    if (description.trim().length < 3) {
+      setError("Please describe the job (e.g. “water heater install”).");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/check-quote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category, price_cents: cents }),
+        body: JSON.stringify({ category, description: description.trim(), price_cents: cents }),
       });
       const json = (await res.json()) as CheckResult;
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Failed");
       setSubmittedPrice(cents);
-      setSubmittedCategory(category);
+      setSubmittedDescription(description.trim());
       setResult(json);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -92,8 +106,8 @@ export default function CheckQuotePage() {
     <div className="py-10 max-w-2xl mx-auto px-4">
       <h1 className="text-3xl font-extrabold text-brand-900">Is this quote fair?</h1>
       <p className="mt-2 text-stone-600">
-        Enter a quote you received and we&rsquo;ll compare it against verified prices
-        reported by Triangle homeowners.
+        Describe the job and enter your quoted price — we&rsquo;ll compare it against
+        similar verified prices from Triangle homeowners.
       </p>
 
       <form onSubmit={check} className="mt-6 rounded-xl border border-stone-200 bg-white p-6 space-y-4">
@@ -111,6 +125,19 @@ export default function CheckQuotePage() {
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+        </div>
+        <div>
+          <label htmlFor="cq-desc" className="block text-sm font-semibold text-stone-700">
+            Describe the job
+          </label>
+          <input
+            id="cq-desc"
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="e.g. water heater install, roof repair, heat pump"
+            className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2.5 text-stone-900 placeholder:text-stone-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100"
+          />
         </div>
         <div>
           <label htmlFor="cq-price" className="block text-sm font-semibold text-stone-700">
@@ -139,11 +166,10 @@ export default function CheckQuotePage() {
 
       {result?.notEnoughData && (
         <div className="mt-6 rounded-xl border border-stone-200 bg-white p-6">
-          <p className="font-semibold text-stone-800">Not enough data yet</p>
+          <p className="font-semibold text-stone-800">No similar jobs yet</p>
           <p className="mt-1 text-stone-600">
-            We {result.count === 0 ? "don't have any" : "only have one"} verified{" "}
-            {submittedCategory} price{result.count === 1 ? "" : "s"} from Triangle
-            homeowners so far — not enough to judge your quote fairly.
+            We haven&rsquo;t seen enough Triangle jobs like &ldquo;{submittedDescription}&rdquo;
+            to judge your quote fairly.
           </p>
           <p className="mt-3 text-stone-600">
             <Link href="/submit" className="font-semibold text-brand-700 hover:underline">
@@ -158,7 +184,7 @@ export default function CheckQuotePage() {
         <div className="mt-6 rounded-xl border border-stone-200 bg-white p-6">
           <p className={`text-xl font-bold ${verdict.tone}`}>{verdict.headline}</p>
           <p className="mt-3 text-lg text-stone-800">
-            Typical {submittedCategory} quotes in the Triangle range from{" "}
+            Similar Triangle jobs range from{" "}
             <span className="font-bold">{formatCents(result.min_cents!)}</span> to{" "}
             <span className="font-bold">{formatCents(result.max_cents!)}</span>.
           </p>
@@ -181,11 +207,32 @@ export default function CheckQuotePage() {
             </div>
           )}
 
+          {result.samples && result.samples.length > 0 && (
+            <div className="mt-6">
+              <p className="text-sm font-semibold text-stone-700">
+                Compared against {result.count} similar verified {result.count === 1 ? "job" : "jobs"}:
+              </p>
+              <ul className="mt-2 space-y-1.5">
+                {result.samples.map((s, i) => (
+                  <li key={i} className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="text-stone-600">
+                      {s.service_name}
+                      <span className="text-stone-400">
+                        {" "}· {s.town}{s.service_date ? ` · ${formatMonthYear(s.service_date)}` : ""}
+                      </span>
+                    </span>
+                    <span className="font-semibold text-stone-800 whitespace-nowrap">
+                      {formatCents(s.amount_cents)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <p className="mt-4 text-xs text-stone-400">
-            Based on {result.count} verified homeowner-reported prices from across the
-            Triangle (median {formatCents(result.median_cents!)}). More data makes this
-            sharper — prices vary with scope, materials, and timing. Always get multiple
-            quotes.
+            Median of similar jobs: {formatCents(result.median_cents!)}. Prices vary with
+            scope, materials, and timing — always get multiple quotes.
           </p>
 
           <div className="mt-4 rounded-lg bg-brand-50 p-4">

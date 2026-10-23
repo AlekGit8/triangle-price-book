@@ -1,20 +1,49 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase-server";
 
+const STOPWORDS = new Set([
+  "a", "an", "the", "and", "or", "for", "with", "of", "to", "in", "on", "at",
+]);
+
+function tokens(s: string): Set<string> {
+  return new Set(
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !STOPWORDS.has(w))
+  );
+}
+
+/** Shared significant tokens between the user's description and a report name. */
+function matchScore(query: Set<string>, name: Set<string>): number {
+  let shared = 0;
+  for (const t of query) if (name.has(t)) shared++;
+  return shared;
+}
+
 /**
- * POST /api/check-quote — compare a homeowner's quote against verified reports.
- * Body: { category: string, price_cents: number }
- * Returns distribution stats + the user's percentile rank within the category.
- * Verified-only, mirroring the service_aggregates view logic.
+ * POST /api/check-quote — compare a homeowner's quote against SIMILAR verified reports.
+ * Body: { category: string, description: string, price_cents: number }
+ * Matches the description against verified report service names by shared tokens
+ * (minimum 2), then returns the range/median of the matches.
  */
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const category = String(body.category ?? "").trim();
+    const description = String(body.description ?? "").trim();
     const priceCents = Math.round(Number(body.price_cents));
 
     if (!category || !Number.isFinite(priceCents) || priceCents <= 0) {
       return NextResponse.json({ ok: false, error: "Invalid input." }, { status: 400 });
+    }
+    const queryTokens = tokens(description);
+    if (queryTokens.size === 0) {
+      return NextResponse.json(
+        { ok: false, error: "Please describe the job (e.g. “water heater install”)." },
+        { status: 400 }
+      );
     }
 
     const sb = getServiceSupabase();
@@ -23,18 +52,22 @@ export async function POST(req: Request) {
       .select("amount_cents, service_name, town, service_date")
       .eq("category", category)
       .eq("verification_status", "verified")
-      .not("moderated_at", "is", null)
-      .order("amount_cents", { ascending: true });
+      .not("moderated_at", "is", null);
     if (error) throw error;
 
-    const rows = data ?? [];
-    const prices = rows.map((r) => r.amount_cents).sort((a, b) => a - b);
-    const count = prices.length;
+    const scored = (data ?? [])
+      .map((r) => ({
+        ...r,
+        score: matchScore(queryTokens, tokens(r.service_name)),
+      }))
+      .filter((r) => r.score >= 2)
+      .sort((a, b) => b.score - a.score || a.amount_cents - b.amount_cents);
 
-    if (count < 2) {
-      return NextResponse.json({ ok: true, count, notEnoughData: true });
+    if (scored.length < 2) {
+      return NextResponse.json({ ok: true, count: scored.length, notEnoughData: true });
     }
 
+    const prices = scored.map((r) => r.amount_cents).sort((a, b) => a - b);
     const min = prices[0];
     const max = prices[prices.length - 1];
     const median =
@@ -44,10 +77,19 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      count,
+      count: scored.length,
       min_cents: min,
       median_cents: median,
       max_cents: max,
+      matched: queryTokens.size > 0 ? [...queryTokens].filter((t) =>
+        scored.some((r) => tokens(r.service_name).has(t))
+      ) : [],
+      samples: scored.slice(0, 12).map((r) => ({
+        amount_cents: r.amount_cents,
+        service_name: r.service_name,
+        town: r.town,
+        service_date: r.service_date,
+      })),
     });
   } catch (err) {
     console.error("check-quote error:", err);
