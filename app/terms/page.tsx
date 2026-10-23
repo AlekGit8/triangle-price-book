@@ -10,6 +10,9 @@ export default function TermsPage() {
     <div className="py-10 max-w-3xl mx-auto prose-stone">
       <h1 className="text-3xl font-extrabold text-brand-900">Terms of Service</h1>
       <p className="mt-2 text-sm text-stone-500">Draft — last updated October 2026</p>
+      <p className="mt-2 text-sm text-stone-600">
+        {siteConfig.siteName} is operated by {siteConfig.operatorName} (“we”, “us”).
+      </p>
 
       <div className="mt-6 space-y-6 text-[15px] leading-relaxed text-stone-700">
         <section>

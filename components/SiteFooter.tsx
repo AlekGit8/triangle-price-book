@@ -32,7 +32,8 @@ export default function SiteFooter() {
           </nav>
         </div>
         <p className="mt-8 text-xs text-stone-400">
-          Prices are community-reported and anonymous; verify before hiring.
+          Operated by {siteConfig.operatorName}. Prices are community-reported
+          and anonymous; verify before hiring.
         </p>
       </div>
     </footer>
