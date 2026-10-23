@@ -68,8 +68,7 @@ export default function ReportCard({ report }: { report: Report }) {
           <Badge tone="stone">Unverified report</Badge>
         )}
         <span className="text-xs text-stone-500">
-          {report.town}
-          {report.service_date ? ` · ${formatMonthYear(report.service_date)}` : ""}
+          {report.town} · {formatMonthYear(report.service_date ?? report.created_at)}
         </span>
       </div>
       {note && (

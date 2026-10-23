@@ -15,8 +15,25 @@ export interface Report {
   created_at: string;
 }
 
-export interface ServiceAggregate {
-  service_name: string;
+/**
+ * The date a report is ordered and displayed by: the quote/service date when
+ * the submitter provided one, otherwise the date it was submitted to the site.
+ * Returns YYYY-MM-DD.
+ */
+export function effectiveReportDate(r: Report): string {
+  return r.service_date ?? r.created_at.slice(0, 10);
+}
+
+/** Newest-first by effective report date; submission recency breaks ties. */
+export function sortReportsByEffectiveDate(reports: Report[]): Report[] {
+  return [...reports].sort((a, b) => {
+    const byDate = effectiveReportDate(b).localeCompare(effectiveReportDate(a));
+    if (byDate !== 0) return byDate;
+    return b.created_at.localeCompare(a.created_at);
+  });
+}
+
+export interface ServiceAggregate {  service_name: string;
   category: Category;
   report_count: number;
   verified_count: number;
