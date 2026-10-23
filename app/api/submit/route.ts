@@ -21,6 +21,36 @@ function bad(error: string, status = 400) {
   return NextResponse.json({ ok: false, error }, { status });
 }
 
+/** Normalize a town name to its canonical spelling so reports don't
+ *  fragment across variants like "Fuquay Varina" vs "Fuquay-Varina". */
+function normalizeTown(raw: string): string {
+  const t = raw.trim().replace(/\s+/g, " ");
+  // Canonicalize known Triangle towns (case-insensitive, hyphen/space agnostic).
+  const key = t.toLowerCase().replace(/[-\s]+/g, "");
+  const canonical: Record<string, string> = {
+    fuquayvarina: "Fuquay-Varina",
+    hollysprings: "Holly Springs",
+    apex: "Apex",
+    cary: "Cary",
+    raleigh: "Raleigh",
+    durham: "Durham",
+    chapelhill: "Chapel Hill",
+    carrboro: "Carrboro",
+    morrisville: "Morrisville",
+    wakeforest: "Wake Forest",
+    knightdale: "Knightdale",
+    rolesville: "Rolesville",
+    wendell: "Wendell",
+    zebulon: "Zebulon",
+    garner: "Garner",
+    clayton: "Clayton",
+    pittsboro: "Pittsboro",
+    sanford: "Sanford",
+    hillsborough: "Hillsborough",
+  };
+  return canonical[key] ?? t;
+}
+
 /** Validate one report's fields; returns the DB row or an error. */
 function validateReport(
   input: ReportInput
@@ -29,7 +59,7 @@ function validateReport(
   const serviceName = String(input.serviceName ?? "").trim();
   const amountRaw = String(input.amount ?? "").trim();
   const reportType = String(input.reportType ?? "");
-  const town = String(input.town ?? "").trim();
+  const town = normalizeTown(String(input.town ?? ""));
   const amountNote = String(input.amountNote ?? "").trim() || null;
   const serviceDate = String(input.serviceDate ?? "").trim() || null;
   const notes = String(input.notes ?? "").trim() || null;
