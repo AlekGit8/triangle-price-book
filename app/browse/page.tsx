@@ -13,6 +13,7 @@ function BrowseInner() {
   const initialService = searchParams.get("service") ?? "";
   const [category, setCategory] = useState(initial);
   const [service, setService] = useState(initialService);
+  const [sort, setSort] = useState<"date-desc" | "date-asc" | "price-desc" | "price-asc">("date-desc");
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [unconfigured, setUnconfigured] = useState(false);
@@ -43,6 +44,36 @@ function BrowseInner() {
     if (service) rs = rs.filter((r) => r.service_name === service);
     return rs;
   }, [reports, category, service]);
+
+  const effectiveDate = (r: Report) => r.service_date ?? r.created_at.slice(0, 10);
+
+  const sorted = useMemo(() => {
+    const rs = [...filtered];
+    switch (sort) {
+      case "price-desc":
+        rs.sort((a, b) => b.amount_cents - a.amount_cents);
+        break;
+      case "price-asc":
+        rs.sort((a, b) => a.amount_cents - b.amount_cents);
+        break;
+      case "date-asc":
+        rs.sort(
+          (a, b) =>
+            effectiveDate(a).localeCompare(effectiveDate(b)) ||
+            a.created_at.localeCompare(b.created_at)
+        );
+        break;
+      case "date-desc":
+      default:
+        rs.sort(
+          (a, b) =>
+            effectiveDate(b).localeCompare(effectiveDate(a)) ||
+            b.created_at.localeCompare(a.created_at)
+        );
+        break;
+    }
+    return rs;
+  }, [filtered, sort]);
 
   function pickCategory(c: string) {
     setCategory(c);
@@ -89,7 +120,28 @@ function BrowseInner() {
         </div>
       )}
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-stone-600" aria-live="polite">
+          {filtered.length} {filtered.length === 1 ? "report" : "reports"}
+        </p>
+        <label className="flex items-center gap-2 text-sm text-stone-600">
+          Sort by
+          <select
+            value={sort}
+            onChange={(e) =>
+              setSort(e.target.value as "date-desc" | "date-asc" | "price-desc" | "price-asc")
+            }
+            className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700"
+          >
+            <option value="date-desc">Date: newest to oldest</option>
+            <option value="date-asc">Date: oldest to newest</option>
+            <option value="price-desc">Price: high to low</option>
+            <option value="price-asc">Price: low to high</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-4">
         {loading ? (
           <p className="text-stone-500">Loading…</p>
         ) : unconfigured ? (
@@ -100,8 +152,7 @@ function BrowseInner() {
               redeploy to see live reports here.
             </p>
           </div>
-        ) : filtered.length === 0 ? (
-          <p className="text-stone-600">
+        ) : filtered.length === 0 ? (          <p className="text-stone-600">
             {service ? (
               <>
                 No reports for &ldquo;{service}&rdquo; yet.{" "}
@@ -115,7 +166,7 @@ function BrowseInner() {
           </p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {filtered.map((r) => (
+            {sorted.map((r) => (
               <ReportCard key={r.id} report={r} />
             ))}
           </div>
