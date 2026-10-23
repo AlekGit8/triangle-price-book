@@ -74,7 +74,7 @@ export default function HomepageBody({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder='Try "water heater" or "fence"'
+              placeholder='Try "water heater" or "roof"'
               autoComplete="off"
               className="w-full rounded-full border border-stone-300 bg-white px-5 py-3 text-stone-900 placeholder:text-stone-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100"
             />
