@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
   siteConfig,
-  categorySlugs,
   categoryFromSlug,
 } from "@/lib/site-config";
 import { getServiceAggregates } from "@/lib/data";
@@ -11,12 +10,8 @@ import { formatCents } from "@/lib/format";
 import AggregateCard from "@/components/AggregateCard";
 
 
-export const revalidate = 3600;
 export const runtime = 'edge';
-
-export function generateStaticParams() {
-  return Object.values(categorySlugs).map((slug) => ({ category: slug }));
-}
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
   params,
