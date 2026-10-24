@@ -1,8 +1,9 @@
 # Cloudflare Turnstile setup (spam protection)
 
-**Status:** the code is fully wired — the widget renders on `/submit` and
-`/api/submit` + `/api/extract` verify the token server-side. Only the keys
-are missing, so verification currently passes everything through.
+**Status: CONFIGURED Oct 24, 2026** — both keys are set in Cloudflare Pages
+env vars (Production): `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and
+`TURNSTILE_SECRET_KEY`. The widget renders on `/submit` and `/api/submit` +
+`/api/extract` verify the token server-side (success + action + hostname).
 
 ## Why it matters
 
