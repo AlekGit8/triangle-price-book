@@ -1,6 +1,8 @@
 import { getServiceAggregates, getApprovedReports, sortReportsByEffectiveDate } from "@/lib/data";
 import HomepageBody from "@/components/HomepageBody";
 
+export const runtime = 'edge';
+
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {

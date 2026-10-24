@@ -3,6 +3,8 @@ import { getServiceSupabase } from "@/lib/supabase-server";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { siteConfig } from "@/lib/site-config";
 
+export const runtime = 'edge';
+
 const MAX_INVOICE_BYTES = 8 * 1024 * 1024; // 8 MB
 const MAX_BATCH = 20;
 

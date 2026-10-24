@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase-server";
 
+export const runtime = 'edge';
+
 const STOPWORDS = new Set([
   "a", "an", "the", "and", "or", "for", "with", "of", "to", "in", "on", "at",
 ]);

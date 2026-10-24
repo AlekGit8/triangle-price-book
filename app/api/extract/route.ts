@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { siteConfig } from "@/lib/site-config";
 
+export const runtime = 'edge';
+
 const MAX_DOC_BYTES = 8 * 1024 * 1024; // 8 MB
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",

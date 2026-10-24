@@ -10,18 +10,20 @@ import { getServiceAggregates } from "@/lib/data";
 import { formatCents } from "@/lib/format";
 import AggregateCard from "@/components/AggregateCard";
 
+
 export const revalidate = 3600;
 
 export function generateStaticParams() {
   return Object.values(categorySlugs).map((slug) => ({ category: slug }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { category: string };
-}): Metadata {
-  const category = categoryFromSlug(params.category);
+  params: Promise<{ category: string }>;
+}): Promise<Metadata> {
+  const { category: slug } = await params;
+  const category = categoryFromSlug(slug);
   if (!category) return {};
   return {
     title: `${category} Prices in Raleigh-Durham, NC | ${siteConfig.siteName}`,
@@ -32,9 +34,10 @@ export function generateMetadata({
 export default async function CategoryPage({
   params,
 }: {
-  params: { category: string };
+  params: Promise<{ category: string }>;
 }) {
-  const category = categoryFromSlug(params.category);
+  const { category: slug } = await params;
+  const category = categoryFromSlug(slug);
   if (!category) notFound();
 
   const aggregates = (await getServiceAggregates()).filter(
