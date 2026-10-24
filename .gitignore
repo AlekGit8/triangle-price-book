@@ -13,3 +13,10 @@ out/
 # Misc
 .DS_Store
 *.log
+
+# Cloudflare Workers (OpenNext) build output
+.open-next/
+.vercel/
+
+# Local Workers dev vars (never commit real keys)
+.dev.vars

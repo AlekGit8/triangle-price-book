@@ -19,7 +19,7 @@ export const siteConfig = {
 
   /**
    * Canonical base URL used for sitemap.xml, robots.txt, and metadata.
-   * Custom domain connected Oct 22, 2026 — apex 308-redirects to www (Vercel recommended).
+   * Custom domain connected Oct 22, 2026 — apex 308-redirects to www.
    */
   siteUrl: "https://www.trianglepricebook.com",
 

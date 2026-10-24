@@ -1,5 +1,5 @@
 /**
- * Tiny in-memory rate limiter for the edge runtime.
+ * Tiny in-memory rate limiter for the Workers runtime.
  *
  * NOTE on the $0-cost architecture: this is per edge isolate, not global —
  * Cloudflare runs many isolates, so a distributed attacker can get roughly
@@ -56,7 +56,7 @@ export function checkRateLimit(
 }
 
 /**
- * Best-effort client IP. On Cloudflare Pages, cf-connecting-ip is set by the
+ * Best-effort client IP. On Cloudflare, cf-connecting-ip is set by the
  * edge and cannot be spoofed by the client; x-forwarded-for's first entry is
  * client-controlled, so it is only a fallback (e.g. local dev).
  */

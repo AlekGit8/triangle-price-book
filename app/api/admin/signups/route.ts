@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase-server";
 
-export const runtime = 'edge';
 
 function authorized(req: Request): boolean {
   const expected = process.env.ADMIN_KEY;

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase-server";
 import { siteConfig } from "@/lib/site-config";
 
-export const runtime = 'edge';
 
 // Guard against giant JSON bodies; a description is a sentence, not a novel.
 const MAX_BODY_BYTES = 16 * 1024;

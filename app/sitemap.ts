@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { siteConfig, categorySlugs } from "@/lib/site-config";
 
-export const runtime = 'edge';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = siteConfig.siteUrl;

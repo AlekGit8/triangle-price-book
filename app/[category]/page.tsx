@@ -10,7 +10,6 @@ import { formatCents } from "@/lib/format";
 import AggregateCard from "@/components/AggregateCard";
 
 
-export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
