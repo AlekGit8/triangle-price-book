@@ -176,7 +176,8 @@ export async function POST(req: Request) {
     const ip = clientIp(req);
     const turnstileOk = await verifyTurnstile(
       String(form.get("turnstileToken") ?? ""),
-      ip === "unknown" ? null : ip
+      ip === "unknown" ? null : ip,
+      "submit"
     );
     if (!turnstileOk) {
       return bad("Spam check failed. Please try again.");

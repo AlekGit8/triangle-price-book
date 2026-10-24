@@ -767,7 +767,7 @@ export default function SubmitPage() {
         {turnstileSiteKey && (
           <>
             <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
-            <div className="cf-turnstile" data-sitekey={turnstileSiteKey} />
+            <div className="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="submit" />
           </>
         )}
 
