@@ -12,6 +12,7 @@ import AggregateCard from "@/components/AggregateCard";
 
 
 export const revalidate = 3600;
+export const runtime = 'edge';
 
 export function generateStaticParams() {
   return Object.values(categorySlugs).map((slug) => ({ category: slug }));
