@@ -23,8 +23,9 @@ export async function GET(req: Request) {
       .from("reports")
       .select(
         `id, service_name, category, amount_cents, amount_note, report_type, town,
-         service_date, notes, verification_status, submitter_email, created_at,
-         verifications ( id, invoice_path, created_at )`
+         service_date, notes, verification_status, created_at,
+         verifications ( id, invoice_path, created_at ),
+         report_contacts ( email )`
       )
       .order("created_at", { ascending: false })
       .limit(100);
@@ -35,7 +36,13 @@ export async function GET(req: Request) {
     }
     const { data, error } = await q;
     if (error) throw error;
-    return NextResponse.json({ ok: true, reports: data });
+    // Flatten the private contact email onto the shape the admin UI expects.
+    const reports = ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+      const { report_contacts: _contacts, ...rest } = r;
+      const contacts = _contacts as { email?: string } | null;
+      return { ...rest, submitter_email: contacts?.email ?? null };
+    });
+    return NextResponse.json({ ok: true, reports });
   } catch (err) {
     console.error("admin reports error:", err);
     return NextResponse.json({ ok: false, error: "Failed to load queue." }, { status: 500 });

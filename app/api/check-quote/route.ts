@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase-server";
+import { siteConfig } from "@/lib/site-config";
 
 export const runtime = 'edge';
+
+// Guard against giant JSON bodies; a description is a sentence, not a novel.
+const MAX_BODY_BYTES = 16 * 1024;
+const MAX_DESCRIPTION = 300;
+// $20M in cents — sanity cap, matching /api/submit.
+const MAX_PRICE_CENTS = 2_000_000_000;
 
 const STOPWORDS = new Set([
   "a", "an", "the", "and", "or", "for", "with", "of", "to", "in", "on", "at",
@@ -32,13 +39,30 @@ function matchScore(query: Set<string>, name: Set<string>): number {
  */
 export async function POST(req: Request) {
   try {
+    const contentLength = Number(req.headers.get("content-length") ?? 0);
+    if (contentLength > MAX_BODY_BYTES) {
+      return NextResponse.json({ ok: false, error: "Invalid input." }, { status: 413 });
+    }
     const body = await req.json().catch(() => ({}));
     const category = String(body.category ?? "").trim();
     const description = String(body.description ?? "").trim();
     const priceCents = Math.round(Number(body.price_cents));
 
-    if (!category || !Number.isFinite(priceCents) || priceCents <= 0) {
-      return NextResponse.json({ ok: false, error: "Invalid input." }, { status: 400 });
+    if (!(siteConfig.categories as readonly string[]).includes(category)) {
+      return NextResponse.json({ ok: false, error: "Invalid category." }, { status: 400 });
+    }
+    if (
+      !Number.isFinite(priceCents) ||
+      priceCents <= 0 ||
+      priceCents > MAX_PRICE_CENTS
+    ) {
+      return NextResponse.json({ ok: false, error: "Invalid price." }, { status: 400 });
+    }
+    if (description.length > MAX_DESCRIPTION) {
+      return NextResponse.json(
+        { ok: false, error: "Please keep the description under 300 characters." },
+        { status: 400 }
+      );
     }
     const queryTokens = tokens(description);
     if (queryTokens.size === 0) {

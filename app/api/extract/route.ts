@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { clientIp } from "@/lib/rate-limit";
 import { siteConfig } from "@/lib/site-config";
 
 export const runtime = 'edge';
@@ -65,14 +66,23 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Cheap pre-parse guard against giant multipart bodies (8 MB file + slack).
+    const contentLength = Number(req.headers.get("content-length") ?? 0);
+    if (contentLength > 12 * 1024 * 1024) {
+      return NextResponse.json(
+        { ok: false, error: "Document must be under 8 MB." },
+        { status: 413 }
+      );
+    }
+
     const form = await req.formData();
 
     // Spam check (only enforced when Turnstile keys are configured).
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+    // ("unknown" IP -> null so Turnstile doesn't get a bogus remoteip.)
+    const ip = clientIp(req);
     const turnstileOk = await verifyTurnstile(
       String(form.get("turnstileToken") ?? ""),
-      ip
+      ip === "unknown" ? null : ip
     );
     if (!turnstileOk) {
       return NextResponse.json(

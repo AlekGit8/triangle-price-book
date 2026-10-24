@@ -14,6 +14,14 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 export async function POST(req: Request) {
   try {
+    // A signup is an email address, not a novel — reject giant bodies early.
+    const contentLength = Number(req.headers.get("content-length") ?? 0);
+    if (contentLength > 8 * 1024) {
+      return NextResponse.json(
+        { ok: false, error: "Please enter a valid email address." },
+        { status: 413 }
+      );
+    }
     const body = await req.json().catch(() => ({}));
     const email = String(body.email ?? "").trim().toLowerCase();
     const wantsUpdates = body.wants_updates === true;
