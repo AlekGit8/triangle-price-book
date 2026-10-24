@@ -4,7 +4,7 @@ Crowdsourced, anonymized home-services price transparency for the Raleigh-Durham
 Triangle, NC. Neighbors share what they paid or were quoted — just prices,
 towns, and dates. No business names are collected anywhere user-facing.
 
-**Live:** https://www.trianglepricebook.com (Cloudflare Pages)
+**Live:** https://www.trianglepricebook.com (Cloudflare Workers via OpenNext)
 **Repo:** https://github.com/AlekGit8/triangle-price-book (public)
 **Operator:** Longsite Labs LLC
 
@@ -16,18 +16,20 @@ towns, and dates. No business names are collected anywhere user-facing.
 
 | Piece | Service | Cost |
 |---|---|---|
-| Framework | Next.js 15.5.2 (App Router, TypeScript) + React 19 + Tailwind CSS | free |
-| Hosting | Cloudflare Pages (auto-deploy from GitHub `main`) | free tier, commercial use OK |
+| Framework | Next.js 15.5.28 (App Router, TypeScript) + React 19 + Tailwind CSS | free |
+| Hosting | Cloudflare Workers via OpenNext (auto-deploy from GitHub `main`) | free tier, commercial use OK |
 | Database | Supabase Postgres (`triangle-price-book`, us-east-1) | free tier (500 MB) |
 | File storage | Supabase Storage, private `invoices` bucket | free tier (1 GB) |
 | AI extraction | Google Gemini (free tier) | free |
-| Spam protection | Cloudflare Turnstile (wired in code, keys not set up yet) | free |
+| Spam protection | Cloudflare Turnstile (configured Oct 24, 2026) | free |
 | DNS | Cloudflare (nameservers; domain registered at Porkbun) | free |
 | Email list | Supabase `launch_signups` → export to Kit at launch | free |
 
-Build command: `npx @cloudflare/next-on-pages` → output `.vercel/output/static`.
-All non-static routes run on the edge (`export const runtime = 'edge'`).
-Category pages render dynamically per request (ISR isn't supported on Pages).
+Build command: `npx opennextjs-cloudflare build` (config in `wrangler.jsonc` +
+`open-next.config.ts`). All routes run on the Node.js runtime (OpenNext does
+not support the edge runtime). Category pages render dynamically per request.
+Migrated from Cloudflare Pages to Workers on Oct 24, 2026 — no Vercel
+dependencies remain in the repo.
 
 ## Features
 
@@ -74,7 +76,7 @@ Category pages render dynamically per request (ISR isn't supported on Pages).
    - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY` (server-side only)
 
 ### 2. Environment variables
-Set these in **Cloudflare Pages → Settings → Environment variables**
+Set these in **Cloudflare Worker → Settings → Variables**
 (Production):
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
@@ -84,15 +86,14 @@ Set these in **Cloudflare Pages → Settings → Environment variables**
 
 ### 3. Deploy
 Connect the GitHub repo in **Cloudflare Dashboard → Workers & Pages →
-Create → Pages → Connect to Git**:
-- Build command: `npx @cloudflare/next-on-pages`
-- Build output: `.vercel/output/static`
+Create → Worker → Connect to Git** (Workers Builds):
+- Build command: `npx opennextjs-cloudflare build`
 - Production branch: `main`
 
 Every push to `main` redeploys automatically.
 
 ### 4. Custom domain
-Add the domain under Pages → Custom domains, then point DNS at Cloudflare
+Add the domain under Worker → Domains, then point DNS at Cloudflare
 (nameservers or CNAME per Cloudflare's instructions).
 
 ## Project structure
@@ -107,7 +108,7 @@ app/
   how-it-works/page.tsx     # Transparency page (verified vs unverified)
   terms/page.tsx / privacy/page.tsx  # Legal pages (Oct 23, 2026)
   admin/page.tsx            # Moderation + signups (ADMIN_KEY)
-  [category]/page.tsx       # Category landing pages (edge, dynamic)
+  [category]/page.tsx       # Category landing pages (dynamic)
   api/
     submit/route.ts         # Validates + inserts reports, uploads invoice
     extract/route.ts        # Gemini quote extraction
@@ -151,7 +152,7 @@ public/
 Everything runs on free tiers. Real costs kick in only with traction:
 - Domain: ~$11/yr at Porkbun.
 - Supabase: free until 500 MB DB / 1 GB storage — thousands of reports fit.
-- Cloudflare Pages: free, unlimited bandwidth, commercial use allowed.
+- Cloudflare Workers: free (100k requests/day, 3 MiB Worker size limit), commercial use allowed.
 - Gemini: free tier for extraction.
 - Turnstile: free (keys not set up yet — first fix if spam appears).
 
@@ -161,7 +162,7 @@ Everything runs on free tiers. Real costs kick in only with traction:
 - [ ] Delete `middleware.ts` to lift coming-soon mode
 - [ ] Submit sitemap in Google Search Console
 - [ ] Pick analytics (Cloudflare Web Analytics is the natural free choice)
-- [ ] Set up Turnstile keys
+- [x] Set up Turnstile keys (Oct 24, 2026)
 - [ ] Decide on business email provider; create Google account under
       `hello@trianglepricebook.com` for Search Console / AdSense
 - [ ] Export launch signups → Kit for launch email
