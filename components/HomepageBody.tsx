@@ -71,6 +71,7 @@ export default function HomepageBody({
   const marqueeRef = useRef<HTMLDivElement>(null);
   const copyRef = useRef<HTMLDivElement>(null);
   const copyWidthRef = useRef(0);
+  const advanceRef = useRef(0);
   const pausedRef = useRef(false);
   const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragRef = useRef<{ startX: number; lastX: number } | null>(null);
@@ -132,10 +133,23 @@ export default function HomepageBody({
       const dt = Math.min(now - last, 100);
       last = now;
       if (!reduced && !pausedRef.current) {
-        const w = copyWidthRef.current;
+        let w = copyWidthRef.current;
+        if (!w) {
+          // First measure came back 0 (not laid out yet) — retry.
+          w = firstCopy.offsetWidth;
+          copyWidthRef.current = w;
+        }
         if (w) {
-          scroller.scrollLeft += (w / 150_000) * dt;
-          if (scroller.scrollLeft >= 2 * w) scroller.scrollLeft -= w;
+          // Accumulate the fractional advance and apply whole pixels only:
+          // some browsers (notably iOS Safari) drop sub-pixel scrollLeft
+          // assignments, so adding <1px per frame would never move.
+          advanceRef.current += (w / 150_000) * dt;
+          const whole = Math.floor(advanceRef.current);
+          if (whole > 0) {
+            advanceRef.current -= whole;
+            scroller.scrollLeft += whole;
+            if (scroller.scrollLeft >= 2 * w) scroller.scrollLeft -= w;
+          }
         }
       }
       raf = requestAnimationFrame(tick);
