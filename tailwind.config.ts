@@ -23,6 +23,18 @@ const config: Config = {
           500: "#f59e0b",
           600: "#d97706",
         },
+        /** Marc Lou redesign palette: warm paper, near-black ink, grey secondary. */
+        ink: "#111111",
+        paper: "#FAFAF8",
+        muted: "#6B7280",
+        line: "#E5E7EB",
+        card: "#F3F3F1",
+        pitch: "#0A0A0A",
+      },
+      fontFamily: {
+        serif: ["var(--font-display)", "Georgia", "Times New Roman", "serif"],
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
     },
   },

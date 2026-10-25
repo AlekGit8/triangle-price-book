@@ -10,8 +10,8 @@ const nav = [
 
 export default function SiteHeader() {
   return (
-    <header className="border-b border-stone-200 bg-white/90 backdrop-blur sticky top-0 z-10">
-      <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between gap-4">
+    <header className="border-b border-line bg-white/90 backdrop-blur sticky top-0 z-10">
+      <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <Image
             src="/logo.svg"
@@ -20,7 +20,7 @@ export default function SiteHeader() {
             height={32}
             className="rounded-lg"
           />
-          <span className="font-bold text-brand-900 text-lg leading-tight">
+          <span className="font-bold text-ink text-lg leading-tight">
             {siteConfig.siteName}
           </span>
         </Link>
@@ -30,7 +30,7 @@ export default function SiteHeader() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="whitespace-nowrap rounded-full bg-brand-700 px-4 py-2 font-semibold text-white hover:bg-brand-800"
+                className="whitespace-nowrap rounded-[10px] bg-black px-4 py-2 font-semibold text-white hover:bg-neutral-800"
               >
                 {item.label}
               </Link>
@@ -38,7 +38,7 @@ export default function SiteHeader() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="whitespace-nowrap px-3 py-2 text-stone-600 hover:text-brand-800 font-medium"
+                className="whitespace-nowrap px-3 py-2 text-muted hover:text-ink font-medium"
               >
                 {item.label}
               </Link>

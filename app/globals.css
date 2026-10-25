@@ -2,7 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+/* Faint dot-grid hero background (MailCheap). */
+.dot-grid {
+  background-image: radial-gradient(circle, #d4d4d4 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Recently reported services: slow infinite marquee.
+   The track holds two identical halves; translating -50% loops seamlessly. */
+@keyframes marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  animation: marquee-scroll 150s linear infinite;
+  will-change: transform;
+}
+
+/* Pause the ticker on hover and when anything inside it takes keyboard focus. */
+.marquee:hover .marquee-track,
+.marquee:focus-within .marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* Soft edge fades for the marquee. */
+.marquee-mask {
+  mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+}
+
+/* Visible, consistent keyboard focus. */
+:focus-visible {
+  outline: 2px solid #111111;
+  outline-offset: 2px;
 }

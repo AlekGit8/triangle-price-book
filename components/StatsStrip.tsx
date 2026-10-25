@@ -14,14 +14,11 @@ export default function StatsStrip({ aggregates }: { aggregates: ServiceAggregat
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 divide-y divide-line rounded-2xl border border-line bg-white sm:grid-cols-3 sm:divide-x sm:divide-y-0">
       {stats.map(([label, value]) => (
-        <div
-          key={label}
-          className="rounded-xl bg-brand-900 px-4 py-3 text-white"
-        >
-          <p className="text-2xl font-bold">{value}</p>
-          <p className="text-xs text-brand-100">{label}</p>
+        <div key={label} className="px-5 py-5 text-center sm:text-left">
+          <p className="font-serif text-3xl text-ink sm:text-4xl">{value}</p>
+          <p className="mt-1 font-mono text-[11px] uppercase tracking-wide text-muted">{label}</p>
         </div>
       ))}
     </div>

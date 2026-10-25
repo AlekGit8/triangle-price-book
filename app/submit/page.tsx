@@ -13,8 +13,8 @@ declare global {
 }
 
 const inputCls =
-  "w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 focus:border-brand-600 focus:outline-none disabled:bg-stone-100 disabled:text-stone-500";
-const labelCls = "block text-sm font-semibold text-stone-700 mb-1";
+  "w-full rounded-[10px] border border-line px-3 py-2 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10 disabled:bg-card disabled:text-muted";
+const labelCls = "block font-mono text-xs font-semibold uppercase tracking-wide text-muted mb-1";
 
 type ExtractState = "idle" | "reading" | "done" | "error" | "rejected" | "unavailable";
 
@@ -94,15 +94,15 @@ function DraftCard({
 
   return (
     <div
-      className={`rounded-xl border bg-white p-4 sm:p-5 ${
-        d.status === "done" ? "border-green-300" : "border-stone-200"
+      className={`rounded-2xl border bg-white p-4 sm:p-5 ${
+        d.status === "done" ? "border-green-300" : "border-line"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="font-bold text-brand-900">
+        <p className="font-bold text-ink">
           {d.serviceName || "Untitled quote"}
           {d.amount && (
-            <span className="ml-2 font-extrabold text-stone-900">${d.amount}</span>
+            <span className="ml-2 font-mono font-bold text-ink">${d.amount}</span>
           )}
         </p>
         {d.status === "pending" && (
@@ -110,7 +110,7 @@ function DraftCard({
             type="button"
             onClick={() => onRemove(d.key)}
             aria-label="Remove this quote"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-neutral-400 hover:bg-card hover:text-ink"
           >
             ×
           </button>
@@ -224,7 +224,7 @@ function DraftCard({
             disabled={locked || !agreed}
             onClick={() => onPublish(d.key)}
             title={!agreed ? "Please confirm the truthfulness checkbox below first" : undefined}
-            className="w-full rounded-full bg-brand-700 px-6 py-2.5 font-bold text-white hover:bg-brand-800 disabled:opacity-50"
+            className="w-full rounded-[10px] bg-black px-6 py-2.5 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
           >
             {d.status === "publishing" ? "Publishing…" : "Publish this quote"}
           </button>
@@ -457,8 +457,8 @@ export default function SubmitPage() {
   if (status === "done") {
     return (
       <div className="py-16 max-w-xl mx-auto text-center">
-        <h1 className="text-3xl font-extrabold text-brand-900">Published!</h1>
-        <p className="mt-3 text-stone-600">
+        <h1 className="font-serif text-4xl text-ink">Published!</h1>
+        <p className="mt-3 text-muted">
           {submittedVerified ? (
             <>
               Your price is live — anonymously, with a Verified badge thanks to
@@ -472,7 +472,7 @@ export default function SubmitPage() {
             </>
           )}
         </p>
-        <a href="/browse" className="mt-6 inline-block font-semibold text-brand-700 hover:underline">
+        <a href="/browse" className="mt-6 inline-block font-semibold text-ink hover:underline">
           Browse prices →
         </a>
       </div>
@@ -484,8 +484,8 @@ export default function SubmitPage() {
 
   return (
     <div className="py-10 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-extrabold text-brand-900">Submit a price</h1>
-      <p className="mt-2 text-stone-600">
+      <h1 className="font-serif text-4xl text-ink">Submit a price</h1>
+      <p className="mt-2 text-muted">
         Two ways to contribute. <strong>Uploading</strong> a quote or invoice
         gets your entries Verified badges — and if your document contains
         multiple quotes, each one becomes its own entry. A manual entry still
@@ -493,10 +493,10 @@ export default function SubmitPage() {
       </p>
 
       {/* Option 1: smart upload card */}
-      <p className="mt-6 text-sm font-bold uppercase tracking-wide text-brand-800">
+      <p className="mt-6 font-mono text-xs font-bold uppercase tracking-wide text-muted">
         Option 1 · Upload a document (preferred)
       </p>
-      <div className="mt-2 rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 p-5 focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-200">
+      <div className="mt-2 rounded-2xl border-2 border-dashed border-line bg-card p-5 focus-within:border-black focus-within:ring-2 focus-within:ring-black/10">
         <input
           ref={docInputRef}
           id="docUpload"
@@ -509,13 +509,13 @@ export default function SubmitPage() {
           htmlFor="docUpload"
           className="flex cursor-pointer flex-col items-center gap-2 py-2 text-center"
         >
-          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-brand-700 text-2xl text-white">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-black text-2xl text-white">
             {extractState === "reading" ? "…" : "📄"}
           </span>
-          <span className="font-bold text-brand-900">
+          <span className="font-bold text-ink">
             {docFile ? docFile.name : "Upload a quote or invoice"}
           </span>
-          <span className="text-sm text-stone-600">
+          <span className="text-sm text-muted">
             {extractState === "reading"
               ? "Reading your document…"
               : "Photo or PDF — we’ll pull out every quote it contains"}
@@ -539,12 +539,12 @@ export default function SubmitPage() {
           </p>
         )}
         {extractState === "unavailable" && (
-          <p className="mt-2 rounded-lg bg-stone-100 border border-stone-200 px-4 py-2 text-sm text-stone-600 text-center">
+          <p className="mt-2 rounded-lg bg-card border border-line px-4 py-2 text-sm text-muted text-center">
             Your file is attached. Auto-fill isn’t enabled yet — fill in the form below.
           </p>
         )}
         {docFile && extractState !== "reading" && (
-          <p className="mt-2 text-xs text-stone-500 text-center">
+          <p className="mt-2 text-xs text-muted text-center">
             Attached as proof — entries publish with Verified badges. Files stay private.
           </p>
         )}
@@ -553,10 +553,10 @@ export default function SubmitPage() {
       {/* Detected quotes: review & publish each */}
       {drafts.length > 0 && (
         <div className="mt-6">
-          <p className="text-sm font-bold uppercase tracking-wide text-brand-800">
+          <p className="font-mono text-xs font-bold uppercase tracking-wide text-muted">
             Review & publish
           </p>
-          <p className="mt-1 text-sm text-stone-600">
+          <p className="mt-1 text-sm text-muted">
             Each quote below publishes as its own anonymous entry, all verified
             against your uploaded document.
           </p>
@@ -576,7 +576,7 @@ export default function SubmitPage() {
                 </button>
                 <a
                   href="/browse"
-                  className="rounded-full bg-brand-700 px-5 py-2 text-sm font-bold text-white hover:bg-brand-800"
+                  className="rounded-[10px] bg-black px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
                 >
                   Browse prices →
                 </a>
@@ -598,7 +598,7 @@ export default function SubmitPage() {
           </div>
 
           {pendingCount > 0 && (
-            <div className="mt-4 rounded-xl border border-stone-200 bg-white p-4 sm:p-5">
+            <div className="mt-4 rounded-2xl border border-line bg-white p-4 sm:p-5">
               <div>
                 <label className={labelCls} htmlFor="draftEmail">
                   Email (optional, private)
@@ -613,17 +613,17 @@ export default function SubmitPage() {
                   onChange={(e) => setDraftEmail(e.target.value)}
                 />
               </div>
-              <label className="mt-4 flex items-start gap-2 text-sm text-stone-600">
+              <label className="mt-4 flex items-start gap-2 text-sm text-muted">
                 <input
                   type="checkbox"
-                  className="mt-1 accent-green-700"
+                  className="mt-1 accent-black"
                   checked={draftsAgreed}
                   onChange={(e) => setDraftsAgreed(e.target.checked)}
                 />
                 <span>
                   I confirm these prices are truthful to the best of my knowledge,
                   and I agree to the{" "}
-                  <a href="/terms" className="font-semibold text-brand-700 hover:underline">
+                  <a href="/terms" className="font-semibold text-ink hover:underline">
                     Terms of Service
                   </a>
                   .
@@ -633,14 +633,14 @@ export default function SubmitPage() {
                 type="button"
                 disabled={!draftsAgreed || publishingAll || pendingCount === 0}
                 onClick={publishAll}
-                className="mt-4 w-full rounded-full bg-accent-500 px-6 py-3 font-bold text-white hover:bg-accent-600 disabled:opacity-50"
+                className="mt-4 w-full rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
               >
                 {publishingAll
                   ? "Publishing…"
                   : `Publish all ${pendingCount} quote${pendingCount === 1 ? "" : "s"}`}
               </button>
               {!draftsAgreed && (
-                <p className="mt-2 text-xs text-stone-500 text-center">
+                <p className="mt-2 text-xs text-muted text-center">
                   Please confirm the checkbox above to publish.
                 </p>
               )}
@@ -649,13 +649,13 @@ export default function SubmitPage() {
         </div>
       )}
 
-      <div className="my-6 flex items-center gap-3 text-sm text-stone-400">
-        <span className="h-px flex-1 bg-stone-200" />
+      <div className="my-6 flex items-center gap-3 text-sm text-muted">
+        <span className="h-px flex-1 bg-line" />
         <span className="text-center">
-          <span className="font-bold uppercase tracking-wide text-stone-500">Option 2 · </span>
+          <span className="font-bold uppercase tracking-wide text-muted">Option 2 · </span>
           no document? Fill in the form — it publishes as an unverified community report
         </span>
-        <span className="h-px flex-1 bg-stone-200" />
+        <span className="h-px flex-1 bg-line" />
       </div>
 
       <form onSubmit={onSubmit} className="space-y-5">
@@ -705,20 +705,20 @@ export default function SubmitPage() {
         <div>
           <span className={labelCls}>Was this paid or a quote? *</span>
           <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-stone-700">
+            <label className="flex items-center gap-2 text-ink">
               <input
                 type="radio" name="reportType" value="paid"
                 checked={fields.reportType === "paid"}
                 onChange={() => set("reportType", "paid")}
-                className="accent-green-700"
+                className="accent-black"
               /> Paid
             </label>
-            <label className="flex items-center gap-2 text-stone-700">
+            <label className="flex items-center gap-2 text-ink">
               <input
                 type="radio" name="reportType" value="quote"
                 checked={fields.reportType === "quote"}
                 onChange={() => set("reportType", "quote")}
-                className="accent-green-700"
+                className="accent-black"
               /> Quote
             </label>
           </div>
@@ -758,7 +758,7 @@ export default function SubmitPage() {
             placeholder="Only used if we need to verify your entry" maxLength={120}
             value={fields.submitterEmail} onChange={(e) => set("submitterEmail", e.target.value)}
           />
-          <p className="mt-1 text-xs text-stone-500">
+          <p className="mt-1 text-xs text-muted">
             Uploading a document above attaches it as your invoice automatically.
           </p>
         </div>
@@ -771,11 +771,11 @@ export default function SubmitPage() {
           </>
         )}
 
-        <label className="flex items-start gap-2 text-sm text-stone-600">
-          <input type="checkbox" required className="mt-1 accent-green-700" />
+        <label className="flex items-start gap-2 text-sm text-muted">
+          <input type="checkbox" required className="mt-1 accent-black" />
           <span>
             I confirm this price is truthful to the best of my knowledge, and I agree to the{" "}
-            <a href="/terms" className="font-semibold text-brand-700 hover:underline">Terms of Service</a>.
+            <a href="/terms" className="font-semibold text-ink hover:underline">Terms of Service</a>.
           </span>
         </label>
 
@@ -788,7 +788,7 @@ export default function SubmitPage() {
         <button
           type="submit"
           disabled={status === "sending"}
-          className="w-full rounded-full bg-brand-700 px-6 py-3 font-bold text-white hover:bg-brand-800 disabled:opacity-50"
+          className="w-full rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
         >
           {status === "sending"
             ? "Publishing…"
@@ -796,7 +796,7 @@ export default function SubmitPage() {
               ? "Review above, then publish"
               : "Publish as unverified report"}
         </button>
-        <p className="text-xs text-stone-500 text-center">
+        <p className="text-xs text-muted text-center">
           {docFile
             ? "Your price publishes instantly and anonymously with a Verified badge."
             : "Your price publishes instantly and anonymously as an unverified community report — no document needed."}

@@ -6,16 +6,16 @@ function Badge({
   tone,
 }: {
   children: React.ReactNode;
-  tone: "green" | "amber" | "stone";
+  tone: "green" | "yellow" | "grey";
 }) {
   const tones = {
-    green: "bg-brand-100 text-brand-800",
-    amber: "bg-amber-100 text-amber-800",
-    stone: "bg-stone-100 text-stone-600",
+    green: "bg-green-100 text-green-800",
+    yellow: "bg-[#FEF3C7] text-[#92400E]",
+    grey: "bg-neutral-100 text-neutral-600",
   };
   return (
     <span
-      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${tones[tone]}`}
+      className={`inline-block rounded px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide ${tones[tone]}`}
     >
       {children}
     </span>
@@ -39,45 +39,51 @@ function publicNote(notes: string | null): string | null {
 /**
  * One anonymized price entry. Never renders a business name —
  * attribution is always "a verified homeowner in {town}".
+ * `compact` (marquee mode) hides the note and attribution line so
+ * ticker cards stay uniform.
  */
-export default function ReportCard({ report }: { report: Report }) {
-  const note = publicNote(report.notes);
+export default function ReportCard({
+  report,
+  compact = false,
+}: {
+  report: Report;
+  compact?: boolean;
+}) {
+  const note = compact ? null : publicNote(report.notes);
   return (
-    <article className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
-            {report.category}
-          </p>
-          <h3 className="mt-1 font-semibold text-stone-900">{report.service_name}</h3>
-        </div>
-        <p className="text-2xl font-bold text-brand-800 whitespace-nowrap">
-          {formatCents(report.amount_cents)}
-          {report.amount_note && (
-            <span className="text-sm font-medium text-stone-500"> {report.amount_note}</span>
-          )}
-        </p>
-      </div>
+    <article className="h-full rounded-2xl border border-line bg-white p-5">
+      <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted">
+        {report.category}
+      </p>
+      <h3 className="mt-1 font-semibold text-ink">{report.service_name}</h3>
+      <p className="mt-3 font-mono text-2xl font-bold text-ink whitespace-nowrap">
+        {formatCents(report.amount_cents)}
+        {report.amount_note && (
+          <span className="font-mono text-sm font-medium text-muted"> {report.amount_note}</span>
+        )}
+      </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Badge tone={report.report_type === "paid" ? "green" : "amber"}>
+        <Badge tone={report.report_type === "paid" ? "green" : "yellow"}>
           {report.report_type === "paid" ? "Paid" : "Quote"}
         </Badge>
         {report.verification_status === "verified" ? (
           <Badge tone="green">Verified</Badge>
         ) : (
-          <Badge tone="stone">Unverified report</Badge>
+          <Badge tone="grey">Unverified report</Badge>
         )}
-        <span className="text-xs text-stone-500">
+        <span className="font-mono text-xs text-muted">
           {report.town} · {formatMonthYear(report.service_date ?? report.created_at)}
         </span>
       </div>
       {note && (
-        <p className="mt-3 text-sm text-stone-600">{note}</p>
+        <p className="mt-3 text-sm text-muted">{note}</p>
       )}
-      <p className="mt-3 text-xs italic text-stone-400">
-        Reported by {report.verification_status === "verified" ? "a verified" : "a"}{" "}
-        homeowner in {report.town}
-      </p>
+      {!compact && (
+        <p className="mt-3 text-xs italic text-neutral-400">
+          Reported by {report.verification_status === "verified" ? "a verified" : "a"}{" "}
+          homeowner in {report.town}
+        </p>
+      )}
     </article>
   );
 }

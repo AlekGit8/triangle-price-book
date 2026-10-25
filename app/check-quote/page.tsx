@@ -104,22 +104,22 @@ export default function CheckQuotePage() {
 
   return (
     <div className="py-10 max-w-2xl mx-auto px-4">
-      <h1 className="text-3xl font-extrabold text-brand-900">Is this quote fair?</h1>
-      <p className="mt-2 text-stone-600">
+      <h1 className="font-serif text-4xl text-ink sm:text-5xl">Is this quote fair?</h1>
+      <p className="mt-2 text-muted">
         Describe the job and enter your quoted price — we&rsquo;ll compare it against
         similar verified prices from Triangle homeowners.
       </p>
 
-      <form onSubmit={check} className="mt-6 rounded-xl border border-stone-200 bg-white p-6 space-y-4">
+      <form onSubmit={check} className="mt-6 rounded-2xl border border-line bg-white p-6 space-y-4">
         <div>
-          <label htmlFor="cq-category" className="block text-sm font-semibold text-stone-700">
+          <label htmlFor="cq-category" className="block font-mono text-xs font-semibold uppercase tracking-wide text-muted">
             Service category
           </label>
           <select
             id="cq-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2.5 text-stone-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100"
+            className="mt-1 w-full rounded-[10px] border border-line px-3 py-2.5 text-ink focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10"
           >
             {siteConfig.categories.map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -127,7 +127,7 @@ export default function CheckQuotePage() {
           </select>
         </div>
         <div>
-          <label htmlFor="cq-desc" className="block text-sm font-semibold text-stone-700">
+          <label htmlFor="cq-desc" className="block font-mono text-xs font-semibold uppercase tracking-wide text-muted">
             Describe the job
           </label>
           <input
@@ -136,11 +136,11 @@ export default function CheckQuotePage() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="e.g. water heater install, roof repair, heat pump"
-            className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2.5 text-stone-900 placeholder:text-stone-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100"
+            className="mt-1 w-full rounded-[10px] border border-line px-3 py-2.5 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10"
           />
         </div>
         <div>
-          <label htmlFor="cq-price" className="block text-sm font-semibold text-stone-700">
+          <label htmlFor="cq-price" className="block font-mono text-xs font-semibold uppercase tracking-wide text-muted">
             Your quoted price ($)
           </label>
           <input
@@ -151,28 +151,28 @@ export default function CheckQuotePage() {
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             placeholder="e.g. 5500"
-            className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2.5 text-stone-900 placeholder:text-stone-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100"
+            className="mt-1 w-full rounded-[10px] border border-line px-3 py-2.5 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10"
           />
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-lg bg-brand-700 px-4 py-2.5 font-semibold text-white hover:bg-brand-800 disabled:opacity-50"
+          className="w-full rounded-[10px] bg-black px-4 py-2.5 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
         >
           {busy ? "Checking…" : "Check my quote"}
         </button>
       </form>
 
       {result?.notEnoughData && (
-        <div className="mt-6 rounded-xl border border-stone-200 bg-white p-6">
-          <p className="font-semibold text-stone-800">No similar jobs yet</p>
-          <p className="mt-1 text-stone-600">
+        <div className="mt-6 rounded-2xl border border-line bg-white p-6">
+          <p className="font-semibold text-ink">No similar jobs yet</p>
+          <p className="mt-1 text-muted">
             We haven&rsquo;t seen enough Triangle jobs like &ldquo;{submittedDescription}&rdquo;
             to judge your quote fairly.
           </p>
-          <p className="mt-3 text-stone-600">
-            <Link href="/submit" className="font-semibold text-brand-700 hover:underline">
+          <p className="mt-3 text-muted">
+            <Link href="/submit" className="font-semibold text-ink hover:underline">
               Share your quote anonymously
             </Link>{" "}
             and help build the data your neighbors need.
@@ -181,25 +181,25 @@ export default function CheckQuotePage() {
       )}
 
       {verdict && result && (
-        <div className="mt-6 rounded-xl border border-stone-200 bg-white p-6">
+        <div className="mt-6 rounded-2xl border border-line bg-white p-6">
           <p className={`text-xl font-bold ${verdict.tone}`}>{verdict.headline}</p>
-          <p className="mt-3 text-lg text-stone-800">
+          <p className="mt-3 text-lg text-ink">
             Similar Triangle jobs range from{" "}
             <span className="font-bold">{formatCents(result.min_cents!)}</span> to{" "}
             <span className="font-bold">{formatCents(result.max_cents!)}</span>.
           </p>
-          <p className="mt-2 text-stone-600">{verdict.detail}</p>
+          <p className="mt-2 text-muted">{verdict.detail}</p>
 
           {hasRange && (
             <div className="mt-6">
-              <div className="relative h-2 rounded-full bg-stone-200">
+              <div className="relative h-2 rounded-full bg-line">
                 <div
-                  className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-700 ring-4 ring-brand-100"
+                  className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black ring-4 ring-black/10"
                   style={{ left: `${scalePos(submittedPrice)}%` }}
                   title="Your quote"
                 />
               </div>
-              <div className="mt-2 flex justify-between text-xs text-stone-500">
+              <div className="mt-2 flex justify-between text-xs text-muted">
                 <span>{formatCents(result.min_cents!)}</span>
                 <span>Your quote: {formatCents(submittedPrice)}</span>
                 <span>{formatCents(result.max_cents!)}</span>
@@ -209,19 +209,19 @@ export default function CheckQuotePage() {
 
           {result.samples && result.samples.length > 0 && (
             <div className="mt-6">
-              <p className="text-sm font-semibold text-stone-700">
+              <p className="text-sm font-semibold text-ink">
                 Compared against {result.count} similar verified {result.count === 1 ? "job" : "jobs"}:
               </p>
               <ul className="mt-2 space-y-1.5">
                 {result.samples.map((s, i) => (
                   <li key={i} className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="text-stone-600">
+                    <span className="text-muted">
                       {s.service_name}
-                      <span className="text-stone-400">
+                      <span className="text-neutral-400">
                         {" "}· {s.town}{s.service_date ? ` · ${formatMonthYear(s.service_date)}` : ""}
                       </span>
                     </span>
-                    <span className="font-semibold text-stone-800 whitespace-nowrap">
+                    <span className="font-semibold text-ink whitespace-nowrap">
                       {formatCents(s.amount_cents)}
                     </span>
                   </li>
@@ -230,15 +230,15 @@ export default function CheckQuotePage() {
             </div>
           )}
 
-          <p className="mt-4 text-xs text-stone-400">
+          <p className="mt-4 text-xs text-neutral-400">
             Median of similar jobs: {formatCents(result.median_cents!)}. Prices vary with
             scope, materials, and timing — always get multiple quotes.
           </p>
 
-          <div className="mt-4 rounded-lg bg-brand-50 p-4">
-            <p className="text-sm text-stone-700">
+          <div className="mt-4 rounded-lg bg-card p-4">
+            <p className="text-sm text-ink">
               <span className="font-semibold">Help your neighbors:</span>{" "}
-              <Link href="/submit" className="font-semibold text-brand-700 hover:underline">
+              <Link href="/submit" className="font-semibold text-ink hover:underline">
                 anonymously share this quote
               </Link>{" "}
               so the next homeowner gets a better answer.

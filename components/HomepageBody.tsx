@@ -30,20 +30,31 @@ function matchesReport(
   return tokens.every((t) => haystack.includes(t));
 }
 
+/** Exact "Quick answers" Q&As from /how-it-works. */
+const FAQ: Array<{ q: string; a: string }> = [
+  { q: "Do I need an account?", a: "No." },
+  { q: "Is it really free?", a: "Yes. Ads keep the lights on." },
+  {
+    q: "Can a business pay to change or remove prices?",
+    a: "No. There are no business profiles, rankings, or paid placements.",
+  },
+  { q: "Think an entry is wrong?", a: "Contact us and we'll review it." },
+];
+
 export default function HomepageBody({
   aggregates,
-  recentReports,
+  allReports,
 }: {
   aggregates: ServiceAggregate[];
-  recentReports: Report[];
+  allReports: Report[];
 }) {
   const [query, setQuery] = useState("");
   const resultsRef = useRef<HTMLElement>(null);
 
   const isFiltering = normalize(query).length > 0;
   const filtered = useMemo(
-    () => recentReports.filter((r) => matchesReport(r, query)),
-    [recentReports, query]
+    () => allReports.filter((r) => matchesReport(r, query)),
+    [allReports, query]
   );
 
   function scrollToResults(e: React.FormEvent) {
@@ -54,17 +65,20 @@ export default function HomepageBody({
   return (
     <div className="py-10">
       {/* Hero */}
-      <section className="text-center max-w-2xl mx-auto">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-brand-900 leading-tight">
+      <section className="dot-grid -mx-4 px-4 pb-12 pt-14 text-center sm:pt-20">
+        <p className="inline-block rounded-full border border-line bg-white px-4 py-1.5 font-mono text-xs font-semibold uppercase tracking-wide text-muted">
+          Community prices · No sponsors · No accounts
+        </p>
+        <h1 className="mx-auto mt-6 max-w-3xl font-serif text-5xl leading-[1.05] text-ink sm:text-6xl">
           {siteConfig.tagline}
         </h1>
-        <p className="mt-4 text-lg text-stone-600">{siteConfig.subTagline}</p>
+        <p className="mx-auto mt-5 max-w-xl text-lg text-muted">{siteConfig.subTagline}</p>
 
         {/* Search */}
-        <form onSubmit={scrollToResults} className="mt-6 text-left" role="search">
+        <form onSubmit={scrollToResults} className="mx-auto mt-8 max-w-xl text-left" role="search">
           <label
             htmlFor="price-search"
-            className="block text-sm font-semibold text-stone-800"
+            className="block text-sm font-semibold text-ink"
           >
             What prices are you searching for?
           </label>
@@ -76,13 +90,13 @@ export default function HomepageBody({
               onChange={(e) => setQuery(e.target.value)}
               placeholder='Try "water heater" or "roof"'
               autoComplete="off"
-              className="w-full rounded-full border border-stone-300 bg-white px-5 py-3 text-stone-900 placeholder:text-stone-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100"
+              className="w-full rounded-full border border-line bg-white px-5 py-3 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10"
             />
             {isFiltering && (
               <button
                 type="button"
                 onClick={() => setQuery("")}
-                className="shrink-0 rounded-full border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-600 hover:border-stone-400 hover:text-stone-800"
+                className="shrink-0 rounded-full border border-line bg-white px-4 py-3 text-sm font-semibold text-muted hover:border-black hover:text-ink"
               >
                 Clear
               </button>
@@ -90,49 +104,36 @@ export default function HomepageBody({
           </div>
         </form>
 
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <div className="mx-auto mt-6 flex max-w-2xl flex-wrap justify-center gap-2">
           {siteConfig.categories.map((c) => (
             <Link
               key={c}
               href={`/${categorySlugs[c]}`}
-              className="rounded-full border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:border-brand-600 hover:text-brand-800"
+              className="rounded-full border border-line bg-white px-4 py-2 text-sm font-medium text-ink hover:border-black"
             >
               {c}
             </Link>
           ))}
         </div>
-        <div className="mt-6">
+        <div className="mt-8">
           <Link
             href="/submit"
-            className="inline-block rounded-full bg-accent-500 px-6 py-3 font-bold text-white hover:bg-accent-600"
+            className="inline-block rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800"
           >
-            Share what you paid, anonymously
+            Share what you paid, anonymously →
           </Link>
         </div>
       </section>
 
       {/* Stats */}
-      <section className="mt-10">
+      <section className="mt-4">
         <StatsStrip aggregates={aggregates} />
       </section>
 
-      {/* Why this exists */}
-      <section className="mt-10 rounded-2xl border-2 border-accent-400 bg-amber-50 p-6">
-        <p className="text-sm font-bold uppercase tracking-wide text-accent-600">
-          Why this exists
-        </p>
-        <p className="mt-2 text-stone-600">
-          The idea is simple: when everyone can see what things actually cost
-          around here, we all make more informed decisions &mdash; and nobody
-          overpays. The more that people contribute, the more useful this
-          becomes.
-        </p>
-      </section>
-
       {/* Recently reported */}
-      <section ref={resultsRef} className="mt-10 scroll-mt-6">
+      <section ref={resultsRef} className="mt-16 scroll-mt-6">
         <div className="flex items-baseline justify-between gap-4">
-          <h2 className="text-2xl font-bold text-brand-900">
+          <h2 className="font-serif text-3xl text-ink sm:text-4xl">
             {isFiltering ? (
               <>
                 Results for &ldquo;{query.trim()}&rdquo;
@@ -141,21 +142,21 @@ export default function HomepageBody({
               "Recently reported services"
             )}
           </h2>
-          <Link href="/browse" className="shrink-0 text-sm font-semibold text-brand-700 hover:underline">
+          <Link href="/browse" className="shrink-0 font-mono text-[13px] font-semibold text-ink hover:underline">
             Browse all reports →
           </Link>
         </div>
         {isFiltering && (
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 font-mono text-xs text-muted">
             {filtered.length} report{filtered.length === 1 ? "" : "s"} found
           </p>
         )}
         {filtered.length === 0 ? (
-          <p className="mt-4 text-stone-600">
+          <p className="mt-4 text-muted">
             {isFiltering ? (
               <>
                 No reports for &ldquo;{query.trim()}&rdquo; yet. Be the first to{" "}
-                <Link href="/submit" className="font-semibold text-brand-700 hover:underline">
+                <Link href="/submit" className="font-semibold text-ink hover:underline">
                   share what you paid
                 </Link>
                 .
@@ -163,35 +164,110 @@ export default function HomepageBody({
             ) : (
               <>
                 No reports yet. Be the first to{" "}
-                <Link href="/submit" className="font-semibold text-brand-700 hover:underline">
+                <Link href="/submit" className="font-semibold text-ink hover:underline">
                   share what you paid
                 </Link>
                 .
               </>
             )}
           </p>
-        ) : (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        ) : isFiltering ? (
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
             {filtered.map((report) => (
               <ReportCard key={report.id} report={report} />
             ))}
           </div>
+        ) : (
+          <div
+            className="marquee marquee-mask mt-6 overflow-hidden"
+            tabIndex={0}
+            role="region"
+            aria-label="Recently reported services, scrolling"
+          >
+            <div className="marquee-track flex w-max">
+              {[0, 1].map((half) => (
+                <div
+                  key={half}
+                  aria-hidden={half === 1}
+                  className="flex shrink-0 gap-4 pr-4"
+                >
+                  {allReports.map((report) => (
+                    <div key={report.id} className="w-[300px] shrink-0 sm:w-[340px]">
+                      <ReportCard report={report} compact />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </section>
 
+      {/* Why this exists */}
+      <section className="mx-auto mt-20 max-w-2xl text-center">
+        <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-black text-white">
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+            <path d="M12 3l9 8h-3v9h-4v-6h-4v6H6v-9H3l9-8z" />
+          </svg>
+        </span>
+        <p className="mt-5 font-mono text-xs font-semibold uppercase tracking-widest text-muted">
+          Why this exists
+        </p>
+        <p className="mt-4 text-lg leading-relaxed text-muted">
+          The idea is simple: when everyone can see what things actually cost
+          around here, we all make more informed decisions &mdash; and nobody
+          overpays. The more that people contribute, the more useful this
+          becomes.
+        </p>
+        <p className="mt-5 font-mono text-[11px] font-semibold uppercase tracking-widest text-muted">
+          Built by a local Triangle homeowner to make all our lives easier.
+        </p>
+      </section>
+
       {/* How it works teaser */}
-      <section className="mt-12 rounded-2xl bg-brand-900 p-8 text-white">
-        <h2 className="text-2xl font-bold">How it works</h2>
-        <ol className="mt-4 space-y-3 text-brand-100">
+      <section className="mt-20 rounded-[24px] bg-pitch p-8 text-white sm:p-10">
+        <h2 className="font-serif text-3xl sm:text-4xl">How it works</h2>
+        <ol className="mt-5 space-y-3 text-white/70">
           <li><strong className="text-white">1.</strong> Neighbors submit what they paid or were quoted — optionally with an invoice.</li>
           <li><strong className="text-white">2.</strong> Entries publish instantly and anonymously.</li>
           <li><strong className="text-white">3.</strong> Everyone sees real local prices before hiring.</li>
         </ol>
         <Link
           href="/how-it-works"
-          className="mt-6 inline-block rounded-full bg-white px-5 py-2.5 font-semibold text-brand-900 hover:bg-brand-50"
+          className="mt-7 inline-block rounded-[10px] bg-white px-5 py-2.5 font-semibold text-ink hover:bg-neutral-100"
         >
           Full transparency page
+        </Link>
+      </section>
+
+      {/* Quick answers */}
+      <section className="mx-auto mt-20 max-w-2xl">
+        <h2 className="text-center font-serif text-3xl text-ink sm:text-4xl">Quick answers</h2>
+        <div className="mt-8 divide-y divide-line rounded-2xl border border-line bg-white">
+          {FAQ.map(({ q, a }) => (
+            <details key={q} className="group px-5 py-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold text-ink [&::-webkit-details-marker]:hidden">
+                {q}
+                <span className="font-mono text-lg text-muted transition-transform group-open:rotate-45" aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <p className="mt-2 text-muted">{a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      {/* Final call to action */}
+      <section className="mt-20 rounded-3xl bg-card p-8 text-center sm:p-12">
+        <h2 className="mx-auto max-w-2xl font-serif text-3xl leading-tight text-ink sm:text-4xl">
+          Real prices paid by your neighbors — not national averages, not sponsored estimates.
+        </h2>
+        <Link
+          href="/submit"
+          className="mt-7 inline-block rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800"
+        >
+          Share what you paid, anonymously →
         </Link>
       </section>
     </div>

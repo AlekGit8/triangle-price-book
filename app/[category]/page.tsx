@@ -53,20 +53,20 @@ export default async function CategoryPage({
     <div className="py-10">
       {/* Header */}
       <section className="max-w-2xl">
-        <p className="text-sm font-bold uppercase tracking-wide text-accent-600">
+        <p className="font-mono text-xs font-bold uppercase tracking-widest text-muted">
           {siteConfig.regionLongName}
         </p>
-        <h1 className="mt-2 text-4xl font-extrabold text-brand-900 leading-tight">
+        <h1 className="mt-2 font-serif text-4xl leading-tight text-ink sm:text-5xl">
           {category} Prices in Raleigh-Durham, NC
         </h1>
-        <p className="mt-4 text-lg text-stone-600">
+        <p className="mt-4 text-lg text-muted">
           What does {category.toLowerCase()} work actually cost around here?
           These are real prices reported by homeowners across Raleigh, Durham,
           Cary, Apex, Fuquay-Varina, and surrounding Triangle towns — what
           neighbors paid or were quoted, not national averages.
         </p>
         {totalReports > 0 && (
-          <p className="mt-3 text-sm text-stone-500">
+          <p className="mt-3 font-mono text-xs text-muted">
             {totalReports} price{totalReports === 1 ? "" : "s"} reported
             {verifiedReports > 0 &&
               ` · ${verifiedReports} verified`}
@@ -79,13 +79,13 @@ export default async function CategoryPage({
       {/* Aggregates */}
       <section className="mt-8">
         {aggregates.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-stone-300 bg-white p-8 text-center">
-            <p className="text-stone-600">
+          <div className="rounded-2xl border-2 border-dashed border-line bg-white p-8 text-center">
+            <p className="text-muted">
               No {category.toLowerCase()} prices reported yet.
             </p>
             <Link
               href="/submit"
-              className="mt-4 inline-block rounded-full bg-accent-500 px-6 py-3 font-bold text-white hover:bg-accent-600"
+              className="mt-4 inline-block rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800"
             >
               Be the first — share what you paid, anonymously
             </Link>
@@ -103,24 +103,24 @@ export default async function CategoryPage({
       </section>
 
       {/* CTA */}
-      <section className="mt-12 rounded-2xl bg-brand-900 p-8 text-white">
-        <h2 className="text-2xl font-bold">
+      <section className="mt-12 rounded-[24px] bg-pitch p-8 text-white sm:p-10">
+        <h2 className="font-serif text-3xl">
           Had {category.toLowerCase()} work done?
         </h2>
-        <p className="mt-2 text-brand-100">
+        <p className="mt-2 text-white/70">
           Add your price in under a minute — anonymously — and help your
           neighbors avoid overpaying.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/submit"
-            className="inline-block rounded-full bg-accent-500 px-6 py-3 font-bold text-white hover:bg-accent-600"
+            className="inline-block rounded-[10px] bg-white px-6 py-3 font-semibold text-ink hover:bg-neutral-100"
           >
             Share what you paid, anonymously
           </Link>
           <Link
             href={`/browse?category=${encodeURIComponent(category)}`}
-            className="inline-block rounded-full bg-white px-6 py-3 font-semibold text-brand-900 hover:bg-brand-50"
+            className="inline-block rounded-[10px] border border-white/40 px-6 py-3 font-semibold text-white hover:bg-white/10"
           >
             Browse all {category.toLowerCase()} reports →
           </Link>

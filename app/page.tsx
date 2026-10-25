@@ -9,6 +9,8 @@ export default async function HomePage() {
     getServiceAggregates(),
     getApprovedReports(),
   ]);
-  const recentReports = sortReportsByEffectiveDate(reports).slice(0, 6);
-  return <HomepageBody aggregates={aggregates} recentReports={recentReports} />;
+  // The "Recently reported" marquee scrolls every approved report,
+  // newest first — not just the six most recent.
+  const allReports = sortReportsByEffectiveDate(reports);
+  return <HomepageBody aggregates={aggregates} allReports={allReports} />;
 }

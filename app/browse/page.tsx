@@ -4,8 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase-client";
 import { siteConfig } from "@/lib/site-config";
+import { formatCents, formatMonthYear } from "@/lib/format";
 import type { Report } from "@/lib/data";
-import ReportCard from "@/components/ReportCard";
 
 function normalize(s: string): string {
   return s
@@ -104,8 +104,8 @@ function BrowseInner() {
 
   return (
     <div className="py-10">
-      <h1 className="text-3xl font-extrabold text-brand-900">Browse prices</h1>
-      <p className="mt-2 text-stone-600">
+      <h1 className="font-serif text-4xl text-ink sm:text-5xl">Browse prices</h1>
+      <p className="mt-2 text-muted">
         Every entry is anonymous.
       </p>
 
@@ -114,7 +114,7 @@ function BrowseInner() {
         role="search"
         onSubmit={(e) => e.preventDefault()}
       >
-        <label htmlFor="browse-search" className="text-sm font-semibold text-stone-700">
+        <label htmlFor="browse-search" className="font-mono text-xs font-semibold uppercase tracking-wide text-muted">
           What prices are you searching for?
         </label>
         <div className="mt-2 flex gap-2">
@@ -125,13 +125,13 @@ function BrowseInner() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder='Try "water heater" or "roof"'
             autoComplete="off"
-            className="w-full rounded-full border border-stone-300 bg-white px-5 py-3 text-stone-900 placeholder:text-stone-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100"
+            className="w-full rounded-full border border-line bg-white px-5 py-3 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10"
           />
           {query && (
             <button
               type="button"
               onClick={() => setQuery("")}
-              className="shrink-0 rounded-full border border-stone-300 bg-white px-4 py-3 text-sm font-semibold text-stone-600 hover:border-stone-400 hover:text-stone-800"
+              className="shrink-0 rounded-full border border-line bg-white px-4 py-3 text-sm font-semibold text-muted hover:border-black hover:text-ink"
             >
               Clear
             </button>
@@ -146,8 +146,8 @@ function BrowseInner() {
             onClick={() => pickCategory(c)}
             className={`rounded-full px-4 py-2 text-sm font-medium border ${
               category === c
-                ? "bg-brand-700 text-white border-brand-700"
-                : "bg-white text-stone-700 border-stone-300 hover:border-brand-600"
+                ? "bg-black text-white border-black"
+                : "bg-white text-ink border-line hover:border-black"
             }`}
           >
             {c}
@@ -157,12 +157,12 @@ function BrowseInner() {
 
       {service && (
         <div className="mt-4">
-          <span className="inline-flex items-center gap-2 rounded-full bg-brand-100 px-4 py-2 text-sm font-medium text-brand-900">
+          <span className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-sm font-medium text-ink">
             {service}
             <button
               onClick={() => setService("")}
               aria-label="Clear service filter"
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-200 text-brand-900 hover:bg-brand-300"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-200 text-ink hover:bg-neutral-300"
             >
               ×
             </button>
@@ -171,17 +171,17 @@ function BrowseInner() {
       )}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-stone-600" aria-live="polite">
+        <p className="font-mono text-xs text-muted" aria-live="polite">
           {filtered.length} {filtered.length === 1 ? "report" : "reports"}
         </p>
-        <label className="flex items-center gap-2 text-sm text-stone-600">
+        <label className="flex items-center gap-2 text-sm text-muted">
           Sort by
           <select
             value={sort}
             onChange={(e) =>
               setSort(e.target.value as "date-desc" | "date-asc" | "price-desc" | "price-asc")
             }
-            className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700"
+            className="rounded-[10px] border border-line bg-white px-3 py-2 text-sm font-medium text-ink"
           >
             <option value="date-desc">Date: newest to oldest</option>
             <option value="date-asc">Date: oldest to newest</option>
@@ -193,7 +193,7 @@ function BrowseInner() {
 
       <div className="mt-4">
         {loading ? (
-          <p className="text-stone-500">Loading…</p>
+          <p className="text-muted">Loading…</p>
         ) : unconfigured ? (
           <div className="rounded-xl border border-amber-300 bg-amber-50 p-6 text-amber-900">
             <p className="font-semibold">Database not connected yet.</p>
@@ -202,7 +202,7 @@ function BrowseInner() {
               redeploy to see live reports here.
             </p>
           </div>
-        ) : filtered.length === 0 ? (          <p className="text-stone-600">
+        ) : filtered.length === 0 ? (          <p className="text-muted">
             {query ? (
               <>
                 No reports match &ldquo;{query}&rdquo;.{" "}
@@ -214,15 +214,64 @@ function BrowseInner() {
             ) : (
               <>No reports in this category yet.{" "}</>
             )}
-            <a href="/submit" className="font-semibold text-brand-700 hover:underline">
+            <a href="/submit" className="font-semibold text-ink hover:underline">
               Be the first to share one.
             </a>
           </p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {sorted.map((r) => (
-              <ReportCard key={r.id} report={r} />
-            ))}
+          <div className="overflow-x-auto rounded-2xl border border-line bg-white">
+            <table className="w-full min-w-[680px] text-left">
+              <thead>
+                <tr className="border-b border-line font-mono text-[11px] uppercase tracking-wider text-muted">
+                  <th scope="col" className="px-4 py-3 font-semibold">Service</th>
+                  <th scope="col" className="hidden px-4 py-3 font-semibold sm:table-cell">Category</th>
+                  <th scope="col" className="hidden px-4 py-3 font-semibold md:table-cell">Town</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Date</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Type</th>
+                  <th scope="col" className="px-4 py-3 text-right font-semibold">Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((r) => (
+                  <tr key={r.id} className="border-b border-line last:border-0 hover:bg-paper">
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-ink">{r.service_name}</p>
+                      {r.verification_status === "verified" ? (
+                        <span className="mt-1 inline-block rounded bg-green-100 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-green-800">
+                          Verified
+                        </span>
+                      ) : (
+                        <span className="mt-1 inline-block rounded bg-neutral-100 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
+                          Unverified report
+                        </span>
+                      )}
+                    </td>
+                    <td className="hidden px-4 py-3 font-mono text-xs text-muted sm:table-cell">{r.category}</td>
+                    <td className="hidden px-4 py-3 font-mono text-xs text-muted md:table-cell">{r.town}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-muted">
+                      {formatMonthYear(r.service_date ?? r.created_at)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {r.report_type === "paid" ? (
+                        <span className="inline-block rounded bg-green-100 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-green-800">
+                          Paid
+                        </span>
+                      ) : (
+                        <span className="inline-block rounded bg-[#FEF3C7] px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-[#92400E]">
+                          Quote
+                        </span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-base font-bold text-ink">
+                      {formatCents(r.amount_cents)}
+                      {r.amount_note && (
+                        <span className="text-xs font-medium text-muted"> {r.amount_note}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
