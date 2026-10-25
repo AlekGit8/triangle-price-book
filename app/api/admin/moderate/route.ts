@@ -20,6 +20,12 @@ export async function POST(req: Request) {
   if (!authorized(req))
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   try {
+    // A moderation action is two small fields — reject giant bodies early,
+    // like the other routes do.
+    const contentLength = Number(req.headers.get("content-length") ?? 0);
+    if (contentLength > 8 * 1024) {
+      return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 413 });
+    }
     const { id, action } = (await req.json()) as { id?: string; action?: Action };
     if (!id || !["verify", "publish_unverified", "reject"].includes(action ?? ""))
       return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 });

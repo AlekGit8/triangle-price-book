@@ -261,7 +261,11 @@ export async function POST(req: Request) {
       .select("id, amount_cents, service_name, town, service_date, report_type, created_at")
       .eq("category", category)
       .eq("verification_status", "verified")
-      .not("moderated_at", "is", null);
+      .not("moderated_at", "is", null)
+      // Bound the fetch: the token-match needs the category's verified
+      // rows, but an unbounded pull grows with the table (DoS / egress).
+      // 500 is far above any realistic per-category match set.
+      .limit(500);
     if (error) throw error;
 
     const scored = (data ?? [])
