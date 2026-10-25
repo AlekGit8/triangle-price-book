@@ -23,6 +23,12 @@ import { headers } from "next/headers";
  * `if (gateApplies)` block in section 2 (the rate limits and
  * security headers stay). The header/footer nav returns
  * automatically because the rewrite header is no longer set.
+ *
+ * PREVIEW DEPLOYMENTS: middleware skips the rewrite entirely on
+ * Cloudflare Workers preview hostnames (see lib/preview-host.ts),
+ * so the `beta` branch's previews show the full site — and this
+ * check correctly reports the gate as inactive there, because the
+ * header is never set on a preview host.
  */
 export async function isComingSoonGateActive(): Promise<boolean> {
   const h = await headers();

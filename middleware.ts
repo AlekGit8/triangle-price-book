@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { checkRateLimit, clientIp, utcDay } from "@/lib/rate-limit";
+import { isPreviewDeploymentHost } from "@/lib/preview-host";
 
 /**
  * TEMPORARY coming-soon gate — while Longsite Labs LLC is pending state approval.
@@ -21,6 +22,15 @@ import { checkRateLimit, clientIp, utcDay } from "@/lib/rate-limit";
  * the nav shows again. (Direct /coming-soon requests also set the
  * header via the passthrough in section 3 — delete the /coming-soon
  * route and its entry in `gateApplies` at launch too.)
+ *
+ * PREVIEW DEPLOYMENTS (beta workflow): the gate does NOT apply to
+ * Cloudflare Workers preview hostnames (pattern
+ * `*-triangle-price-book.longsitelabsllc.workers.dev` — see
+ * lib/preview-host.ts), so the `beta` branch's previews show the
+ * full site instead of the coming-soon page. Production (custom
+ * domains and the production workers.dev host) stays gated. Rate
+ * limits and security headers still apply on preview hosts — only
+ * the rewrite is skipped.
  */
 
 interface ApiLimit {
@@ -110,7 +120,11 @@ export function middleware(request: NextRequest) {
   //    LAUNCH: delete this `if (gateApplies)` block and nothing else.
   //    Requests then fall through to the passthrough in section 3,
   //    which keeps the security headers.
+  //    Preview deployments bypass the gate (see lib/preview-host.ts):
+  //    their hostnames are workers.dev with a prefix, and they show
+  //    the full site so changes can be reviewed before merging.
   const gateApplies =
+    !isPreviewDeploymentHost(request.nextUrl.hostname) &&
     pathname !== "/coming-soon" &&
     !pathname.startsWith("/admin") &&
     !pathname.startsWith("/api/") &&
