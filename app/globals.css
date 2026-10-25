@@ -8,8 +8,10 @@
   background-size: 22px 22px;
 }
 
-/* Recently reported services: slow infinite marquee.
-   The track holds two identical halves; translating -50% loops seamlessly. */
+/* Category pills on /coming-soon: slow infinite marquee.
+   The track holds two identical halves; translating -50% loops seamlessly.
+   (The homepage report row used to share this; it now scrolls natively —
+   see .report-marquee — so the user can swipe/drag it in both directions.) */
 @keyframes marquee-scroll {
   from {
     transform: translateX(0);
@@ -34,6 +36,26 @@
   .marquee-track {
     animation: none;
   }
+}
+
+/* Homepage "Recently reported services" row: a real horizontal scroller.
+   Three identical copies tile the row; JS advances scrollLeft and wraps by
+   one copy width, so it loops in both directions and the user can swipe
+   (touch) or drag (mouse) through it manually. */
+.report-marquee {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  cursor: grab;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+}
+.report-marquee::-webkit-scrollbar {
+  display: none;
+}
+.report-marquee.dragging {
+  cursor: grabbing;
+  user-select: none;
 }
 
 /* Soft edge fades for the marquee. */
