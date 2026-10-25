@@ -52,6 +52,8 @@ const API_LIMITS: ApiLimit[] = [
   { prefix: "/api/submit", limit: 30, windowMs: HOUR },
   // /api/notify writes signup rows (list-bombing / DB bloat vector).
   { prefix: "/api/notify", limit: 10, windowMs: HOUR },
+  // /api/feedback writes feedback rows (same vector as notify).
+  { prefix: "/api/feedback", limit: 10, windowMs: HOUR },
   // Public read API; generous, but not unlimited (full-table scans).
   { prefix: "/api/check-quote", limit: 120, windowMs: HOUR },
   // Slow down ADMIN_KEY guessing. The key must still be long and random.

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { siteConfig } from "@/lib/site-config";
 import Marquee from "@/components/Marquee";
+import FeedbackForm from "@/components/FeedbackForm";
 
 type Step = "email" | "updates" | "done";
 
@@ -149,6 +150,19 @@ export default function ComingSoonPage() {
               </p>
             </div>
           )}
+      </div>
+
+      {/* Feedback: missing category, feature request, or a price with nowhere to go. */}
+      <div className="mx-auto mt-16 w-full max-w-sm text-center">
+        <h2 className="font-serif text-2xl text-ink">
+          Missing a category? Have a feature request?
+        </h2>
+        <p className="mt-2 text-sm text-muted">
+          Tell us in 300 characters or less — anonymous, no account needed.
+        </p>
+        <div className="mt-4 text-left">
+          <FeedbackForm />
+        </div>
       </div>
     </div>
   );
