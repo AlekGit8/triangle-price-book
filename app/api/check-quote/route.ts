@@ -43,6 +43,32 @@ const AI_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"];
 // Total budget for the Gemini call(s) so a slow model can never hang the
 // whole quote check.
 const AI_TOTAL_TIMEOUT_MS = 15_000;
+// Pause before a single retry of a transient 429/503.
+const AI_RETRY_DELAY_MS = 1500;
+// Only retry a transient 429/503 if this much of the shared budget remains.
+const AI_RETRY_MIN_REMAINING_MS = 3000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Strip surrounding markdown code fences (```json ... ``` or ``` ... ```)
+ * and trim. Gemini is asked for JSON only, but sometimes wraps it anyway.
+ */
+function stripCodeFences(text: string): string {
+  let t = text.trim();
+  if (!t.startsWith("```")) return t;
+  const firstNewline = t.indexOf("\n");
+  if (firstNewline !== -1) {
+    t = t.slice(firstNewline + 1);
+  } else {
+    t = t.replace(/^```[a-zA-Z]*\s*/, "");
+  }
+  const lastFence = t.lastIndexOf("```");
+  if (lastFence !== -1) t = t.slice(0, lastFence);
+  return t.trim();
+}
 
 function aiEstimatePrompt(description: string, category: string): string {
   return `What is a reasonable price range for a homeowner hiring this job in the Raleigh-Durham-Chapel Hill Triangle region of North Carolina? Job: "${description}" (category: ${category}). Return ONLY JSON: {"low": <dollars as a number>, "median": <dollars>, "high": <dollars>, "basis": "one short sentence saying what the range is based on"}. Base it on typical US market pricing for this service. Never invent a specific local business price; give a broad market range. If the job description is too vague to estimate, return all nulls.`;
@@ -95,59 +121,75 @@ async function fetchAiEstimate(
   if (!apiKey) return null;
   const deadline = Date.now() + AI_TOTAL_TIMEOUT_MS;
   for (const model of AI_MODELS) {
-    const remaining = deadline - Date.now();
-    if (remaining <= 0) break;
-    let res: Response;
-    try {
-      res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-        {
-          method: "POST",
-          headers: {
-            "x-goog-api-key": apiKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              { parts: [{ text: aiEstimatePrompt(description, category) }] },
-            ],
-            generationConfig: {
-              response_mime_type: "application/json",
-              maxOutputTokens: 500,
+    // Up to two attempts per model: the first try, plus one retry for a
+    // transient 429/503. Timeouts, parse failures, and invalid estimates
+    // are never retried — they fall through to the next model.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) break;
+      let res: Response;
+      try {
+        res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: "POST",
+            headers: {
+              "x-goog-api-key": apiKey,
+              "Content-Type": "application/json",
             },
-          }),
-          signal: AbortSignal.timeout(Math.max(1000, remaining)),
+            body: JSON.stringify({
+              contents: [
+                { parts: [{ text: aiEstimatePrompt(description, category) }] },
+              ],
+              generationConfig: {
+                response_mime_type: "application/json",
+                maxOutputTokens: 500,
+              },
+            }),
+            signal: AbortSignal.timeout(Math.max(1000, remaining)),
+          }
+        );
+      } catch (err) {
+        console.error(`check-quote: Gemini model ${model} fetch failed`, err);
+        break;
+      }
+      if (!res.ok) {
+        console.error(`check-quote: Gemini model ${model} error`, res.status);
+        if (
+          (res.status === 429 || res.status === 503) &&
+          attempt === 1 &&
+          deadline - Date.now() > AI_RETRY_MIN_REMAINING_MS
+        ) {
+          await sleep(AI_RETRY_DELAY_MS);
+          continue;
         }
-      );
-    } catch (err) {
-      console.error(`check-quote: Gemini model ${model} fetch failed`, err);
-      continue;
+        break;
+      }
+      let aiJson: Record<string, unknown>;
+      try {
+        aiJson = (await res.json()) as Record<string, unknown>;
+      } catch (err) {
+        console.error(`check-quote: Gemini model ${model} bad JSON`, err);
+        break;
+      }
+      const candidates = aiJson.candidates as
+        | Array<{ content?: { parts?: Array<{ text?: string }> } }>
+        | undefined;
+      const raw = candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(stripCodeFences(raw));
+      } catch {
+        console.error(
+          `check-quote: Gemini model ${model} unparsable JSON, raw: ${raw.slice(0, 300)}`
+        );
+        break;
+      }
+      const estimate = sanitizeAiEstimate(parsed);
+      if (estimate) return estimate;
+      console.error(`check-quote: Gemini model ${model} invalid estimate`);
+      break;
     }
-    if (!res.ok) {
-      console.error(`check-quote: Gemini model ${model} error`, res.status);
-      continue;
-    }
-    let aiJson: Record<string, unknown>;
-    try {
-      aiJson = (await res.json()) as Record<string, unknown>;
-    } catch (err) {
-      console.error(`check-quote: Gemini model ${model} bad JSON`, err);
-      continue;
-    }
-    const candidates = aiJson.candidates as
-      | Array<{ content?: { parts?: Array<{ text?: string }> } }>
-      | undefined;
-    const raw = candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      console.error(`check-quote: Gemini model ${model} unparsable JSON`);
-      continue;
-    }
-    const estimate = sanitizeAiEstimate(parsed);
-    if (estimate) return estimate;
-    console.error(`check-quote: Gemini model ${model} invalid estimate`);
   }
   return null;
 }
