@@ -37,20 +37,17 @@ interface AiEstimate {
   basis: string;
 }
 
-// Same model chain as /api/extract — Google retires older versioned models
-// for new API keys, and the newest models can be capacity-throttled (503).
-const AI_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"];
+// Same model chain as /api/extract, newest first, with the proven stable
+// gemini-2.5-flash last as the fallback — it has a much more generous free
+// tier and is only reached when the newer models fail, so it adds no load
+// in the success case.
+const AI_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash"];
 // Total budget for the Gemini call(s) so a slow model can never hang the
 // whole quote check.
 const AI_TOTAL_TIMEOUT_MS = 15_000;
-// Pause before a single retry of a transient 429/503.
-const AI_RETRY_DELAY_MS = 1500;
-// Only retry a transient 429/503 if this much of the shared budget remains.
-const AI_RETRY_MIN_REMAINING_MS = 3000;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+// Deliberately NO retry on 429/503: under free-tier throttling a retry just
+// doubles call volume against an already-overloaded API and buys nothing.
+// One attempt per model, then fall through to the next model.
 
 /**
  * Strip surrounding markdown code fences (```json ... ``` or ``` ... ```)
@@ -120,76 +117,65 @@ async function fetchAiEstimate(
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
   const deadline = Date.now() + AI_TOTAL_TIMEOUT_MS;
+  // One attempt per model — see the no-retry note above. Any failure falls
+  // through to the next model; timeouts, parse failures, and invalid
+  // estimates are never retried either.
   for (const model of AI_MODELS) {
-    // Up to two attempts per model: the first try, plus one retry for a
-    // transient 429/503. Timeouts, parse failures, and invalid estimates
-    // are never retried — they fall through to the next model.
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) break;
-      let res: Response;
-      try {
-        res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-          {
-            method: "POST",
-            headers: {
-              "x-goog-api-key": apiKey,
-              "Content-Type": "application/json",
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    let res: Response;
+    try {
+      res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": apiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [
+              { parts: [{ text: aiEstimatePrompt(description, category) }] },
+            ],
+            generationConfig: {
+              response_mime_type: "application/json",
+              maxOutputTokens: 500,
             },
-            body: JSON.stringify({
-              contents: [
-                { parts: [{ text: aiEstimatePrompt(description, category) }] },
-              ],
-              generationConfig: {
-                response_mime_type: "application/json",
-                maxOutputTokens: 500,
-              },
-            }),
-            signal: AbortSignal.timeout(Math.max(1000, remaining)),
-          }
-        );
-      } catch (err) {
-        console.error(`check-quote: Gemini model ${model} fetch failed`, err);
-        break;
-      }
-      if (!res.ok) {
-        console.error(`check-quote: Gemini model ${model} error`, res.status);
-        if (
-          (res.status === 429 || res.status === 503) &&
-          attempt === 1 &&
-          deadline - Date.now() > AI_RETRY_MIN_REMAINING_MS
-        ) {
-          await sleep(AI_RETRY_DELAY_MS);
-          continue;
+          }),
+          signal: AbortSignal.timeout(Math.max(1000, remaining)),
         }
-        break;
-      }
-      let aiJson: Record<string, unknown>;
-      try {
-        aiJson = (await res.json()) as Record<string, unknown>;
-      } catch (err) {
-        console.error(`check-quote: Gemini model ${model} bad JSON`, err);
-        break;
-      }
-      const candidates = aiJson.candidates as
-        | Array<{ content?: { parts?: Array<{ text?: string }> } }>
-        | undefined;
-      const raw = candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      let parsed: Record<string, unknown>;
-      try {
-        parsed = JSON.parse(stripCodeFences(raw));
-      } catch {
-        console.error(
-          `check-quote: Gemini model ${model} unparsable JSON, raw: ${raw.slice(0, 300)}`
-        );
-        break;
-      }
-      const estimate = sanitizeAiEstimate(parsed);
-      if (estimate) return estimate;
-      console.error(`check-quote: Gemini model ${model} invalid estimate`);
-      break;
+      );
+    } catch (err) {
+      console.error(`check-quote: Gemini model ${model} fetch failed`, err);
+      continue;
     }
+    if (!res.ok) {
+      console.error(`check-quote: Gemini model ${model} error`, res.status);
+      continue;
+    }
+    let aiJson: Record<string, unknown>;
+    try {
+      aiJson = (await res.json()) as Record<string, unknown>;
+    } catch (err) {
+      console.error(`check-quote: Gemini model ${model} bad JSON`, err);
+      continue;
+    }
+    const candidates = aiJson.candidates as
+      | Array<{ content?: { parts?: Array<{ text?: string }> } }>
+      | undefined;
+    const raw = candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(stripCodeFences(raw));
+    } catch {
+      console.error(
+        `check-quote: Gemini model ${model} unparsable JSON, raw: ${raw.slice(0, 300)}`
+      );
+      continue;
+    }
+    const estimate = sanitizeAiEstimate(parsed);
+    if (estimate) return estimate;
+    console.error(`check-quote: Gemini model ${model} invalid estimate`);
   }
   return null;
 }
