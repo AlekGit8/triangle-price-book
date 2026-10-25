@@ -37,11 +37,14 @@ interface AiEstimate {
   basis: string;
 }
 
-// Same model chain as /api/extract, newest first, with the proven stable
-// gemini-2.5-flash last as the fallback — it has a much more generous free
-// tier and is only reached when the newer models fail, so it adds no load
-// in the success case.
-const AI_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash"];
+// gemini-3.5-flash-lite ONLY (user direction, verified Oct 24, 2026 against
+// Google's docs): released Jul 21, 2026, free-tier eligible, lifecycle good
+// until Jul 21, 2027. Do NOT re-add gemini-2.5-flash (retired Oct 20, 2026
+// on Vertex; Developer API access restricted to prior users — our key is
+// new, so it does not work), gemini-3.5-flash (deprecated Oct 8, 2026 —
+// calls now route to gemini-3.6-flash, so it was never a real fallback),
+// or gemini-3.6-flash (retires Nov 19, 2026).
+const AI_MODELS = ["gemini-3.5-flash-lite"];
 // Total budget for the Gemini call(s) so a slow model can never hang the
 // whole quote check.
 const AI_TOTAL_TIMEOUT_MS = 15_000;
@@ -68,7 +71,7 @@ function stripCodeFences(text: string): string {
 }
 
 function aiEstimatePrompt(description: string, category: string): string {
-  return `What is a reasonable price range for a homeowner hiring this job in the Raleigh-Durham-Chapel Hill Triangle region of North Carolina? Job: "${description}" (category: ${category}). Return ONLY JSON: {"low": <dollars as a number>, "median": <dollars>, "high": <dollars>, "basis": "one short sentence saying what the range is based on"}. Base it on typical US market pricing for this service. Never invent a specific local business price; give a broad market range. If the job description is too vague to estimate, return all nulls.`;
+  return `What is a reasonable price range for a homeowner hiring this job in the Raleigh-Durham-Chapel Hill Triangle region of North Carolina? Job: "${description}" (category: ${category}). Reply with ONLY a JSON object with exactly these keys: "low", "median", and "high" (numbers, in US dollars) and "basis" (one short sentence saying what the range is based on). Base it on typical US market pricing for this service. Never invent a specific local business price; give a broad market range. If the job description is too vague to estimate, set "low", "median", and "high" to null.`;
 }
 
 /** Sanitize a parsed Gemini JSON object into an estimate, or null if unusable. */
