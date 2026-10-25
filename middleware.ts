@@ -1,36 +1,16 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { checkRateLimit, clientIp, utcDay } from "@/lib/rate-limit";
-import { isPreviewDeploymentHost } from "@/lib/preview-host";
 
 /**
- * TEMPORARY coming-soon gate — while Longsite Labs LLC is pending state approval.
- * All public traffic sees the coming-soon page. /admin and /api stay
- * reachable so the owner can keep working behind the scenes.
+ * LAUNCHED Oct 25, 2026 — the coming-soon gate was removed: all public
+ * traffic now sees the real site. The coming-soon page
+ * (app/coming-soon/page.tsx) stays in the repo so the gate can be
+ * reinstated if needed.
  *
- * This middleware ALSO enforces:
+ * This middleware enforces:
  *  - per-IP rate limits on /api/* (abuse / cost protection — see lib/rate-limit.ts)
  *  - baseline security headers on every response
- *
- * LAUNCH: delete ONLY the `if (gateApplies)` block in section 2 below
- * (the rewrite — not this whole file). The rate limits and security
- * headers in this file stay: requests then fall through to the
- * passthrough in section 3, which still applies the security headers.
- * The header/footer nav returns automatically: the rewrite is what
- * sets the `x-tpb-coming-soon` header that lib/coming-soon-gate.ts
- * reads, so once the rewrite is gone the header is no longer set and
- * the nav shows again. (Direct /coming-soon requests also set the
- * header via the passthrough in section 3 — delete the /coming-soon
- * route and its entry in `gateApplies` at launch too.)
- *
- * PREVIEW DEPLOYMENTS (beta workflow): the gate does NOT apply to
- * Cloudflare Workers preview hostnames (pattern
- * `*-triangle-price-book.longsitelabsllc.workers.dev` — see
- * lib/preview-host.ts), so the `beta` branch's previews show the
- * full site instead of the coming-soon page. Production (custom
- * domains and the production workers.dev host) stays gated. Rate
- * limits and security headers still apply on preview hosts — only
- * the rewrite is skipped.
  */
 
 interface ApiLimit {
@@ -118,41 +98,11 @@ export function middleware(request: NextRequest) {
     if (limited) return withSecurityHeaders(limited);
   }
 
-  // 2. Coming-soon gate (temporary — see file header).
-  //    LAUNCH: delete this `if (gateApplies)` block and nothing else.
-  //    Requests then fall through to the passthrough in section 3,
-  //    which keeps the security headers.
-  //    Preview deployments bypass the gate (see lib/preview-host.ts):
-  //    their hostnames are workers.dev with a prefix, and they show
-  //    the full site so changes can be reviewed before merging.
-  const gateApplies =
-    !isPreviewDeploymentHost(request.nextUrl.hostname) &&
-    pathname !== "/coming-soon" &&
-    !pathname.startsWith("/admin") &&
-    !pathname.startsWith("/api/") &&
-    !pathname.startsWith("/_next/") &&
-    pathname !== "/favicon.ico" &&
-    pathname !== "/icon.svg" &&
-    pathname !== "/logo.svg" &&
-    pathname !== "/robots.txt" &&
-    pathname !== "/sitemap.xml";
-  if (gateApplies) {
-    // Everyone else gets the coming-soon page (URL stays as typed).
-    // The dedicated header tells server components (via headers())
-    // that this request was rewritten to the coming-soon page — see
-    // lib/coming-soon-gate.ts. Next.js copies middleware response
-    // headers onto the request headers visible to server components
-    // (except `x-middleware-rewrite`, which is response-only).
-    const rewriteRes = NextResponse.rewrite(new URL("/coming-soon", request.url));
-    rewriteRes.headers.set("x-tpb-coming-soon", "1");
-    return withSecurityHeaders(rewriteRes);
-  }
-
-  // 3. Passthrough with security headers for everything the gate
-  //    doesn't rewrite: /coming-soon itself, /admin, /api, and static
-  //    assets. A direct request for the coming-soon page itself also
-  //    hides the header/footer nav (the page shares the root layout);
-  //    /admin and /api deliberately do NOT get the gate header.
+  // 2. Passthrough with security headers for everything: public pages,
+  //    /coming-soon itself, /admin, /api, and static assets. A direct
+  //    request for the coming-soon page itself also hides the
+  //    header/footer nav (the page shares the root layout); /admin and
+  //    /api deliberately do NOT get the gate header.
   const res = NextResponse.next();
   if (pathname === "/coming-soon") {
     res.headers.set("x-tpb-coming-soon", "1");
