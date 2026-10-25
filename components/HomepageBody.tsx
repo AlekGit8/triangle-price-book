@@ -67,7 +67,7 @@ export default function HomepageBody({
       {/* Hero */}
       <section className="dot-grid -mx-4 px-4 pb-12 pt-14 text-center sm:pt-20">
         <p className="inline-block rounded-full border border-line bg-white px-4 py-1.5 font-mono text-xs font-semibold uppercase tracking-wide text-muted">
-          Community prices · Crowdsourced anonymous data · No accounts
+          Crowdsourced anonymous data · No accounts
         </p>
         <h1 className="mx-auto mt-6 max-w-3xl font-serif text-5xl leading-[1.05] text-ink sm:text-6xl">
           {siteConfig.tagline}
