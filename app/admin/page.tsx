@@ -8,7 +8,6 @@ interface QueueReport {
   service_name: string;
   category: string;
   amount_cents: number;
-  amount_note: string | null;
   report_type: string;
   town: string;
   service_date: string | null;
@@ -97,7 +96,7 @@ export default function AdminPage() {
   if (!unlocked) {
     return (
       <div className="py-16 max-w-sm mx-auto">
-        <h1 className="text-2xl font-extrabold text-brand-900">Moderation</h1>
+        <h1 className="font-serif text-3xl text-ink">Moderation</h1>
         <form
           className="mt-4 flex gap-2"
           onSubmit={(e) => {
@@ -111,13 +110,13 @@ export default function AdminPage() {
             type="password"
             value={key}
             onChange={(e) => setKey(e.target.value)}
-            className="flex-1 rounded-lg border border-stone-300 px-3 py-2"
+            className="flex-1 rounded-[10px] border border-line px-3 py-2 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10"
             placeholder="Admin key"
           />
           <button
             type="submit"
             disabled={loading}
-            className="rounded-lg bg-brand-700 px-4 py-2 font-semibold text-white hover:bg-brand-800 disabled:opacity-50"
+            className="rounded-[10px] bg-black px-4 py-2 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
           >
             {loading ? "…" : "Unlock"}
           </button>
@@ -130,12 +129,12 @@ export default function AdminPage() {
   return (
     <div className="py-10">
       <div className="flex items-baseline justify-between">
-        <h1 className="text-3xl font-extrabold text-brand-900">Moderation</h1>
-        <button onClick={() => { if (tab === "signups") loadSignups(key); else load(key, tab); }} className="text-sm font-semibold text-brand-700 hover:underline">
+        <h1 className="font-serif text-3xl text-ink sm:text-4xl">Moderation</h1>
+        <button onClick={() => { if (tab === "signups") loadSignups(key); else load(key, tab); }} className="font-mono text-[13px] font-semibold text-ink hover:underline">
           Refresh
         </button>
       </div>
-      <p className="mt-2 text-stone-600">
+      <p className="mt-2 text-muted">
         New submissions publish instantly with a document attached. Use this page
         to review the queue and take down anything abusive.
       </p>
@@ -147,8 +146,8 @@ export default function AdminPage() {
             onClick={() => { setTab(t); if (t === "signups") loadSignups(key); else load(key, t); }}
             className={`rounded-full px-4 py-2 text-sm font-semibold ${
               tab === t
-                ? "bg-brand-700 text-white"
-                : "border border-stone-300 text-stone-700 hover:border-brand-600"
+                ? "bg-black text-white"
+                : "border border-line bg-white text-ink hover:border-black"
             }`}
           >
             {t === "queue"
@@ -163,66 +162,65 @@ export default function AdminPage() {
       {tab === "signups" ? (
         <div className="mt-6">
           <div className="grid grid-cols-2 gap-4 max-w-md">
-            <div className="rounded-xl border border-stone-200 bg-white p-5">
-              <p className="text-3xl font-bold text-brand-800">{signupStats.total}</p>
-              <p className="text-sm text-stone-600">Launch notifications</p>
+            <div className="rounded-2xl border border-line bg-white p-5">
+              <p className="font-serif text-4xl text-ink">{signupStats.total}</p>
+              <p className="mt-1 text-sm text-muted">Launch notifications</p>
             </div>
-            <div className="rounded-xl border border-stone-200 bg-white p-5">
-              <p className="text-3xl font-bold text-brand-800">{signupStats.updatesOptIn}</p>
-              <p className="text-sm text-stone-600">Opted into updates</p>
+            <div className="rounded-2xl border border-line bg-white p-5">
+              <p className="font-serif text-4xl text-ink">{signupStats.updatesOptIn}</p>
+              <p className="mt-1 text-sm text-muted">Opted into updates</p>
             </div>
           </div>
           <div className="mt-6 space-y-2">
             {signups.map((s) => (
-              <div key={s.email} className="flex items-center justify-between rounded-lg border border-stone-200 bg-white px-4 py-2.5">
-                <span className="text-sm text-stone-800">{s.email}</span>
+              <div key={s.email} className="flex items-center justify-between rounded-[10px] border border-line bg-white px-4 py-2.5">
+                <span className="text-sm text-ink">{s.email}</span>
                 <span className="flex items-center gap-3">
                   {s.wants_updates && (
-                    <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-semibold text-brand-800">
+                    <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
                       Updates
                     </span>
                   )}
-                  <span className="text-xs text-stone-400">
+                  <span className="font-mono text-xs text-muted">
                     {new Date(s.created_at).toLocaleDateString()}
                   </span>
                 </span>
               </div>
             ))}
             {signups.length === 0 && (
-              <p className="text-stone-600">No signups yet.</p>
+              <p className="text-muted">No signups yet.</p>
             )}
           </div>
         </div>
       ) : (
       <div className="mt-6 space-y-4">
         {(tab === "queue" ? reports : published).map((r) => (
-          <article key={r.id} className="rounded-xl border border-stone-200 bg-white p-5">
+          <article key={r.id} className="rounded-2xl border border-line bg-white p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
+                <p className="font-mono text-xs font-semibold uppercase tracking-wide text-muted">
                   {r.category} · {r.report_type} · {r.verification_status}
                 </p>
-                <h3 className="font-semibold text-stone-900">{r.service_name}</h3>
-                <p className="text-sm text-stone-600">
+                <h3 className="mt-1 font-semibold text-ink">{r.service_name}</h3>
+                <p className="text-sm text-muted">
                   {r.town}
                   {r.service_date ? ` · ${formatMonthYear(r.service_date)}` : ""}
                 </p>
-                {r.notes && <p className="mt-1 text-sm text-stone-600">{r.notes}</p>}
+                {r.notes && <p className="mt-1 text-sm text-muted">{r.notes}</p>}
                 {r.submitter_email && (
-                  <p className="mt-1 text-xs text-stone-500">Submitter: {r.submitter_email}</p>
+                  <p className="mt-1 font-mono text-xs text-muted">Submitter: {r.submitter_email}</p>
                 )}
                 {r.verifications.length > 0 ? (
-                  <p className="mt-1 text-xs font-semibold text-brand-700">
+                  <p className="mt-1 text-xs font-semibold text-green-700">
                     Invoice attached: {r.verifications.length} file(s) — review in Supabase
                     Storage → invoices bucket, path prefix {r.id}/
                   </p>
                 ) : (
-                  <p className="mt-1 text-xs text-stone-500">No invoice attached.</p>
+                  <p className="mt-1 text-xs text-muted">No invoice attached.</p>
                 )}
               </div>
-              <p className="text-2xl font-bold text-brand-800 whitespace-nowrap">
+              <p className="whitespace-nowrap font-mono text-2xl font-bold text-ink">
                 {formatCents(r.amount_cents)}
-                {r.amount_note && <span className="text-sm font-medium text-stone-500"> {r.amount_note}</span>}
               </p>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -230,13 +228,13 @@ export default function AdminPage() {
                 <>
                   <button
                     onClick={() => moderate(r.id, "verify", "queue")}
-                    className="rounded-full bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800"
+                    className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
                   >
                     Verify &amp; publish
                   </button>
                   <button
                     onClick={() => moderate(r.id, "publish_unverified", "queue")}
-                    className="rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-700 hover:border-brand-600"
+                    className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-black"
                   >
                     Publish unverified
                   </button>
@@ -263,7 +261,7 @@ export default function AdminPage() {
           </article>
         ))}
         {(tab === "queue" ? reports : published).length === 0 && (
-          <p className="text-stone-600">
+          <p className="text-muted">
             {tab === "queue" ? "Queue is empty. Nice." : "Nothing published yet."}
           </p>
         )}

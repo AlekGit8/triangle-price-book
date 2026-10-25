@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { siteConfig, categorySlugs } from "@/lib/site-config";
 import type { ServiceAggregate, Report } from "@/lib/data";
 import StatsStrip from "@/components/StatsStrip";
 import ReportCard from "@/components/ReportCard";
+import Marquee from "@/components/Marquee";
 
 function normalize(s: string): string {
   return s
@@ -62,111 +63,6 @@ export default function HomepageBody({
     resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  // --- "Recently reported services" row: a real horizontal scroller. ---
-  // Three identical copies tile the row; the viewport lives in the middle
-  // copy and the scroll position wraps by one copy width, so the row loops
-  // seamlessly in both directions and the user can swipe (touch) or drag
-  // (mouse) through it manually. A slow auto-advance keeps the old ticker
-  // feel and pauses while the user interacts.
-  const marqueeRef = useRef<HTMLDivElement>(null);
-  const copyRef = useRef<HTMLDivElement>(null);
-  const copyWidthRef = useRef(0);
-  const advanceRef = useRef(0);
-  const pausedRef = useRef(false);
-  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dragRef = useRef<{ startX: number; lastX: number } | null>(null);
-  const draggedRef = useRef(false);
-
-  function pauseAuto() {
-    pausedRef.current = true;
-    if (resumeTimerRef.current) {
-      clearTimeout(resumeTimerRef.current);
-      resumeTimerRef.current = null;
-    }
-  }
-
-  function scheduleResume() {
-    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
-    resumeTimerRef.current = setTimeout(() => {
-      pausedRef.current = false;
-      resumeTimerRef.current = null;
-    }, 2500);
-  }
-
-  useEffect(() => {
-    if (isFiltering || allReports.length === 0) return;
-    const el = marqueeRef.current;
-    const copy = copyRef.current;
-    if (!el || !copy) return;
-    // Explicitly non-null aliases: TS does not carry the guard's narrowing
-    // into the nested callbacks below.
-    const scroller: HTMLDivElement = el;
-    const firstCopy: HTMLDivElement = copy;
-
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    copyWidthRef.current = firstCopy.offsetWidth;
-    // Start in the middle copy so both directions have room to scroll.
-    scroller.scrollLeft = copyWidthRef.current;
-
-    // Keep the viewport in the middle copy: crossing either boundary wraps
-    // by one copy width to the identical position in the next copy.
-    function normalize() {
-      const w = copyWidthRef.current;
-      if (!w) return;
-      if (scroller.scrollLeft >= 2 * w) scroller.scrollLeft -= w;
-      else if (scroller.scrollLeft < w) scroller.scrollLeft += w;
-    }
-    scroller.addEventListener("scroll", normalize, { passive: true });
-
-    function onResize() {
-      const w = firstCopy.offsetWidth;
-      if (!w) return;
-      copyWidthRef.current = w;
-      scroller.scrollLeft = w + (((scroller.scrollLeft - w) % w) + w) % w;
-    }
-    window.addEventListener("resize", onResize);
-
-    // Slow auto-advance: one copy width per 150s, matching the old ticker.
-    let raf = 0;
-    let last = performance.now();
-    function tick(now: number) {
-      const dt = Math.min(now - last, 100);
-      last = now;
-      if (!reduced && !pausedRef.current) {
-        let w = copyWidthRef.current;
-        if (!w) {
-          // First measure came back 0 (not laid out yet) — retry.
-          w = firstCopy.offsetWidth;
-          copyWidthRef.current = w;
-        }
-        if (w) {
-          // Accumulate the fractional advance and apply whole pixels only:
-          // some browsers (notably iOS Safari) drop sub-pixel scrollLeft
-          // assignments, so adding <1px per frame would never move.
-          advanceRef.current += (w / 150_000) * dt;
-          const whole = Math.floor(advanceRef.current);
-          if (whole > 0) {
-            advanceRef.current -= whole;
-            scroller.scrollLeft += whole;
-            if (scroller.scrollLeft >= 2 * w) scroller.scrollLeft -= w;
-          }
-        }
-      }
-      raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      scroller.removeEventListener("scroll", normalize);
-      window.removeEventListener("resize", onResize);
-      if (resumeTimerRef.current) {
-        clearTimeout(resumeTimerRef.current);
-        resumeTimerRef.current = null;
-      }
-    };
-  }, [isFiltering, allReports]);
-
   return (
     <div className="py-10">
       {/* Hero */}
@@ -193,7 +89,7 @@ export default function HomepageBody({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder='Try "water heater" or "roof"'
+              placeholder='try "heat pump" or "water heater"'
               autoComplete="off"
               className="w-full rounded-full border border-line bg-white px-5 py-3 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10"
             />
@@ -288,83 +184,17 @@ export default function HomepageBody({
             ))}
           </div>
         ) : (
-          <div
-            ref={marqueeRef}
-            className="report-marquee marquee-mask mt-6"
-            tabIndex={0}
-            role="region"
-            aria-label="Recently reported services — swipe or drag to scroll"
-            onPointerDown={(e) => {
-              pauseAuto();
-              if (e.pointerType === "mouse") {
-                dragRef.current = { startX: e.clientX, lastX: e.clientX };
-                draggedRef.current = false;
-                marqueeRef.current?.setPointerCapture(e.pointerId);
-                marqueeRef.current?.classList.add("dragging");
-              }
-            }}
-            onPointerMove={(e) => {
-              const drag = dragRef.current;
-              if (!drag || e.pointerType !== "mouse" || !marqueeRef.current) return;
-              const dx = e.clientX - drag.lastX;
-              drag.lastX = e.clientX;
-              if (Math.abs(e.clientX - drag.startX) > 6) draggedRef.current = true;
-              marqueeRef.current.scrollLeft -= dx;
-            }}
-            onPointerUp={(e) => {
-              if (dragRef.current) {
-                dragRef.current = null;
-                marqueeRef.current?.classList.remove("dragging");
-                try {
-                  marqueeRef.current?.releasePointerCapture(e.pointerId);
-                } catch {
-                  // Pointer was never captured; ignore.
-                }
-              }
-              scheduleResume();
-            }}
-            onPointerCancel={() => {
-              dragRef.current = null;
-              marqueeRef.current?.classList.remove("dragging");
-              scheduleResume();
-            }}
-            onClickCapture={(e) => {
-              // A drag that ends on a card must not open the card.
-              if (draggedRef.current) {
-                e.preventDefault();
-                draggedRef.current = false;
-              }
-            }}
-            onTouchStart={() => pauseAuto()}
-            onTouchEnd={() => scheduleResume()}
-            onWheel={() => {
-              pauseAuto();
-              scheduleResume();
-            }}
-            onMouseEnter={() => pauseAuto()}
-            onMouseLeave={() => {
-              dragRef.current = null;
-              marqueeRef.current?.classList.remove("dragging");
-              scheduleResume();
-            }}
+          <Marquee
+            ariaLabel="Recently reported services — swipe or drag to scroll"
+            className="mt-6"
+            durationMs={150_000}
           >
-            <div className="flex w-max">
-              {[0, 1, 2].map((half) => (
-                <div
-                  key={half}
-                  ref={half === 0 ? copyRef : undefined}
-                  aria-hidden={half !== 0}
-                  className="flex shrink-0 gap-4 pr-4"
-                >
-                  {allReports.map((report) => (
-                    <div key={report.id} className="w-[300px] shrink-0 sm:w-[340px]">
-                      <ReportCard report={report} compact />
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
+            {allReports.map((report) => (
+              <div key={report.id} className="w-[300px] shrink-0 sm:w-[340px]">
+                <ReportCard report={report} compact />
+              </div>
+            ))}
+          </Marquee>
         )}
       </section>
 

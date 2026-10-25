@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     let q = sb
       .from("reports")
       .select(
-        `id, service_name, category, amount_cents, amount_note, report_type, town,
+        `id, service_name, category, amount_cents, report_type, town,
          service_date, notes, verification_status, created_at,
          verifications ( id, invoice_path, created_at ),
          report_contacts ( email )`

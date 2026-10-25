@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { siteConfig } from "@/lib/site-config";
+import Marquee from "@/components/Marquee";
 
 type Step = "email" | "updates" | "done";
 
@@ -65,31 +66,21 @@ export default function ComingSoonPage() {
       </div>
 
       {/* Category marquee: every category the site will cover, scrolling. */}
-      <div
-        className="marquee marquee-mask -mx-4 mt-12 overflow-hidden"
-        tabIndex={0}
-        role="region"
-        aria-label="Categories of prices coming to Triangle Price Book, scrolling"
+      <Marquee
+        ariaLabel="Categories of prices coming to Triangle Price Book — swipe or drag to scroll"
+        className="-mx-4 mt-12"
+        durationMs={45_000}
+        copyClassName="flex shrink-0 gap-3 pr-3"
       >
-        <div className="marquee-track flex w-max" style={{ animationDuration: "45s" }}>
-          {[0, 1].map((half) => (
-            <div
-              key={half}
-              aria-hidden={half === 1}
-              className="flex shrink-0 gap-3 pr-3"
-            >
-              {siteConfig.categories.map((c) => (
-                <span
-                  key={c}
-                  className="shrink-0 whitespace-nowrap rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium text-ink"
-                >
-                  {c}
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
+        {siteConfig.categories.map((c) => (
+          <span
+            key={c}
+            className="shrink-0 whitespace-nowrap rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium text-ink"
+          >
+            {c}
+          </span>
+        ))}
+      </Marquee>
 
       <div className="mx-auto mt-12 w-full max-w-sm text-center">
           {step === "email" && (

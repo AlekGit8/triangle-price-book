@@ -58,9 +58,6 @@ export default function ReportCard({
       <h3 className="mt-1 font-semibold text-ink">{report.service_name}</h3>
       <p className="mt-3 font-mono text-2xl font-bold text-ink whitespace-nowrap">
         {formatCents(report.amount_cents)}
-        {report.amount_note && (
-          <span className="font-mono text-sm font-medium text-muted"> {report.amount_note}</span>
-        )}
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Badge tone={report.report_type === "paid" ? "green" : "yellow"}>

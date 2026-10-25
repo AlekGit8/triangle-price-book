@@ -4,13 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { siteConfig } from "@/lib/site-config";
 import { formatCents, formatMonthYear } from "@/lib/format";
-
-interface Sample {
-  amount_cents: number;
-  service_name: string;
-  town: string;
-  service_date: string | null;
-}
+import ReportCard from "@/components/ReportCard";
+import type { Report } from "@/lib/data";
 
 interface AiEstimate {
   low_cents: number;
@@ -27,7 +22,8 @@ interface CheckResult {
   median_cents?: number;
   max_cents?: number;
   matched?: string[];
-  samples?: Sample[];
+  entries?: Report[];
+  category_entries?: Report[];
   ai_estimate?: AiEstimate | null;
   error?: string;
 }
@@ -66,6 +62,7 @@ export default function CheckQuotePage() {
   const [result, setResult] = useState<CheckResult | null>(null);
   const [submittedPrice, setSubmittedPrice] = useState(0);
   const [submittedDescription, setSubmittedDescription] = useState("");
+  const [submittedCategory, setSubmittedCategory] = useState<string>(siteConfig.categories[0]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -93,6 +90,7 @@ export default function CheckQuotePage() {
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Failed");
       setSubmittedPrice(cents);
       setSubmittedDescription(description.trim());
+      setSubmittedCategory(category);
       setResult(json);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -247,13 +245,13 @@ export default function CheckQuotePage() {
             </div>
           )}
 
-          {result.samples && result.samples.length > 0 && (
+          {result.entries && result.entries.length > 0 && (
             <div className="mt-6">
               <p className="text-sm font-semibold text-ink">
                 Compared against {result.count} similar verified {result.count === 1 ? "job" : "jobs"}:
               </p>
               <ul className="mt-2 space-y-1.5">
-                {result.samples.map((s, i) => (
+                {result.entries.map((s, i) => (
                   <li key={i} className="flex items-baseline justify-between gap-3 text-sm">
                     <span className="text-muted">
                       {s.service_name}
@@ -286,6 +284,41 @@ export default function CheckQuotePage() {
           </div>
         </div>
       )}
+
+      {result && result.entries && result.entries.length > 0 && (
+        <div className="mt-10">
+          <h2 className="font-serif text-2xl text-ink">Similar jobs in our database</h2>
+          <p className="mt-1 text-sm text-muted">
+            Every verified entry that matches &ldquo;{submittedDescription}&rdquo; — the same
+            jobs behind the comparison above.
+          </p>
+          <div className="mt-4 space-y-3">
+            {result.entries.map((e) => (
+              <ReportCard key={e.id} report={e} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {result &&
+        (!result.entries || result.entries.length === 0) &&
+        result.category_entries &&
+        result.category_entries.length > 0 && (
+          <div className="mt-10">
+            <h2 className="font-serif text-2xl text-ink">
+              Other {submittedCategory} prices in our database
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Nothing matched &ldquo;{submittedDescription}&rdquo; closely, but here are the
+              other verified {submittedCategory} prices we have.
+            </p>
+            <div className="mt-4 space-y-3">
+              {result.category_entries.map((e) => (
+                <ReportCard key={e.id} report={e} />
+              ))}
+            </div>
+          </div>
+        )}
     </div>
   );
 }
