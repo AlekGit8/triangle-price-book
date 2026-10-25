@@ -29,6 +29,9 @@ export default async function SiteFooter() {
               <Link href="/how-it-works" className="hover:text-ink">
                 How this works &amp; transparency
               </Link>
+              <Link href="/check-quote" className="hover:text-ink">
+                Check a quote
+              </Link>
               <Link href="/terms" className="hover:text-ink">
                 Terms of Service
               </Link>

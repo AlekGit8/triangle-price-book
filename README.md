@@ -81,7 +81,8 @@ Set these in **Cloudflare Worker → Settings → Variables**
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `GEMINI_API_KEY` — Google AI Studio key for quote extraction
-  (`gemini-3.6-flash` → `gemini-3.5-flash` fallback)
+  (`gemini-3.5-flash-lite` only; 2.5-flash retired Oct 20, 2026,
+  3.5-flash deprecated Oct 8, 2026)
 - `ADMIN_KEY` — long random string; password for `/admin`
 
 ### 3. Deploy
@@ -91,6 +92,18 @@ Create → Worker → Connect to Git** (Workers Builds):
 - Production branch: `main`
 
 Every push to `main` redeploys automatically.
+
+### Beta / preview workflow (Oct 24, 2026)
+Changes are tested on the `beta` branch first — never straight to `main`:
+- Push to `beta` → Cloudflare builds a preview at
+  `https://beta-triangle-price-book.longsitelabsllc.workers.dev`.
+  Preview hostnames bypass the coming-soon gate (`lib/preview-host.ts`),
+  so the preview shows the full site; production stays gated.
+- If the change is approved, merge `beta` → `main` (goes live).
+  If not, delete the branch / revert the commit — production never changes
+  until a merge happens.
+- Preview environment variables (all 7, incl. `GEMINI_API_KEY`) are set
+  separately in Worker → Settings → Variables → Previews.
 
 ### 4. Custom domain
 Add the domain under Worker → Domains, then point DNS at Cloudflare
@@ -159,7 +172,9 @@ Everything runs on free tiers. Real costs kick in only with traction:
 ## Before public launch
 
 - [x] Attorney-grade Terms + Privacy Policy (Oct 23, 2026)
-- [ ] Delete `middleware.ts` to lift coming-soon mode
+- [ ] Delete only the `if (gateApplies)` rewrite block in `middleware.ts`
+      to lift coming-soon mode (NOT the whole file — rate limits and
+      security headers live there too)
 - [ ] Submit sitemap in Google Search Console
 - [ ] Pick analytics (Cloudflare Web Analytics is the natural free choice)
 - [x] Set up Turnstile keys (Oct 24, 2026)

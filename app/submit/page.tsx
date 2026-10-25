@@ -22,7 +22,6 @@ interface FormFields {
   category: string;
   serviceName: string;
   amount: string;
-  amountNote: string;
   reportType: "paid" | "quote";
   town: string;
   serviceDate: string;
@@ -34,7 +33,6 @@ const emptyFields: FormFields = {
   category: "HVAC",
   serviceName: "",
   amount: "",
-  amountNote: "",
   reportType: "paid",
   town: "",
   serviceDate: "",
@@ -49,7 +47,6 @@ interface DraftQuote {
   category: string;
   serviceName: string;
   amount: string;
-  amountNote: string;
   reportType: "paid" | "quote";
   town: string;
   serviceDate: string;
@@ -64,7 +61,6 @@ function draftFromAI(key: string, q: Record<string, unknown>): DraftQuote {
     category: typeof q.category === "string" ? q.category : "HVAC",
     serviceName: typeof q.serviceName === "string" ? q.serviceName : "",
     amount: typeof q.amount === "number" ? String(q.amount) : "",
-    amountNote: typeof q.amountNote === "string" ? q.amountNote : "",
     reportType: q.reportType === "quote" ? "quote" : "paid",
     town: typeof q.town === "string" ? q.town : "",
     serviceDate: typeof q.serviceDate === "string" ? q.serviceDate : "",
@@ -159,27 +155,15 @@ function DraftCard({
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls} htmlFor={id("amount")}>Amount (USD) *</label>
-              <input
-                id={id("amount")} className={inputCls} inputMode="decimal"
-                pattern="^\d+(\.\d{1,2})?$" title="Numbers only, e.g. 5253.36"
-                disabled={locked}
-                value={d.amount}
-                onChange={(e) => set({ amount: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className={labelCls} htmlFor={id("amountNote")}>Amount note</label>
-              <input
-                id={id("amountNote")} className={inputCls} maxLength={20}
-                placeholder="e.g. + tax"
-                disabled={locked}
-                value={d.amountNote}
-                onChange={(e) => set({ amountNote: e.target.value })}
-              />
-            </div>
+          <div>
+            <label className={labelCls} htmlFor={id("amount")}>Amount (USD) *</label>
+            <input
+              id={id("amount")} className={inputCls} inputMode="decimal"
+              pattern="^\d+(\.\d{1,2})?$" title="Numbers only, e.g. 5253.36"
+              disabled={locked}
+              value={d.amount}
+              onChange={(e) => set({ amount: e.target.value })}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -237,6 +221,9 @@ function DraftCard({
 export default function SubmitPage() {
   const [fields, setFields] = useState<FormFields>(emptyFields);
   const [docFile, setDocFile] = useState<File | null>(null);
+  // Option 2 attachment: proof only, never sent to the AI extractor.
+  // If set, /api/submit marks the entry verified on the file's presence alone.
+  const [manualFile, setManualFile] = useState<File | null>(null);
   const [extractState, setExtractState] = useState<ExtractState>("idle");
   const [extractMsg, setExtractMsg] = useState("");
   const [extractCount, setExtractCount] = useState(0);
@@ -251,6 +238,7 @@ export default function SubmitPage() {
   const [publishingAll, setPublishingAll] = useState(false);
 
   const docInputRef = useRef<HTMLInputElement>(null);
+  const manualInputRef = useRef<HTMLInputElement>(null);
 
   function set<K extends keyof FormFields>(key: K, value: FormFields[K]) {
     setFields((f) => ({ ...f, [key]: value }));
@@ -271,6 +259,17 @@ export default function SubmitPage() {
     setExtractMsg("");
     setExtractCount(0);
     if (docInputRef.current) docInputRef.current.value = "";
+  }
+
+  /** Option 2 attachment: stored as proof only — no AI extraction runs. */
+  function handleManualFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) setManualFile(file);
+  }
+
+  function clearManualFile() {
+    setManualFile(null);
+    if (manualInputRef.current) manualInputRef.current.value = "";
   }
 
   /** Upload-first flow: send the document to /api/extract, get back one draft per quote found. */
@@ -342,7 +341,6 @@ export default function SubmitPage() {
           category: d.category,
           serviceName: d.serviceName.trim(),
           amount: d.amount.trim(),
-          amountNote: d.amountNote.trim(),
           reportType: d.reportType,
           town: d.town.trim(),
           serviceDate: d.serviceDate,
@@ -429,13 +427,15 @@ export default function SubmitPage() {
       form.set("category", fields.category);
       form.set("serviceName", fields.serviceName.trim());
       form.set("amount", fields.amount.trim());
-      form.set("amountNote", fields.amountNote.trim());
       form.set("reportType", fields.reportType);
       form.set("town", fields.town.trim());
       form.set("serviceDate", fields.serviceDate);
       form.set("notes", fields.notes.trim());
       form.set("submitterEmail", fields.submitterEmail.trim());
-      if (docFile) form.set("invoice", docFile);
+      // Option 2's own attachment wins; otherwise fall back to the Option 1
+      // upload (its presence already means "verified" server-side).
+      const invoiceFile = manualFile ?? docFile;
+      if (invoiceFile) form.set("invoice", invoiceFile);
       if (turnstileSiteKey && window.turnstile) {
         form.set("turnstileToken", window.turnstile.getResponse() || "");
       }
@@ -446,6 +446,8 @@ export default function SubmitPage() {
       setStatus("done");
       setFields(emptyFields);
       setDocFile(null);
+      setManualFile(null);
+      if (manualInputRef.current) manualInputRef.current.value = "";
       if (docInputRef.current) docInputRef.current.value = "";
       if (turnstileSiteKey && window.turnstile) window.turnstile.reset();
     } catch (err) {
@@ -681,25 +683,15 @@ export default function SubmitPage() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelCls} htmlFor="amount">Amount (USD) *</label>
-            <input
-              id="amount" required className={inputCls}
-              inputMode="decimal" placeholder="5253.36"
-              pattern="^\d+(\.\d{1,2})?$"
-              title="Numbers only, e.g. 5253.36"
-              value={fields.amount} onChange={(e) => set("amount", e.target.value)}
-            />
-          </div>
-          <div>
-            <label className={labelCls} htmlFor="amountNote">Amount note</label>
-            <input
-              id="amountNote" className={inputCls}
-              placeholder="e.g. + tax" maxLength={20}
-              value={fields.amountNote} onChange={(e) => set("amountNote", e.target.value)}
-            />
-          </div>
+        <div>
+          <label className={labelCls} htmlFor="amount">Amount (USD) *</label>
+          <input
+            id="amount" required className={inputCls}
+            inputMode="decimal" placeholder="5253.36"
+            pattern="^\d+(\.\d{1,2})?$"
+            title="Numbers only, e.g. 5253.36"
+            value={fields.amount} onChange={(e) => set("amount", e.target.value)}
+          />
         </div>
 
         <div>
@@ -752,15 +744,44 @@ export default function SubmitPage() {
         </div>
 
         <div>
+          <label className={labelCls} htmlFor="manualUpload">Attach a quote or invoice (optional)</label>
+          <div className="flex items-center gap-2">
+            <input
+              ref={manualInputRef}
+              id="manualUpload"
+              type="file"
+              accept="image/*,.pdf"
+              className="sr-only"
+              onChange={handleManualFileChange}
+            />
+            <label
+              htmlFor="manualUpload"
+              className="shrink-0 cursor-pointer rounded-[10px] border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-black"
+            >
+              {manualFile ? "Change file" : "Choose a file"}
+            </label>
+            <span className="min-w-0 truncate text-sm text-muted">
+              {manualFile ? manualFile.name : "Photo or PDF — attaches as proof, no AI reading"}
+            </span>
+            {manualFile && (
+              <button
+                type="button"
+                onClick={clearManualFile}
+                className="shrink-0 text-sm font-semibold text-muted hover:text-ink"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div>
           <label className={labelCls} htmlFor="submitterEmail">Email (optional, private)</label>
           <input
             id="submitterEmail" type="email" className={inputCls}
             placeholder="Only used if we need to verify your entry" maxLength={120}
             value={fields.submitterEmail} onChange={(e) => set("submitterEmail", e.target.value)}
           />
-          <p className="mt-1 text-xs text-muted">
-            Uploading a document above attaches it as your invoice automatically.
-          </p>
         </div>
 
         {/* Cloudflare Turnstile: renders only when a site key is configured. */}
@@ -792,12 +813,14 @@ export default function SubmitPage() {
         >
           {status === "sending"
             ? "Publishing…"
-            : docFile
-              ? "Review above, then publish"
-              : "Publish as unverified report"}
+            : manualFile
+              ? "Publish as verified report"
+              : docFile
+                ? "Review above, then publish"
+                : "Publish as unverified report"}
         </button>
         <p className="text-xs text-muted text-center">
-          {docFile
+          {manualFile || docFile
             ? "Your price publishes instantly and anonymously with a Verified badge."
             : "Your price publishes instantly and anonymously as an unverified community report — no document needed."}
         </p>
