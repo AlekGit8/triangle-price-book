@@ -8,35 +8,10 @@
   background-size: 22px 22px;
 }
 
-/* Category pills on /coming-soon: slow infinite marquee.
-   The track holds two identical halves; translating -50% loops seamlessly.
-   (The homepage report row used to share this; it now scrolls natively —
-   see .report-marquee — so the user can swipe/drag it in both directions.) */
-@keyframes marquee-scroll {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-.marquee-track {
-  animation: marquee-scroll 150s linear infinite;
-  will-change: transform;
-}
-
-/* Pause the ticker on hover and when anything inside it takes keyboard focus. */
-.marquee:hover .marquee-track,
-.marquee:focus-within .marquee-track {
-  animation-play-state: paused;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .marquee-track {
-    animation: none;
-  }
-}
+/* The old CSS-animated marquee (marquee-track / marquee-scroll) is gone:
+   both scrolling rows now use the shared <Marquee> component, which
+   scrolls natively in JS (swipe/drag + auto-advance, reduced-motion aware).
+   Only the edge-fade mask below remains. */
 
 /* Homepage "Recently reported services" row: a real horizontal scroller.
    Three identical copies tile the row; JS advances scrollLeft and wraps by
