@@ -38,6 +38,17 @@ const mono = JetBrains_Mono({
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* Google AdSense — publisher ID pub-9935150237512512. The script
+            connects the site to the AdSense account; ads show only after
+            AdSense approves the site and Auto ads (or ad units) are
+            enabled in the AdSense dashboard. */}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9935150237512512"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body
         className={`${display.variable} ${sans.variable} ${mono.variable} min-h-screen bg-paper font-sans text-ink antialiased`}
       >
