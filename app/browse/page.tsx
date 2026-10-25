@@ -123,7 +123,7 @@ function BrowseInner() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder='Try "water heater" or "roof"'
+            placeholder='try "heat pump" or "water heater"'
             autoComplete="off"
             className="w-full rounded-full border border-line bg-white px-5 py-3 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10"
           />
