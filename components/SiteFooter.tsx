@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { siteConfig } from "@/lib/site-config";
+import { isComingSoonGateActive } from "@/lib/coming-soon-gate";
 
-export default function SiteFooter() {
+export default async function SiteFooter() {
+  // While the coming-soon gate is live, every footer link below rewrites
+  // to /coming-soon, so the whole nav block is dead — hide it and keep
+  // the rest of the footer. After launch (middleware.ts deleted) the
+  // nav returns automatically. See lib/coming-soon-gate.ts.
+  const gated = await isComingSoonGateActive();
+
   return (
     <footer className="mt-16 border-t border-line bg-white">
       <div className="mx-auto max-w-6xl px-4 py-10 text-sm text-muted">
@@ -16,20 +23,22 @@ export default function SiteFooter() {
               Built by a local Triangle homeowner to make all our lives easier.
             </p>
           </div>
-          <nav className="flex flex-col gap-2 font-mono text-[13px]">
-            <Link href="/how-it-works" className="hover:text-ink">
-              How this works &amp; transparency
-            </Link>
-            <Link href="/terms" className="hover:text-ink">
-              Terms of Service
-            </Link>
-            <Link href="/privacy" className="hover:text-ink">
-              Privacy Policy
-            </Link>
-            <Link href="/submit" className="hover:text-ink">
-              Submit a price
-            </Link>
-          </nav>
+          {!gated && (
+            <nav className="flex flex-col gap-2 font-mono text-[13px]">
+              <Link href="/how-it-works" className="hover:text-ink">
+                How this works &amp; transparency
+              </Link>
+              <Link href="/terms" className="hover:text-ink">
+                Terms of Service
+              </Link>
+              <Link href="/privacy" className="hover:text-ink">
+                Privacy Policy
+              </Link>
+              <Link href="/submit" className="hover:text-ink">
+                Submit a price
+              </Link>
+            </nav>
+          )}
         </div>
         <p className="mt-8 text-xs text-neutral-400">
           Operated by {siteConfig.operatorName}. Prices are community-reported
