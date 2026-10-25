@@ -14,7 +14,6 @@ const MAX_BODY_BYTES = 12 * 1024 * 1024;
 const MAX_SERVICE_NAME = 200;
 const MAX_TOWN = 80;
 const MAX_NOTES = 2000;
-const MAX_AMOUNT_NOTE = 60;
 // $20M in cents — stays inside the Postgres integer column (max ~$21.4M).
 const MAX_AMOUNT_CENTS = 2_000_000_000;
 
@@ -48,7 +47,6 @@ interface ReportInput {
   category: unknown;
   serviceName: unknown;
   amount: unknown;
-  amountNote: unknown;
   reportType: unknown;
   town: unknown;
   serviceDate: unknown;
@@ -98,7 +96,6 @@ function validateReport(
   const amountRaw = String(input.amount ?? "").trim();
   const reportType = String(input.reportType ?? "");
   const town = normalizeTown(String(input.town ?? ""));
-  const amountNote = String(input.amountNote ?? "").trim() || null;
   const serviceDateRaw = String(input.serviceDate ?? "").trim() || null;
   const notes = String(input.notes ?? "").trim() || null;
 
@@ -112,8 +109,6 @@ function validateReport(
     return { error: `Town must be under ${MAX_TOWN} characters.` };
   if (notes && notes.length > MAX_NOTES)
     return { error: `Notes must be under ${MAX_NOTES} characters.` };
-  if (amountNote && amountNote.length > MAX_AMOUNT_NOTE)
-    return { error: `Amount note must be under ${MAX_AMOUNT_NOTE} characters.` };
   if (!["paid", "quote"].includes(reportType))
     return { error: "Report type must be paid or quote." };
   const amountCents = Math.round(Number(amountRaw) * 100);
@@ -133,7 +128,6 @@ function validateReport(
       service_name: serviceName,
       category,
       amount_cents: amountCents,
-      amount_note: amountNote,
       report_type: reportType,
       town,
       service_date: serviceDate,
@@ -279,7 +273,6 @@ export async function POST(req: Request) {
       category: form.get("category"),
       serviceName: form.get("serviceName"),
       amount: form.get("amount"),
-      amountNote: form.get("amountNote"),
       reportType: form.get("reportType"),
       town: form.get("town"),
       serviceDate: form.get("serviceDate"),

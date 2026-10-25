@@ -27,7 +27,6 @@ Return ONLY a JSON object with these exact keys:
       "serviceName": "short description of the work, e.g. 'Tankless water heater install (Rinnai RX199)'",
       "category": one of ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Septic Systems", "Handyman/Other"],
       "amount": grand total as a number with no commas or currency symbols, e.g. 5253.36,
-      "amountNote": "+ tax" if tax is NOT included in the total, "incl. tax" if it is, or null if unclear,
       "town": town where the work was performed (the customer's town, not the business's), or null if unclear,
       "serviceDate": date of service or quote as YYYY-MM-DD, or null if unclear,
       "reportType": "paid" if this is an invoice/receipt for completed paid work, "quote" if it is an estimate/quote,
@@ -222,8 +221,6 @@ export async function POST(req: Request) {
           typeof q.amount === "number" && Number.isFinite(q.amount) && q.amount > 0
             ? Math.round(q.amount * 100) / 100
             : null,
-        amountNote:
-          typeof q.amountNote === "string" ? q.amountNote.slice(0, 20) : null,
         town: typeof q.town === "string" ? q.town.slice(0, 80) : null,
         serviceDate:
           typeof q.serviceDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q.serviceDate)

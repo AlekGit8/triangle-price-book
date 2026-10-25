@@ -42,7 +42,7 @@ function BrowseInner() {
       const { data, error } = await sb
         .from("reports")
         .select(
-          "id, service_name, category, amount_cents, amount_note, report_type, town, service_date, notes, verification_status, created_at"
+          "id, service_name, category, amount_cents, report_type, town, service_date, notes, verification_status, created_at"
         )
         .neq("verification_status", "rejected")
         .order("created_at", { ascending: false })
@@ -264,9 +264,6 @@ function BrowseInner() {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-base font-bold text-ink">
                       {formatCents(r.amount_cents)}
-                      {r.amount_note && (
-                        <span className="text-xs font-medium text-muted"> {r.amount_note}</span>
-                      )}
                     </td>
                   </tr>
                 ))}

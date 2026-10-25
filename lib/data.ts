@@ -6,7 +6,6 @@ export interface Report {
   service_name: string;
   category: Category;
   amount_cents: number;
-  amount_note: string | null;
   report_type: "paid" | "quote";
   town: string;
   service_date: string | null;
@@ -59,7 +58,7 @@ export async function getApprovedReports(category?: string): Promise<Report[]> {
     let q = sb
       .from("reports")
       .select(
-        "id, service_name, category, amount_cents, amount_note, report_type, town, service_date, notes, verification_status, created_at"
+        "id, service_name, category, amount_cents, report_type, town, service_date, notes, verification_status, created_at"
       )
       .neq("verification_status", "rejected")
       .order("created_at", { ascending: false })

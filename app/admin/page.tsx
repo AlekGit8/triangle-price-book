@@ -8,7 +8,6 @@ interface QueueReport {
   service_name: string;
   category: string;
   amount_cents: number;
-  amount_note: string | null;
   report_type: string;
   town: string;
   service_date: string | null;
@@ -222,7 +221,6 @@ export default function AdminPage() {
               </div>
               <p className="whitespace-nowrap font-mono text-2xl font-bold text-ink">
                 {formatCents(r.amount_cents)}
-                {r.amount_note && <span className="text-sm font-medium text-muted"> {r.amount_note}</span>}
               </p>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
