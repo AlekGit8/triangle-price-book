@@ -122,6 +122,11 @@ export default function HomepageBody({
           >
             Share what you paid, anonymously →
           </Link>
+          <p className="mt-4">
+            <Link href="/check-quote" className="font-semibold text-ink hover:underline">
+              Got a quote? Check if it&rsquo;s fair →
+            </Link>
+          </p>
         </div>
       </section>
 
