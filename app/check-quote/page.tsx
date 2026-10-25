@@ -12,6 +12,13 @@ interface Sample {
   service_date: string | null;
 }
 
+interface AiEstimate {
+  low_cents: number;
+  median_cents: number;
+  high_cents: number;
+  basis: string;
+}
+
 interface CheckResult {
   ok: boolean;
   count: number;
@@ -21,6 +28,7 @@ interface CheckResult {
   max_cents?: number;
   matched?: string[];
   samples?: Sample[];
+  ai_estimate?: AiEstimate | null;
   error?: string;
 }
 
@@ -102,6 +110,13 @@ export default function CheckQuotePage() {
 
   const verdict = hasRange ? verdictFor(submittedPrice, result!) : null;
 
+  const aiPlacement =
+    result?.ai_estimate && submittedPrice < result.ai_estimate.low_cents
+      ? "below"
+      : result?.ai_estimate && submittedPrice > result.ai_estimate.high_cents
+        ? "above"
+        : "within";
+
   return (
     <div className="py-10 max-w-2xl mx-auto px-4">
       <h1 className="font-serif text-4xl text-ink sm:text-5xl">Is this quote fair?</h1>
@@ -163,6 +178,31 @@ export default function CheckQuotePage() {
           {busy ? "Checking…" : "Check my quote"}
         </button>
       </form>
+
+      {result?.ai_estimate && (
+        <div className="mt-6 rounded-2xl border border-line bg-white p-6">
+          <p className="font-mono text-xs font-semibold uppercase tracking-wide text-muted">
+            AI estimate
+          </p>
+          <p className="mt-3 text-lg text-ink">
+            A reasonable range for this job is{" "}
+            <span className="font-mono font-bold">{formatCents(result.ai_estimate.low_cents)}</span>{" "}
+            to{" "}
+            <span className="font-mono font-bold">{formatCents(result.ai_estimate.high_cents)}</span>,
+            with a typical price around{" "}
+            <span className="font-mono font-bold">{formatCents(result.ai_estimate.median_cents)}</span>.
+          </p>
+          <p className="mt-2 text-muted">
+            Your quote of {formatCents(submittedPrice)} is {aiPlacement} this estimated range.
+          </p>
+          {result.ai_estimate.basis && (
+            <p className="mt-2 text-sm text-muted">{result.ai_estimate.basis}</p>
+          )}
+          <p className="mt-3 text-xs text-neutral-400">
+            AI estimate — based on a broad online search, not our verified local prices.
+          </p>
+        </div>
+      )}
 
       {result?.notEnoughData && (
         <div className="mt-6 rounded-2xl border border-line bg-white p-6">

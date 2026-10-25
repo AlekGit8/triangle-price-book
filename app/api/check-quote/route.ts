@@ -30,6 +30,128 @@ function matchScore(query: Set<string>, name: Set<string>): number {
   return shared;
 }
 
+interface AiEstimate {
+  low_cents: number;
+  median_cents: number;
+  high_cents: number;
+  basis: string;
+}
+
+// Same model chain as /api/extract — Google retires older versioned models
+// for new API keys, and the newest models can be capacity-throttled (503).
+const AI_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"];
+// Total budget for the Gemini call(s) so a slow model can never hang the
+// whole quote check.
+const AI_TOTAL_TIMEOUT_MS = 15_000;
+
+function aiEstimatePrompt(description: string, category: string): string {
+  return `What is a reasonable price range for a homeowner hiring this job in the Raleigh-Durham-Chapel Hill Triangle region of North Carolina? Job: "${description}" (category: ${category}). Return ONLY JSON: {"low": <dollars as a number>, "median": <dollars>, "high": <dollars>, "basis": "one short sentence saying what the range is based on"}. Base it on typical US market pricing for this service. Never invent a specific local business price; give a broad market range. If the job description is too vague to estimate, return all nulls.`;
+}
+
+/** Sanitize a parsed Gemini JSON object into an estimate, or null if unusable. */
+function sanitizeAiEstimate(fields: Record<string, unknown>): AiEstimate | null {
+  const low = fields.low;
+  const median = fields.median;
+  const high = fields.high;
+  // The model returns all nulls when the job is too vague to estimate.
+  if (low === null && median === null && high === null) return null;
+  if (
+    typeof low !== "number" ||
+    typeof median !== "number" ||
+    typeof high !== "number" ||
+    !Number.isFinite(low) ||
+    !Number.isFinite(median) ||
+    !Number.isFinite(high) ||
+    low <= 0 ||
+    median <= 0 ||
+    high <= 0 ||
+    low > median ||
+    median > high ||
+    high > 20_000_000
+  ) {
+    return null;
+  }
+  const basis =
+    typeof fields.basis === "string" ? fields.basis.slice(0, 200) : "";
+  return {
+    low_cents: Math.round(low * 100),
+    median_cents: Math.round(median * 100),
+    high_cents: Math.round(high * 100),
+    basis,
+  };
+}
+
+/**
+ * Ask Gemini for a broad-market price estimate for the job. NEVER throws and
+ * NEVER fails the quote check: any missing key, timeout, failed model, or
+ * unusable response returns null and the caller falls back to the database
+ * comparison alone.
+ */
+async function fetchAiEstimate(
+  description: string,
+  category: string
+): Promise<AiEstimate | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  const deadline = Date.now() + AI_TOTAL_TIMEOUT_MS;
+  for (const model of AI_MODELS) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    let res: Response;
+    try {
+      res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "x-goog-api-key": apiKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [
+              { parts: [{ text: aiEstimatePrompt(description, category) }] },
+            ],
+            generationConfig: {
+              response_mime_type: "application/json",
+              maxOutputTokens: 500,
+            },
+          }),
+          signal: AbortSignal.timeout(Math.max(1000, remaining)),
+        }
+      );
+    } catch (err) {
+      console.error(`check-quote: Gemini model ${model} fetch failed`, err);
+      continue;
+    }
+    if (!res.ok) {
+      console.error(`check-quote: Gemini model ${model} error`, res.status);
+      continue;
+    }
+    let aiJson: Record<string, unknown>;
+    try {
+      aiJson = (await res.json()) as Record<string, unknown>;
+    } catch (err) {
+      console.error(`check-quote: Gemini model ${model} bad JSON`, err);
+      continue;
+    }
+    const candidates = aiJson.candidates as
+      | Array<{ content?: { parts?: Array<{ text?: string }> } }>
+      | undefined;
+    const raw = candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      console.error(`check-quote: Gemini model ${model} unparsable JSON`);
+      continue;
+    }
+    const estimate = sanitizeAiEstimate(parsed);
+    if (estimate) return estimate;
+    console.error(`check-quote: Gemini model ${model} invalid estimate`);
+  }
+  return null;
+}
+
 /**
  * POST /api/check-quote — compare a homeowner's quote against SIMILAR verified reports.
  * Body: { category: string, description: string, price_cents: number }
@@ -88,8 +210,18 @@ export async function POST(req: Request) {
       .filter((r) => r.score >= 2)
       .sort((a, b) => b.score - a.score || a.amount_cents - b.amount_cents);
 
+    // Broad-market AI estimate, shown first on the results page. It must
+    // never fail the check: a missing key or bad response yields null and
+    // the database comparison below still runs.
+    const aiEstimate = await fetchAiEstimate(description, category);
+
     if (scored.length < 2) {
-      return NextResponse.json({ ok: true, count: scored.length, notEnoughData: true });
+      return NextResponse.json({
+        ok: true,
+        count: scored.length,
+        notEnoughData: true,
+        ai_estimate: aiEstimate,
+      });
     }
 
     const prices = scored.map((r) => r.amount_cents).sort((a, b) => a - b);
@@ -106,6 +238,7 @@ export async function POST(req: Request) {
       min_cents: min,
       median_cents: median,
       max_cents: max,
+      ai_estimate: aiEstimate,
       matched: Array.from(queryTokens).filter((t) =>
         scored.some((r) => tokens(r.service_name).has(t))
       ),
