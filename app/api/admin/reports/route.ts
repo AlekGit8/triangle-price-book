@@ -26,7 +26,12 @@ export async function GET(req: Request) {
          verifications ( id, invoice_path, created_at ),
          report_contacts ( email )`
       )
+      // Newest submission first (created_at desc): a quote submitted today
+      // tops the list even if the job itself is years old. Service date
+      // only breaks ties — the 21 seed rows share one created_at (single
+      // migration insert), so without it they read as insertion order.
       .order("created_at", { ascending: false })
+      .order("service_date", { ascending: false, nullsFirst: false })
       .limit(100);
     if (scope === "published") {
       q = q.not("moderated_at", "is", null).neq("verification_status", "rejected");
