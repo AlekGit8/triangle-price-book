@@ -184,6 +184,37 @@ async function fetchAiEstimate(
 }
 
 /**
+ * Shape one report row as a full entry for the results page, which renders
+ * matched entries as ReportCards below the comparison. Rows here are always
+ * verified (the query filters on it), and the category is the requested one.
+ */
+function toEntry(
+  r: {
+    id: string;
+    amount_cents: number;
+    service_name: string;
+    town: string;
+    service_date: string | null;
+    report_type: string;
+    created_at: string;
+  },
+  category: string
+) {
+  return {
+    id: r.id,
+    service_name: r.service_name,
+    category,
+    amount_cents: r.amount_cents,
+    report_type: r.report_type,
+    town: r.town,
+    service_date: r.service_date,
+    notes: null,
+    verification_status: "verified",
+    created_at: r.created_at,
+  };
+}
+
+/**
  * POST /api/check-quote — compare a homeowner's quote against SIMILAR verified reports.
  * Body: { category: string, description: string, price_cents: number }
  * Matches the description against verified report service names by shared tokens
@@ -227,7 +258,7 @@ export async function POST(req: Request) {
     const sb = getServiceSupabase();
     const { data, error } = await sb
       .from("reports")
-      .select("amount_cents, service_name, town, service_date")
+      .select("id, amount_cents, service_name, town, service_date, report_type, created_at")
       .eq("category", category)
       .eq("verification_status", "verified")
       .not("moderated_at", "is", null);
@@ -252,6 +283,12 @@ export async function POST(req: Request) {
         count: scored.length,
         notEnoughData: true,
         ai_estimate: aiEstimate,
+        // The matched entries (0 or 1 here), plus the other verified entries
+        // in the category so the results page can still show relevant data.
+        entries: scored.map((r) => toEntry(r, category)),
+        category_entries: (data ?? [])
+          .map((r) => toEntry(r, category))
+          .slice(0, 20),
       });
     }
 
@@ -273,12 +310,9 @@ export async function POST(req: Request) {
       matched: Array.from(queryTokens).filter((t) =>
         scored.some((r) => tokens(r.service_name).has(t))
       ),
-      samples: scored.slice(0, 12).map((r) => ({
-        amount_cents: r.amount_cents,
-        service_name: r.service_name,
-        town: r.town,
-        service_date: r.service_date,
-      })),
+      // Every matched entry, uncapped — the results page lists them all
+      // below the comparison.
+      entries: scored.map((r) => toEntry(r, category)),
     });
   } catch (err) {
     console.error("check-quote error:", err);
