@@ -782,9 +782,6 @@ export default function SubmitPage() {
             placeholder="Only used if we need to verify your entry" maxLength={120}
             value={fields.submitterEmail} onChange={(e) => set("submitterEmail", e.target.value)}
           />
-          <p className="mt-1 text-xs text-muted">
-            Uploading a document above attaches it as your invoice automatically.
-          </p>
         </div>
 
         {/* Cloudflare Turnstile: renders only when a site key is configured. */}
