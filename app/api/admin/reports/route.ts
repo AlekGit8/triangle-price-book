@@ -35,8 +35,22 @@ export async function GET(req: Request) {
     }
     const { data, error } = await q;
     if (error) throw error;
+    // Newest-first by effective report date (service_date when set, else
+    // created_at) — the same order the public site shows. Sorting by
+    // created_at alone can't order the seed rows: all 21 were inserted in
+    // one migration transaction and share a created_at, so the Published
+    // tab read as insertion order instead of most-recent first.
+    const effectiveDate = (r: Record<string, unknown>): string =>
+      (r.service_date as string | null) ?? (r.created_at as string).slice(0, 10);
+    const byEffectiveDate = (a: Record<string, unknown>, b: Record<string, unknown>): number => {
+      const byDate = effectiveDate(b).localeCompare(effectiveDate(a));
+      if (byDate !== 0) return byDate;
+      return (b.created_at as string).localeCompare(a.created_at as string);
+    };
     // Flatten the private contact email onto the shape the admin UI expects.
-    const reports = ((data ?? []) as Array<Record<string, unknown>>).map((r) => {
+    const reports = ((data ?? []) as Array<Record<string, unknown>>)
+      .sort(byEffectiveDate)
+      .map((r) => {
       const { report_contacts: _contacts, ...rest } = r;
       const contacts = _contacts as { email?: string } | null;
       return { ...rest, submitter_email: contacts?.email ?? null };
