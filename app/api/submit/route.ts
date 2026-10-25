@@ -32,6 +32,20 @@ const ALLOWED_INVOICE_EXTS = new Set([
   "pdf",
 ]);
 
+// Content-Type for stored invoices comes from the file EXTENSION, never
+// from the uploader-supplied MIME type — a client can claim any type, and
+// a stored "text/html" (or scriptable) type is a footgun if an admin ever
+// opens the file in a browser. The extension allowlist above bounds this.
+const INVOICE_MIME_BY_EXT: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  heic: "image/heic",
+  heif: "image/heif",
+  pdf: "application/pdf",
+};
+
 /** True for a real calendar date in YYYY-MM-DD form (not just the shape). */
 function validServiceDate(s: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
@@ -255,7 +269,7 @@ export async function POST(req: Request) {
       const path = `shared/${crypto.randomUUID()}/${Date.now()}.${ext}`;
       const { error: upErr } = await sb.storage
         .from("invoices")
-        .upload(path, inv, { contentType: inv.type || "application/octet-stream" });
+        .upload(path, inv, { contentType: INVOICE_MIME_BY_EXT[ext] ?? "application/octet-stream" });
       if (upErr) {
         await sb.from("reports").delete().in("id", ids);
         throw upErr;
@@ -263,7 +277,15 @@ export async function POST(req: Request) {
       const { error: verErr } = await sb
         .from("verifications")
         .insert(ids.map((id) => ({ report_id: id, invoice_path: path })));
-      if (verErr) throw verErr;
+      if (verErr) {
+        // Never leave rows marked "verified" with no backing invoice:
+        // the verification link is what the badge means. Roll back the
+        // reports (and the now-orphaned file) instead of publishing
+        // unverified evidence.
+        await sb.from("reports").delete().in("id", ids);
+        await sb.storage.from("invoices").remove([path]);
+        throw verErr;
+      }
 
       return NextResponse.json({ ok: true, ids, verified: true });
     }
@@ -323,7 +345,7 @@ export async function POST(req: Request) {
     const path = `${report.id}/${Date.now()}.${ext}`;
     const { error: upErr } = await sb.storage
       .from("invoices")
-      .upload(path, inv, { contentType: inv.type || "application/octet-stream" });
+      .upload(path, inv, { contentType: INVOICE_MIME_BY_EXT[ext] ?? "application/octet-stream" });
     if (upErr) {
       await sb.from("reports").delete().eq("id", report.id);
       throw upErr;
@@ -331,7 +353,14 @@ export async function POST(req: Request) {
     const { error: verErr } = await sb
       .from("verifications")
       .insert({ report_id: report.id, invoice_path: path });
-    if (verErr) throw verErr;
+    if (verErr) {
+      // Never leave a row marked "verified" with no backing invoice —
+      // see the batch-mode note above. Roll back the report and the
+      // now-orphaned file.
+      await sb.from("reports").delete().eq("id", report.id);
+      await sb.storage.from("invoices").remove([path]);
+      throw verErr;
+    }
 
     return NextResponse.json({ ok: true, id: report.id, verified: true });
   } catch (err) {

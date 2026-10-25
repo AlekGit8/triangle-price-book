@@ -4,7 +4,11 @@
  * otherwise it passes through (spam protection disabled).
  * When enforced, requires success === true, the expected action, and a
  * hostname on the allowlist (TURNSTILE_HOSTNAMES, defaulting to the known
- * production hosts).
+ * production hosts). The allowlist must cover every host that serves the
+ * site — custom domains AND the Workers hosts — or verification fails
+ * there and /api/submit + /api/extract reject every request with
+ * "Spam check failed". (The old pages.dev entry was dropped when the
+ * Cloudflare Pages project was deleted Oct 24, 2026.)
  */
 export async function verifyTurnstile(
   token: string,
@@ -32,7 +36,7 @@ export async function verifyTurnstile(
     if (expectedAction && json.action !== expectedAction) return false;
     const allowedHostnames = (
       process.env.TURNSTILE_HOSTNAMES ??
-      "trianglepricebook.com,www.trianglepricebook.com,triangle-price-book.pages.dev"
+      "trianglepricebook.com,www.trianglepricebook.com,triangle-price-book.longsitelabsllc.workers.dev,beta-triangle-price-book.longsitelabsllc.workers.dev"
     )
       .split(",")
       .map((h) => h.trim())
