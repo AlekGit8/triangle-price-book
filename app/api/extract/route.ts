@@ -52,8 +52,8 @@ Rules:
  * Requires GEMINI_API_KEY (free at https://aistudio.google.com/apikey).
  * Returns { ok: false, error: "not_configured" } (HTTP 501) when the key
  * is missing so the UI can fall back to the manual form gracefully.
- * Tries gemini-3.6-flash first, falling back to gemini-3.5-flash —
- * Google retires older versioned models for new API keys.
+ * Uses gemini-3.5-flash-lite — gemini-3.6-flash retires Nov 19, 2026 and
+ * gemini-3.5-flash is deprecated (routes to 3.6-flash).
  */
 export async function POST(req: Request) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -117,10 +117,11 @@ export async function POST(req: Request) {
     const bytes = Buffer.from(await file.arrayBuffer());
     const base64 = bytes.toString("base64");
 
-    // Model fallback chain: Google retires older versioned models for new
-    // API keys, and the newest models can be capacity-throttled (503).
-    // Try in order; first success wins.
-    const MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"];
+    // gemini-3.5-flash-lite ONLY (verified Oct 24, 2026 against Google's
+    // docs): released Jul 21, 2026, free-tier eligible, good until
+    // Jul 21, 2027. Do NOT re-add gemini-3.6-flash (retires Nov 19, 2026)
+    // or gemini-3.5-flash (deprecated Oct 8, 2026 — routes to 3.6-flash).
+    const MODELS = ["gemini-3.5-flash-lite"];
     let aiJson: Record<string, unknown> | null = null;
     let lastStatus = 0;
     for (const model of MODELS) {
