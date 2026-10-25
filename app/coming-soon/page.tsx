@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { siteConfig } from "@/lib/site-config";
 
 type Step = "email" | "updates" | "done";
@@ -55,23 +54,44 @@ export default function ComingSoonPage() {
 
   return (
     <div className="dot-grid -mx-4 px-4 py-16 sm:py-24">
-      <div className="mx-auto flex min-h-[65vh] max-w-xl flex-col items-center justify-center text-center">
-        <Image
-          src="/logo.svg"
-          alt={`${siteConfig.siteName} logo`}
-          width={88}
-          height={88}
-          priority
-        />
-        <p className="mt-8 inline-block rounded-full border border-line bg-white px-4 py-1.5 font-mono text-xs font-semibold uppercase tracking-wide text-muted">
+      <div className="mx-auto flex max-w-xl flex-col items-center justify-center text-center">
+        <p className="inline-block rounded-full bg-[#FEF3C7] px-4 py-1.5 font-mono text-xs font-semibold uppercase tracking-wide text-[#92400E]">
           Coming soon
         </p>
         <h1 className="mt-6 font-serif text-5xl leading-[1.05] text-ink sm:text-6xl">
           {siteConfig.siteName}
         </h1>
         <p className="mt-4 max-w-md text-lg text-muted">{siteConfig.tagline}</p>
+      </div>
 
-        <div className="mt-10 w-full max-w-sm">
+      {/* Category marquee: every category the site will cover, scrolling. */}
+      <div
+        className="marquee marquee-mask -mx-4 mt-12 overflow-hidden"
+        tabIndex={0}
+        role="region"
+        aria-label="Categories of prices coming to Triangle Price Book, scrolling"
+      >
+        <div className="marquee-track flex w-max" style={{ animationDuration: "45s" }}>
+          {[0, 1].map((half) => (
+            <div
+              key={half}
+              aria-hidden={half === 1}
+              className="flex shrink-0 gap-3 pr-3"
+            >
+              {siteConfig.categories.map((c) => (
+                <span
+                  key={c}
+                  className="shrink-0 whitespace-nowrap rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium text-ink"
+                >
+                  {c}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mx-auto mt-12 w-full max-w-sm text-center">
           {step === "email" && (
             <form
               onSubmit={submitStep1}
@@ -138,7 +158,6 @@ export default function ComingSoonPage() {
               </p>
             </div>
           )}
-        </div>
       </div>
     </div>
   );
