@@ -3,36 +3,32 @@ import { headers } from "next/headers";
 /**
  * Is the temporary coming-soon gate active for this request?
  *
- * Why this is a proxy, not a direct check: Next.js does NOT expose a
- * middleware rewrite to server components. The `x-middleware-rewrite`
- * header is set on the RESPONSE only — Next.js explicitly excludes it
- * from the request headers passed to the page (see `resolve-routes.js`
- * in Next 15.5: `x-middleware-rewrite` is skipped when middleware
- * response headers are copied onto `req.headers`). Verified
- * behaviorally in `next dev`: `headers()` inside SiteHeader shows no
- * rewrite header for a rewritten "/" request, and the header sets for
- * a rewritten "/" and a direct "/coming-soon" are identical.
+ * The signal is a dedicated header, `x-tpb-coming-soon: 1`, set by
+ * middleware.ts on the rewrite response (and on direct /coming-soon
+ * requests, which share the root layout's header/footer). Next.js
+ * copies middleware response headers onto the request headers visible
+ * via `headers()` in server components — verified behaviorally in
+ * `next dev`: the header appears for a rewritten "/" request and for
+ * a direct "/coming-soon" request, and is absent for /admin.
  *
- * What the component CAN see: Next.js copies the middleware's own
- * response headers onto the request headers visible via `headers()`.
- * While middleware.ts exists it sets security headers (e.g.
- * `x-frame-options: DENY`) on every response, so their presence here
- * means middleware ran — and the gate lives in middleware.ts, so
- * middleware present means gate active.
+ * Why a dedicated header, not a proxy: the previous check keyed off
+ * `x-frame-options`, a security header middleware sets on EVERY
+ * response. That meant the gate looked active whenever middleware
+ * existed — including after launch, when the rewrite is removed but
+ * the rate limits and security headers stay. The dedicated header is
+ * only set when the coming-soon page is actually being served, so the
+ * check tracks the rewrite, not middleware presence.
  *
- * LAUNCH REQUIREMENT: at launch, middleware.ts must be DELETED
- * ENTIRELY (not just the rewrite block). If only the rewrite block is
- * removed, the security headers remain, this keeps returning true, and
- * the nav stays hidden forever. The gate and this check are removed
- * together when middleware.ts is deleted.
+ * LAUNCH: remove ONLY the rewrite block in middleware.ts — the
+ * `if (gateApplies)` block in section 2 (the rate limits and
+ * security headers stay). The header/footer nav returns
+ * automatically because the rewrite header is no longer set.
  */
 export async function isComingSoonGateActive(): Promise<boolean> {
   const h = await headers();
   // Direct signal, if any runtime ever exposes it (none observed in
   // Next 15.5 — kept as a first check for future-proofing).
   if (h.get("x-middleware-rewrite")?.includes("/coming-soon")) return true;
-  // Proxy: middleware ran (and therefore the gate is in place).
-  // `x-frame-options` is a response-only header by spec — a browser
-  // never sends it, so its presence here can only come from middleware.
-  return h.has("x-frame-options");
+  // Dedicated signal from middleware (see above).
+  return h.get("x-tpb-coming-soon") === "1";
 }

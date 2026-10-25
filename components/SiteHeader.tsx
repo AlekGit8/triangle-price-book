@@ -11,9 +11,9 @@ const nav = [
 export default async function SiteHeader() {
   // While the coming-soon gate is live, every public URL rewrites to
   // /coming-soon, so these nav links are dead — hide them and show only
-  // the wordmark. After launch (middleware.ts deleted) the full nav
-  // returns automatically. See lib/coming-soon-gate.ts for how the gate
-  // is detected.
+  // the wordmark. After launch (rewrite block removed from
+  // middleware.ts) the full nav returns automatically. See
+  // lib/coming-soon-gate.ts for how the gate is detected.
   const gated = await isComingSoonGateActive();
 
   return (

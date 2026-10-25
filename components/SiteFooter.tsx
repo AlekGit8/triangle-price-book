@@ -5,8 +5,9 @@ import { isComingSoonGateActive } from "@/lib/coming-soon-gate";
 export default async function SiteFooter() {
   // While the coming-soon gate is live, every footer link below rewrites
   // to /coming-soon, so the whole nav block is dead — hide it and keep
-  // the rest of the footer. After launch (middleware.ts deleted) the
-  // nav returns automatically. See lib/coming-soon-gate.ts.
+  // the rest of the footer. After launch (rewrite block removed from
+  // middleware.ts) the nav returns automatically. See
+  // lib/coming-soon-gate.ts.
   const gated = await isComingSoonGateActive();
 
   return (
