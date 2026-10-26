@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatCents, formatMonthYear } from "@/lib/format";
+import AdminAnalytics from "@/components/AdminAnalytics";
 
 interface QueueReport {
   id: string;
@@ -37,7 +38,7 @@ export default function AdminPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [reports, setReports] = useState<QueueReport[]>([]);
   const [published, setPublished] = useState<QueueReport[]>([]);
-  const [tab, setTab] = useState<"queue" | "published" | "signups" | "feedback">("queue");
+  const [tab, setTab] = useState<"queue" | "published" | "signups" | "feedback" | "analytics">("queue");
   const [signups, setSignups] = useState<Signup[]>([]);
   const [signupStats, setSignupStats] = useState({ total: 0, updatesOptIn: 0 });
   const [feedback, setFeedback] = useState<Feedback[]>([]);
@@ -325,10 +326,10 @@ export default function AdminPage() {
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {(["queue", "published", "signups", "feedback"] as const).map((t) => (
+        {(["queue", "published", "signups", "feedback", "analytics"] as const).map((t) => (
           <button
             key={t}
-            onClick={() => { setTab(t); if (t === "signups") loadSignups(key); else if (t === "feedback") loadFeedback(key); else load(key, t); }}
+            onClick={() => { setTab(t); if (t === "signups") loadSignups(key); else if (t === "feedback") loadFeedback(key); else if (t === "queue" || t === "published") load(key, t); }}
             className={`rounded-full px-4 py-2 text-sm font-semibold ${
               tab === t
                 ? "bg-black text-white"
@@ -341,12 +342,16 @@ export default function AdminPage() {
                 ? `Published (${published.length})${newPublished.length > 0 ? ` · ${newPublished.length} new` : ""}`
                 : t === "signups"
                   ? `Launch signups (${signupStats.total})${newSignups.length > 0 ? ` · ${newSignups.length} new` : ""}`
-                  : `Feedback (${feedback.length})${newFeedback.length > 0 ? ` · ${newFeedback.length} new` : ""}`}
+                  : t === "feedback"
+                    ? `Feedback (${feedback.length})${newFeedback.length > 0 ? ` · ${newFeedback.length} new` : ""}`
+                    : "Analytics"}
           </button>
         ))}
       </div>
 
-      {tab === "signups" ? (
+      {tab === "analytics" ? (
+        <AdminAnalytics adminKey={key} />
+      ) : tab === "signups" ? (
         <div className="mt-6">
           <div className="grid grid-cols-2 gap-4 max-w-md">
             <div className="rounded-2xl border border-line bg-white p-5">

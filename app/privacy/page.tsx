@@ -71,7 +71,11 @@ export default function PrivacyPage() {
           <p className="mt-2">
             We use privacy-friendly analytics with no cross-site tracking profiles. The
             submission form may use Cloudflare Turnstile, a privacy-preserving spam
-            check, which sets a short-lived security cookie.
+            check, which sets a short-lived security cookie. We also measure our own
+            traffic — anonymous page views, time spent on a page, and whether a visit
+            looks like a bot — with a first-party counter that sets no cookies and
+            stores no IP addresses. A random session identifier is kept only in your
+            browser tab and forgotten when you close it.
           </p>
         </section>
 
