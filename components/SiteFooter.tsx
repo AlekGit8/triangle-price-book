@@ -45,7 +45,7 @@ export default async function SiteFooter() {
                 Submit a price
               </Link>
               <Link href="/donate" className="hover:text-ink">
-                Tip the Price Book
+                Tip Jar
               </Link>
             </nav>
           )}

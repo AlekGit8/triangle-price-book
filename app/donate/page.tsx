@@ -49,8 +49,6 @@ export default async function DonatePage({
       <p className="mt-4 text-lg leading-relaxed text-muted">
         Triangle Price Book is a free resource for homeowners across the
         Triangle — built and maintained by one person, in his spare time.
-        There are no sponsors, no paid listings, and nobody pays to be
-        featured here.
       </p>
       <p className="mt-4 text-lg leading-relaxed text-muted">
         If the site helped you feel confident about a quote, or saved you
