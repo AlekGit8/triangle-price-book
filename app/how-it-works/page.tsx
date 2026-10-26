@@ -110,7 +110,7 @@ export default function HowItWorksPage() {
             </div>
             <div>
               <dt className="font-semibold text-ink">Is it really free?</dt>
-              <dd>Yes. Ads keep the lights on.</dd>
+              <dd>Yes. Tips and Ads keep the lights on.</dd>
             </div>
             <div>
               <dt className="font-semibold text-ink">Can a business pay to change or remove prices?</dt>

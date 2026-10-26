@@ -34,7 +34,7 @@ function matchesReport(
 /** Exact "Quick answers" Q&As from /how-it-works. */
 const FAQ: Array<{ q: string; a: string }> = [
   { q: "Do I need an account?", a: "No." },
-  { q: "Is it really free?", a: "Yes. Ads keep the lights on." },
+  { q: "Is it really free?", a: "Yes. Tips and Ads keep the lights on." },
   {
     q: "Can a business pay to change or remove prices?",
     a: "No. There are no business profiles, rankings, or paid placements.",

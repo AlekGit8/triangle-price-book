@@ -57,7 +57,7 @@ export default async function DonatePage({
       </p>
       <div className="mt-8 rounded-2xl border border-line bg-white p-6 sm:p-8 text-center">
         <p className="font-mono text-xs font-semibold uppercase tracking-widest text-muted">
-          Any amount helps — most people tip $5–$25
+          Any amount helps — most people tip $5–$15
         </p>
         <a
           href={siteConfig.donateUrl}
