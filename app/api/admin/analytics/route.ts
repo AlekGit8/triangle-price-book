@@ -65,24 +65,37 @@ function bucketKey(d: Date, g: Granularity): string {
   return `${monday.getUTCFullYear()}-${pad(monday.getUTCMonth() + 1)}-${pad(monday.getUTCDate())}`;
 }
 
-function bucketLabel(key: string, g: Granularity, firstSeen: Date): string {
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function hour12(h: number): string {
+  const ap = h < 12 ? "AM" : "PM";
+  const hh = h % 12 === 0 ? 12 : h % 12;
+  return `${hh} ${ap}`;
+}
+
+/**
+ * Label derived from the bucket key itself (already America/New_York wall
+ * time), NOT from the first view in the bucket: empty buckets have no
+ * first view, and formatting the range start made every empty bucket
+ * show the same label (e.g. all "Oct 24, 8 PM" on an hourly chart).
+ */
+function bucketLabel(key: string, g: Granularity): string {
   if (g === "hour") {
-    return new Intl.DateTimeFormat("en-US", {
-      timeZone: TZ,
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-    }).format(firstSeen);
+    // key: "YYYY-MM-DD HH:00"
+    const [date, time] = key.split(" ");
+    const [, m, d] = date.split("-").map(Number);
+    const h = Number(time.split(":")[0]);
+    return `${MONTHS[m - 1]} ${d}, ${hour12(h)}`;
   }
   if (g === "day") {
-    return new Intl.DateTimeFormat("en-US", { timeZone: TZ, month: "short", day: "numeric" }).format(
-      firstSeen
-    );
+    // key: "YYYY-MM-DD"
+    const [, m, d] = key.split("-").map(Number);
+    return `${MONTHS[m - 1]} ${d}`;
   }
   if (g === "week") return `Week of ${key.slice(5)}`;
-  return new Intl.DateTimeFormat("en-US", { timeZone: TZ, month: "short", year: "numeric" }).format(
-    firstSeen
-  );
+  // key: "YYYY-MM"
+  const [y, m] = key.split("-").map(Number);
+  return `${MONTHS[m - 1]} ${y}`;
 }
 
 /** Bucket keys covering [start, now] in local time, in order. */
@@ -163,14 +176,12 @@ export async function GET(req: Request) {
       human: 0,
       bots: 0,
       views: 0,
-      firstSeen: null as Date | null,
     }));
     const byKey = new Map(buckets.map((b) => [b.key, b]));
     for (const r of rows) {
       const b = byKey.get(bucketKey(new Date(r.entered_at), granularity));
       if (b) {
         b.views += 1;
-        if (!b.firstSeen) b.firstSeen = new Date(r.entered_at);
       }
     }
     for (const s of sessions.values()) {
@@ -178,11 +189,10 @@ export async function GET(req: Request) {
       if (b) {
         if (s.bot) b.bots += 1;
         else b.human += 1;
-        if (!b.firstSeen) b.firstSeen = s.firstSeen;
       }
     }
     for (const b of buckets) {
-      b.label = bucketLabel(b.key, granularity, b.firstSeen ?? start);
+      b.label = bucketLabel(b.key, granularity);
     }
 
     const humanSessions = [...sessions.values()].filter((s) => !s.bot);
