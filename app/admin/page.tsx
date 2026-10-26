@@ -43,6 +43,47 @@ export default function AdminPage() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [lastSeen, setLastSeen] = useState<string | null>(null);
+  const [seenLoaded, setSeenLoaded] = useState(false);
+  const [baselineJustSet, setBaselineJustSet] = useState(false);
+
+  async function loadSeen(k: string) {
+    try {
+      const res = await fetch("/api/admin/seen", { headers: { "x-admin-key": k } });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "Failed to load");
+      if (json.last_seen_at) {
+        setLastSeen(json.last_seen_at);
+      } else {
+        // First visit: establish the baseline now, so future visits
+        // highlight what's new instead of flagging all 21 seed rows.
+        const mark = await fetch("/api/admin/seen", { method: "POST", headers: { "x-admin-key": k } });
+        const markJson = await mark.json();
+        if (mark.ok && markJson.ok) {
+          setLastSeen(markJson.last_seen_at);
+          setBaselineJustSet(true);
+        }
+      }
+    } catch {
+      // "What's new" is a convenience — a failure here must not block
+      // the rest of the admin page.
+    } finally {
+      setSeenLoaded(true);
+    }
+  }
+
+  async function markAllSeen() {
+    try {
+      const res = await fetch("/api/admin/seen", { method: "POST", headers: { "x-admin-key": key } });
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        setLastSeen(json.last_seen_at);
+        setBaselineJustSet(false);
+      }
+    } catch {
+      alert("Couldn't update the marker — try again.");
+    }
+  }
 
   async function loadSignups(k: string) {
     setLoading(true);
@@ -116,6 +157,17 @@ export default function AdminPage() {
     }
   }
 
+  // "What's new": everything submitted after the last admin visit.
+  // ISO-timestamp string comparison works because created_at comes
+  // back as an ISO string from Supabase.
+  const isNew = (createdAt: string) => !!lastSeen && createdAt > lastSeen;
+  const newQueue = reports.filter((r) => isNew(r.created_at));
+  const newPublished = published.filter((r) => isNew(r.created_at));
+  const newSignups = signups.filter((s) => isNew(s.created_at));
+  const newFeedback = feedback.filter((f) => isNew(f.created_at));
+  const newTotal =
+    newQueue.length + newPublished.length + newSignups.length + newFeedback.length;
+
   if (!unlocked) {
     return (
       <div className="py-16 max-w-sm mx-auto">
@@ -128,6 +180,7 @@ export default function AdminPage() {
             load(key, "published");
             loadSignups(key);
             loadFeedback(key);
+            loadSeen(key);
           }}
         >
           <input
@@ -154,7 +207,7 @@ export default function AdminPage() {
     <div className="py-10">
       <div className="flex items-baseline justify-between">
         <h1 className="font-serif text-3xl text-ink sm:text-4xl">Moderation</h1>
-        <button onClick={() => { if (tab === "signups") loadSignups(key); else if (tab === "feedback") loadFeedback(key); else load(key, tab); }} className="font-mono text-[13px] font-semibold text-ink hover:underline">
+        <button onClick={() => { load(key, "queue"); load(key, "published"); loadSignups(key); loadFeedback(key); loadSeen(key); }} className="font-mono text-[13px] font-semibold text-ink hover:underline">
           Refresh
         </button>
       </div>
@@ -162,6 +215,114 @@ export default function AdminPage() {
         New submissions publish instantly with a document attached. Use this page
         to review the queue and take down anything abusive.
       </p>
+
+      {seenLoaded && (
+        <div className="mt-6 rounded-2xl border border-line bg-white p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-serif text-xl text-ink">What&apos;s new since your last visit</h2>
+              <p className="mt-1 text-sm text-muted">
+                {baselineJustSet
+                  ? "First time here — baseline set just now. Future visits will highlight what's new."
+                  : lastSeen
+                    ? `Last visit: ${new Date(lastSeen).toLocaleString()}`
+                    : "Couldn't load your last visit."}
+              </p>
+            </div>
+            {newTotal > 0 && (
+              <button
+                onClick={markAllSeen}
+                className="whitespace-nowrap rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-black"
+              >
+                Mark all as seen
+              </button>
+            )}
+          </div>
+          {newTotal === 0 ? (
+            <p className="mt-3 text-sm text-muted">Nothing new since your last visit.</p>
+          ) : (
+            <div className="mt-4 space-y-4">
+              {newQueue.length > 0 && (
+                <div>
+                  <p className="font-mono text-xs font-semibold uppercase tracking-wide text-muted">
+                    New in review queue ({newQueue.length})
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {newQueue.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => setTab("queue")}
+                        className="flex w-full items-center justify-between gap-3 rounded-[10px] border border-line px-4 py-2.5 text-left hover:border-black"
+                      >
+                        <span className="text-sm text-ink">{r.service_name} — {r.town}</span>
+                        <span className="whitespace-nowrap font-mono text-sm font-bold text-ink">{formatCents(r.amount_cents)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {newPublished.length > 0 && (
+                <div>
+                  <p className="font-mono text-xs font-semibold uppercase tracking-wide text-muted">
+                    New published ({newPublished.length})
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {newPublished.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => setTab("published")}
+                        className="flex w-full items-center justify-between gap-3 rounded-[10px] border border-line px-4 py-2.5 text-left hover:border-black"
+                      >
+                        <span className="text-sm text-ink">{r.service_name} — {r.town}</span>
+                        <span className="whitespace-nowrap font-mono text-sm font-bold text-ink">{formatCents(r.amount_cents)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {newSignups.length > 0 && (
+                <div>
+                  <p className="font-mono text-xs font-semibold uppercase tracking-wide text-muted">
+                    New signups ({newSignups.length})
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {newSignups.map((s) => (
+                      <button
+                        key={s.email}
+                        onClick={() => setTab("signups")}
+                        className="flex w-full items-center justify-between gap-3 rounded-[10px] border border-line px-4 py-2.5 text-left hover:border-black"
+                      >
+                        <span className="text-sm text-ink">{s.email}</span>
+                        <span className="whitespace-nowrap font-mono text-xs text-muted">
+                          {new Date(s.created_at).toLocaleDateString()}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {newFeedback.length > 0 && (
+                <div>
+                  <p className="font-mono text-xs font-semibold uppercase tracking-wide text-muted">
+                    New feedback ({newFeedback.length})
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {newFeedback.map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => setTab("feedback")}
+                        className="block w-full rounded-[10px] border border-line px-4 py-2.5 text-left hover:border-black"
+                      >
+                        <span className="text-sm text-ink">{f.message}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {(["queue", "published", "signups", "feedback"] as const).map((t) => (
@@ -175,12 +336,12 @@ export default function AdminPage() {
             }`}
           >
             {t === "queue"
-              ? `Review queue (${reports.length})`
+              ? `Review queue (${reports.length})${newQueue.length > 0 ? ` · ${newQueue.length} new` : ""}`
               : t === "published"
-                ? `Published (${published.length})`
+                ? `Published (${published.length})${newPublished.length > 0 ? ` · ${newPublished.length} new` : ""}`
                 : t === "signups"
-                  ? `Launch signups (${signupStats.total})`
-                  : `Feedback (${feedback.length})`}
+                  ? `Launch signups (${signupStats.total})${newSignups.length > 0 ? ` · ${newSignups.length} new` : ""}`
+                  : `Feedback (${feedback.length})${newFeedback.length > 0 ? ` · ${newFeedback.length} new` : ""}`}
           </button>
         ))}
       </div>
