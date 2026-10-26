@@ -11,7 +11,7 @@
 export default function TipJarIcon({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 -2 24 26"
+      viewBox="0 -3 24 27"
       className={className}
       fill="none"
       aria-hidden="true"
@@ -19,27 +19,27 @@ export default function TipJarIcon({ className }: { className?: string }) {
       {/* Dropping coin — painted first so the jar covers it as it falls. */}
       <circle
         cx="12"
-        cy="0"
-        r="2.2"
+        cy="-0.5"
+        r="2.4"
         fill="#F59E0B"
-        className="transition-all duration-300 group-hover:translate-y-[9px] group-hover:opacity-0"
+        className="transition-all duration-300 group-hover:translate-y-[10px] group-hover:opacity-0"
       />
       {/* Lid */}
-      <rect x="8" y="2" width="8" height="2.6" rx="1" fill="currentColor" />
+      <rect x="7.5" y="2" width="9" height="3.2" rx="1.2" fill="currentColor" />
       {/* Jar body */}
       <rect
-        x="6"
-        y="5.5"
-        width="12"
-        height="15.5"
+        x="5.5"
+        y="6"
+        width="13"
+        height="15"
         rx="3"
         fill="white"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="2"
       />
       {/* Coins already in the jar */}
-      <circle cx="9.3" cy="18.6" r="1.5" fill="#F59E0B" />
-      <circle cx="13.8" cy="18.9" r="1.5" fill="#FBBF24" />
+      <circle cx="12" cy="18.5" r="2.3" fill="#F59E0B" />
+      <circle cx="8.8" cy="19" r="1.5" fill="#FBBF24" />
     </svg>
   );
 }
