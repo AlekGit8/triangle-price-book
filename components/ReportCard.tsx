@@ -25,9 +25,10 @@ function Badge({
 /**
  * Owner seed markers ("Owner seed data…") are internal bookkeeping from the
  * site's initial data load. Strip any sentence carrying one so visitors never
- * see it, keeping the rest of the note.
+ * see it, keeping the rest of the note. Shared with the Browse table, which
+ * shows the same public note under the service name.
  */
-function publicNote(notes: string | null): string | null {
+export function publicNote(notes: string | null): string | null {
   if (!notes) return null;
   const kept = notes
     .split(/(?<=[.!?])\s+/)
@@ -39,8 +40,8 @@ function publicNote(notes: string | null): string | null {
 /**
  * One anonymized price entry. Never renders a business name —
  * attribution is always "a verified homeowner in {town}".
- * `compact` (marquee mode) hides the note and attribution line so
- * ticker cards stay uniform.
+ * `compact` (marquee mode) shows the note truncated to two lines and hides
+ * the attribution line so ticker cards stay roughly uniform.
  */
 export default function ReportCard({
   report,
@@ -49,7 +50,7 @@ export default function ReportCard({
   report: Report;
   compact?: boolean;
 }) {
-  const note = compact ? null : publicNote(report.notes);
+  const note = publicNote(report.notes);
   return (
     <article className="h-full rounded-2xl border border-line bg-white p-5">
       <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted">
@@ -73,7 +74,7 @@ export default function ReportCard({
         </span>
       </div>
       {note && (
-        <p className="mt-3 text-sm text-muted">{note}</p>
+        <p className={compact ? "mt-3 text-sm text-muted line-clamp-2" : "mt-3 text-sm text-muted"}>{note}</p>
       )}
       {!compact && (
         <p className="mt-3 text-xs italic text-neutral-400">

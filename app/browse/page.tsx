@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase-client";
 import { siteConfig } from "@/lib/site-config";
 import { formatCents, formatMonthYear } from "@/lib/format";
+import { publicNote } from "@/components/ReportCard";
 import type { Report } from "@/lib/data";
 
 function normalize(s: string): string {
@@ -232,10 +233,15 @@ function BrowseInner() {
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((r) => (
+                {sorted.map((r) => {
+                  const note = publicNote(r.notes);
+                  return (
                   <tr key={r.id} className="border-b border-line last:border-0 hover:bg-paper">
                     <td className="px-4 py-3">
                       <p className="font-semibold text-ink">{r.service_name}</p>
+                      {note && (
+                        <p className="mt-1 text-xs text-muted">{note}</p>
+                      )}
                       {r.verification_status === "verified" ? (
                         <span className="mt-1 inline-block rounded bg-green-100 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-green-800">
                           Verified
@@ -266,7 +272,8 @@ function BrowseInner() {
                       {formatCents(r.amount_cents)}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
