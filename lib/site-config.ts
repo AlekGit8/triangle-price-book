@@ -97,26 +97,118 @@ export const activeSponsor: Sponsor | null = null;
  * "outreach-" so they never collide with a sponsor slug and are
  * easy to tell apart in the clicks table.
  */
-export const outreachLinks: Record<string, { company: string; destinationUrl: string }> = {
+export const outreachLinks: Record<
+  string,
+  { company: string; destinationUrl: string; group: "contractors" | "news" }
+> = {
   "outreach-blaze": {
     company: "Blaze Heating, Cooling, Electrical & Plumbing",
     destinationUrl: siteConfig.siteUrl,
+    group: "contractors",
   },
   "outreach-cr3": {
     company: "CR3 American Exteriors",
     destinationUrl: siteConfig.siteUrl,
+    group: "contractors",
   },
   "outreach-faircloth": {
     company: "Faircloth Roofing",
     destinationUrl: siteConfig.siteUrl,
+    group: "contractors",
   },
   "outreach-roof-medic": {
     company: "Roof Medic",
     destinationUrl: siteConfig.siteUrl,
+    group: "contractors",
   },
   "outreach-big-bear": {
     company: "Big Bear Roofing",
     destinationUrl: siteConfig.siteUrl,
+    group: "contractors",
+  },
+  // News outlets (Oct 26, 2026) — one tracked link per outlet in the
+  // news-outreach drafts, so a click tells you which outlet visited.
+  // outreach-news-observer is for the held N&O draft (do not send yet);
+  // the link is ready if that draft is ever un-held.
+  "outreach-wral": {
+    company: "WRAL-TV",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-abc11": {
+    company: "ABC11 / WTVD",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-cbs17": {
+    company: "CBS 17 / WNCN",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-spectrum": {
+    company: "Spectrum News 1 North Carolina",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-news-observer": {
+    company: "The News & Observer",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-tbj": {
+    company: "Triangle Business Journal",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-axios": {
+    company: "Axios Raleigh",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-indyweek": {
+    company: "Indy Week",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-assembly": {
+    company: "The Assembly",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-raleigh-convergence": {
+    company: "Raleigh Convergence",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-wunc": {
+    company: "WUNC",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-cary-citizen": {
+    company: "Cary Citizen",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-raleigh-magazine": {
+    company: "Raleigh Magazine",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-cary-magazine": {
+    company: "Cary Magazine",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-wake-weekly": {
+    company: "Wake Weekly",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
+  },
+  "outreach-main-broad": {
+    company: "Main & Broad",
+    destinationUrl: siteConfig.siteUrl,
+    group: "news",
   },
 };
 
