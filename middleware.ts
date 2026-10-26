@@ -36,6 +36,10 @@ const API_LIMITS: ApiLimit[] = [
   { prefix: "/api/feedback", limit: 10, windowMs: HOUR },
   // Public read API; generous, but not unlimited (full-table scans).
   { prefix: "/api/check-quote", limit: 120, windowMs: HOUR },
+  // Analytics ingest: page views + a heartbeat every 30s while the
+  // tab is visible — one active visitor is ~120/hr, so 600 leaves
+  // headroom for a shared IP while still bounding DB bloat.
+  { prefix: "/api/analytics/event", limit: 600, windowMs: HOUR },
   // Slow down ADMIN_KEY guessing. The key must still be long and random.
   { prefix: "/api/admin/", limit: 30, windowMs: HOUR },
 ];
