@@ -17,13 +17,42 @@ import { usePathname } from "next/navigation";
 const HEARTBEAT_MS = 30_000;
 const SESSION_KEY = "tpb-session";
 
-function getSessionId(): string {
-  let id = sessionStorage.getItem(SESSION_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    sessionStorage.setItem(SESSION_KEY, id);
+// Fallback when storage is blocked: the session id lives only in memory
+// for this page load, so analytics still works — the session just isn't
+// shared across page loads.
+let memorySessionId: string | null = null;
+
+function newSessionId(): string {
+  try {
+    if (
+      typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+    ) {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // fall through to the manual fallback
   }
-  return id;
+  return `tpb-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2, 10)}`;
+}
+
+function getSessionId(): string {
+  try {
+    let id = sessionStorage.getItem(SESSION_KEY);
+    if (!id) {
+      id = newSessionId();
+      sessionStorage.setItem(SESSION_KEY, id);
+    }
+    return id;
+  } catch {
+    // Some in-app browsers (notably Threads) throw a SecurityError on
+    // sessionStorage access instead of returning null. The beacon must
+    // never take the page down, so fall back to an in-memory id.
+    if (!memorySessionId) memorySessionId = newSessionId();
+    return memorySessionId;
+  }
 }
 
 export default function AnalyticsBeacon() {
