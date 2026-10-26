@@ -1,8 +1,17 @@
 import { formatCents } from "@/lib/format";
 import type { ServiceAggregate } from "@/lib/data";
 
-export default function StatsStrip({ aggregates }: { aggregates: ServiceAggregate[] }) {
-  const totalReports = aggregates.reduce((n, a) => n + a.report_count, 0);
+export default function StatsStrip({
+  aggregates,
+  totalReports,
+}: {
+  aggregates: ServiceAggregate[];
+  // Total published reports (verified + unverified community reports).
+  // The aggregates only cover verified entries, so this comes from the
+  // full approved-reports list instead — otherwise "Prices reported" and
+  // "Verified" would show the same number.
+  totalReports: number;
+}) {
   const verified = aggregates.reduce((n, a) => n + a.verified_count, 0);
   const low = aggregates.length ? Math.min(...aggregates.map((a) => a.min_cents)) : 0;
   const high = aggregates.length ? Math.max(...aggregates.map((a) => a.max_cents)) : 0;

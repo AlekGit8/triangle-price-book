@@ -133,7 +133,7 @@ export default function HomepageBody({
 
       {/* Stats */}
       <section className="mt-4">
-        <StatsStrip aggregates={aggregates} />
+        <StatsStrip aggregates={aggregates} totalReports={allReports.length} />
       </section>
 
       {/* Recently reported */}
