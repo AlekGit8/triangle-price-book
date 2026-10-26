@@ -51,6 +51,48 @@ export const siteConfig = {
     "Crowdsourced, anonymized home-services prices for the Raleigh-Durham Triangle. See what neighbors actually paid for HVAC, plumbing, electrical and more.",
 } as const;
 
+/**
+ * Sponsor banner config (Oct 26, 2026).
+ *
+ * One active sponsor at a time. The banner (components/SponsorBanner)
+ * shows only while `activeSponsor` is set AND today is inside its
+ * flight (startsAt inclusive, endsAt exclusive). With `null` the
+ * banner renders nothing — no placeholder, no empty slot.
+ *
+ * A flight is sold as 2 weeks at the $15/week founding rate ($30
+ * total). To start one, fill in the real sponsor's slug (lowercase,
+ * hyphens), name, one-line headline, destination URL, and flight
+ * dates, then redeploy. Clicks are counted by the /go/<slug>
+ * redirect (sponsor_clicks table); impressions are human page views
+ * from analytics_page_views while the banner is live; the report is
+ * in /admin under the Sponsors tab. Sponsors get zero influence over
+ * listings, prices, or moderation.
+ */
+export interface Sponsor {
+  slug: string;
+  name: string;
+  headline: string;
+  destinationUrl: string;
+  /** ISO timestamp, flight start (inclusive). */
+  startsAt: string;
+  /** ISO timestamp, flight end (exclusive). */
+  endsAt: string;
+}
+
+/**
+ * BETA TEST sponsor — verifies the banner, /go redirect, and admin
+ * report on the beta preview. NOT a real sponsor: revert to `null`
+ * before merging to main.
+ */
+export const activeSponsor: Sponsor | null = {
+  slug: "test-sponsor",
+  name: "Test Sponsor",
+  headline: "Beta test banner — not a real sponsor.",
+  destinationUrl: "https://example.com",
+  startsAt: "2026-10-26T00:00:00.000Z",
+  endsAt: "2026-11-09T00:00:00.000Z",
+};
+
 export type Category = (typeof siteConfig.categories)[number];
 
 /** URL slugs for per-category landing pages (/hvac, /plumbing, …). */

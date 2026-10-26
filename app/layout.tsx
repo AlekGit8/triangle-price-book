@@ -3,6 +3,7 @@ import { Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import SponsorBanner from "@/components/SponsorBanner";
 import AnalyticsBeacon from "@/components/AnalyticsBeacon";
 import { siteConfig } from "@/lib/site-config";
 
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${display.variable} ${sans.variable} ${mono.variable} min-h-screen bg-paper font-sans text-ink antialiased`}
       >
         <SiteHeader />
+        <SponsorBanner />
         <main className="mx-auto max-w-6xl px-4">{children}</main>
         <SiteFooter />
         <AnalyticsBeacon />

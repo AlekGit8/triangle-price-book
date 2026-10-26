@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatCents, formatMonthYear } from "@/lib/format";
 import AdminAnalytics from "@/components/AdminAnalytics";
+import AdminSponsors from "@/components/AdminSponsors";
 
 interface QueueReport {
   id: string;
@@ -38,7 +39,7 @@ export default function AdminPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [reports, setReports] = useState<QueueReport[]>([]);
   const [published, setPublished] = useState<QueueReport[]>([]);
-  const [tab, setTab] = useState<"queue" | "published" | "signups" | "feedback" | "analytics">("queue");
+  const [tab, setTab] = useState<"queue" | "published" | "signups" | "feedback" | "analytics" | "sponsors">("queue");
   const [signups, setSignups] = useState<Signup[]>([]);
   const [signupStats, setSignupStats] = useState({ total: 0, updatesOptIn: 0 });
   const [feedback, setFeedback] = useState<Feedback[]>([]);
@@ -326,7 +327,7 @@ export default function AdminPage() {
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {(["queue", "published", "signups", "feedback", "analytics"] as const).map((t) => (
+        {(["queue", "published", "signups", "feedback", "analytics", "sponsors"] as const).map((t) => (
           <button
             key={t}
             onClick={() => { setTab(t); if (t === "signups") loadSignups(key); else if (t === "feedback") loadFeedback(key); else if (t === "queue" || t === "published") load(key, t); }}
@@ -344,13 +345,17 @@ export default function AdminPage() {
                   ? `Launch signups (${signupStats.total})${newSignups.length > 0 ? ` · ${newSignups.length} new` : ""}`
                   : t === "feedback"
                     ? `Feedback (${feedback.length})${newFeedback.length > 0 ? ` · ${newFeedback.length} new` : ""}`
-                    : "Analytics"}
+                    : t === "analytics"
+                      ? "Analytics"
+                      : "Sponsors"}
           </button>
         ))}
       </div>
 
       {tab === "analytics" ? (
         <AdminAnalytics adminKey={key} />
+      ) : tab === "sponsors" ? (
+        <AdminSponsors adminKey={key} />
       ) : tab === "signups" ? (
         <div className="mt-6">
           <div className="grid grid-cols-2 gap-4 max-w-md">

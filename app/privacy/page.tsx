@@ -9,7 +9,7 @@ export default function PrivacyPage() {
   return (
     <div className="py-10 max-w-3xl mx-auto">
       <h1 className="text-3xl font-extrabold text-brand-900">Privacy Policy</h1>
-      <p className="mt-2 text-sm text-stone-500">Last updated: October 23, 2026</p>
+      <p className="mt-2 text-sm text-stone-500">Last updated: October 26, 2026</p>
       <p className="mt-4 text-[15px] leading-relaxed text-stone-700">
         {siteConfig.siteName} is operated by {siteConfig.operatorName} (&ldquo;we&rdquo;,
         &ldquo;us&rdquo;).
@@ -75,7 +75,11 @@ export default function PrivacyPage() {
             traffic — anonymous page views, time spent on a page, and whether a visit
             looks like a bot — with a first-party counter that sets no cookies and
             stores no IP addresses. A random session identifier is kept only in your
-            browser tab and forgotten when you close it.
+            browser tab and forgotten when you close it. Clicking a banner labelled
+            &ldquo;Sponsored&rdquo; takes you through a short redirect that records one
+            anonymous click — the sponsor name, the page you came from, and whether
+            the visit looks like a bot — so we can report clicks back to the sponsor.
+            No IP address is stored for that click either.
           </p>
         </section>
 
@@ -86,7 +90,10 @@ export default function PrivacyPage() {
             or similar technologies to show ads, which may be based on your browsing. We
             do not give advertisers or ad providers your submissions, uploaded documents,
             or email address. You can manage ad personalization through your
-            browser&rsquo;s cookie settings.
+            browser&rsquo;s cookie settings. The Site may also show a single banner
+            labelled &ldquo;Sponsored&rdquo; at the top of the page, linking to a local
+            sponsor&rsquo;s site. Sponsors pay for the banner only — they get no
+            influence over listings, prices, or moderation, and no visitor data.
           </p>
         </section>
 
