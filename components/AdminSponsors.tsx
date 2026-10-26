@@ -157,26 +157,38 @@ export default function AdminSponsors({ adminKey }: { adminKey: string }) {
           Clicks go to the homepage and are logged under the slug — load one
           to see how many times that company clicked through.
         </p>
-        <div className="mt-3 space-y-2">
-          {Object.entries(outreachLinks).map(([slug, link]) => (
-            <div
-              key={slug}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-line px-4 py-2.5"
-            >
-              <span className="text-sm text-ink">
-                {link.company}{" "}
-                <span className="font-mono text-[13px] text-muted">/go/{slug}</span>
-              </span>
-              <button
-                onClick={() => load(slug)}
-                disabled={loading}
-                className="whitespace-nowrap rounded-full border border-line bg-white px-4 py-1.5 text-sm font-semibold text-ink hover:border-black disabled:opacity-50"
-              >
-                Load clicks
-              </button>
+        {(
+          [
+            ["Sponsorship outreach — contractors", "contractors"],
+            ["News outreach", "news"],
+          ] as const
+        ).map(([label, group]) => (
+          <div key={group} className="mt-4">
+            <h4 className="text-sm font-semibold text-ink">{label}</h4>
+            <div className="mt-2 space-y-2">
+              {Object.entries(outreachLinks)
+                .filter(([, link]) => link.group === group)
+                .map(([slug, link]) => (
+                  <div
+                    key={slug}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-line px-4 py-2.5"
+                  >
+                    <span className="text-sm text-ink">
+                      {link.company}{" "}
+                      <span className="font-mono text-[13px] text-muted">/go/{slug}</span>
+                    </span>
+                    <button
+                      onClick={() => load(slug)}
+                      disabled={loading}
+                      className="whitespace-nowrap rounded-full border border-line bg-white px-4 py-1.5 text-sm font-semibold text-ink hover:border-black disabled:opacity-50"
+                    >
+                      Load clicks
+                    </button>
+                  </div>
+                ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
 
       <div className="rounded-2xl border border-line bg-white p-5">

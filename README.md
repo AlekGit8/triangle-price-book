@@ -62,7 +62,9 @@ dependencies remain in the repo.
   influence over listings, prices, or moderation. The same `/go` redirect
   also powers the per-company outreach links (`outreachLinks` in
   `lib/site-config.ts`, slugs prefixed `outreach-`, redirecting to the
-  homepage with no expiry) for the sponsorship cold-outreach emails; their
+  homepage with no expiry) for the sponsorship cold-outreach emails and
+  the news-outlet outreach emails (5 contractor links + 16 news links,
+  grouped in the Sponsors tab); their
   clicks are reported per slug from the same tab.
 - **Legal pages:** full Terms of Service (14 sections) and Privacy Policy
   (12 sections), both dated Oct 23, 2026. How-it-works page documents the
