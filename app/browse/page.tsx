@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase-client";
 import { siteConfig } from "@/lib/site-config";
 import { formatCents, formatMonthYear } from "@/lib/format";
-import { publicNote } from "@/components/ReportCard";
+import ReportCard, { publicNote } from "@/components/ReportCard";
 import type { Report } from "@/lib/data";
 
 function normalize(s: string): string {
@@ -28,6 +28,8 @@ function BrowseInner() {
   const [service, setService] = useState(initialService);
   const [sort, setSort] = useState<"date-desc" | "date-asc" | "price-desc" | "price-asc">("date-desc");
   const [query, setQuery] = useState("");
+  const [town, setTown] = useState("All");
+  const [selected, setSelected] = useState<Report | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [unconfigured, setUnconfigured] = useState(false);
@@ -53,8 +55,27 @@ function BrowseInner() {
     })();
   }, []);
 
+  // Towns come from the data itself (new towns appear as people submit).
+  const towns = useMemo(() => {
+    const unique = Array.from(new Set(reports.map((r) => r.town))).sort((a, b) =>
+      a.localeCompare(b)
+    );
+    return ["All", ...unique];
+  }, [reports]);
+
+  // Close the detail card with Escape.
+  useEffect(() => {
+    if (!selected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelected(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected]);
+
   const filtered = useMemo(() => {
     let rs = category === "All" ? reports : reports.filter((r) => r.category === category);
+    if (town !== "All") rs = rs.filter((r) => r.town === town);
     if (service) rs = rs.filter((r) => r.service_name === service);
     const tokens = normalize(query).split(" ").filter(Boolean).map(singularize);
     if (tokens.length > 0) {
@@ -64,7 +85,7 @@ function BrowseInner() {
       });
     }
     return rs;
-  }, [reports, category, service, query]);
+  }, [reports, category, town, service, query]);
 
   const effectiveDate = (r: Report) => r.service_date ?? r.created_at.slice(0, 10);
 
@@ -175,8 +196,23 @@ function BrowseInner() {
         <p className="font-mono text-xs text-muted" aria-live="polite">
           {filtered.length} {filtered.length === 1 ? "report" : "reports"}
         </p>
-        <label className="flex items-center gap-2 text-sm text-muted">
-          Sort by
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-muted">
+            Town
+            <select
+              value={town}
+              onChange={(e) => setTown(e.target.value)}
+              className="rounded-[10px] border border-line bg-white px-3 py-2 text-sm font-medium text-ink"
+            >
+              {towns.map((t) => (
+                <option key={t} value={t}>
+                  {t === "All" ? "All towns" : t}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-muted">
+            Sort by
           <select
             value={sort}
             onChange={(e) =>
@@ -189,7 +225,8 @@ function BrowseInner() {
             <option value="price-desc">Price: high to low</option>
             <option value="price-asc">Price: low to high</option>
           </select>
-        </label>
+          </label>
+        </div>
       </div>
 
       <div className="mt-4">
@@ -226,7 +263,7 @@ function BrowseInner() {
                 <tr className="border-b border-line font-mono text-[11px] uppercase tracking-wider text-muted">
                   <th scope="col" className="px-4 py-3 font-semibold">Service</th>
                   <th scope="col" className="hidden px-4 py-3 font-semibold sm:table-cell">Category</th>
-                  <th scope="col" className="hidden px-4 py-3 font-semibold md:table-cell">Town</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Town</th>
                   <th scope="col" className="px-4 py-3 font-semibold">Date</th>
                   <th scope="col" className="px-4 py-3 font-semibold">Type</th>
                   <th scope="col" className="px-4 py-3 text-right font-semibold">Price</th>
@@ -236,7 +273,20 @@ function BrowseInner() {
                 {sorted.map((r) => {
                   const note = publicNote(r.notes);
                   return (
-                  <tr key={r.id} className="border-b border-line last:border-0 hover:bg-paper">
+                  <tr
+                    key={r.id}
+                    className="cursor-pointer border-b border-line last:border-0 hover:bg-paper"
+                    onClick={() => setSelected(r)}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`${r.service_name}, ${r.town}, details`}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelected(r);
+                      }
+                    }}
+                  >
                     <td className="px-4 py-3">
                       <p className="font-semibold text-ink">{r.service_name}</p>
                       {note && (
@@ -253,7 +303,7 @@ function BrowseInner() {
                       )}
                     </td>
                     <td className="hidden px-4 py-3 font-mono text-xs text-muted sm:table-cell">{r.category}</td>
-                    <td className="hidden px-4 py-3 font-mono text-xs text-muted md:table-cell">{r.town}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-muted">{r.town}</td>
                     <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-muted">
                       {formatMonthYear(r.service_date ?? r.created_at)}
                     </td>
@@ -279,6 +329,31 @@ function BrowseInner() {
           </div>
         )}
       </div>
+
+      {/* Detail card: click a row to see the full entry. */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setSelected(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${selected.service_name} details`}
+        >
+          <div
+            className="relative w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ReportCard report={selected} />
+            <button
+              onClick={() => setSelected(null)}
+              aria-label="Close details"
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-lg leading-none text-ink hover:bg-neutral-200"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
