@@ -303,7 +303,7 @@ function BrowseInner() {
                       )}
                     </td>
                     <td className="hidden px-4 py-3 font-mono text-xs text-muted sm:table-cell">{r.category}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted">{r.town}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-muted">{r.town}</td>
                     <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-muted">
                       {formatMonthYear(r.service_date ?? r.created_at)}
                     </td>
