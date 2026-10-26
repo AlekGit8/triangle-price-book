@@ -7,53 +7,18 @@ function authorized(req: Request): boolean {
   return !!expected && req.headers.get("x-admin-key") === expected;
 }
 
-const TZ = "America/New_York";
 const MAX_ROWS = 50000;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/** YYYY-MM-DD in America/New_York for a given instant. */
-function localDate(d: Date): string {
-  const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  return fmt.format(d);
+/** UTC calendar date (YYYY-MM-DD) of an instant. */
+function utcDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
 }
 
 function addDays(isoDate: string, n: number): string {
   const d = new Date(`${isoDate}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
-}
-
-/** Offset of America/New_York from UTC at an instant, in ms (e.g. -4h in EDT). */
-function etOffsetMs(d: Date): number {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: TZ,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).formatToParts(d);
-  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
-  const asUTC = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
-  return asUTC - d.getTime();
-}
-
-/** Midnight at the start of an America/New_York calendar date, as a UTC ISO string. */
-function etDateToUtcIso(dateStr: string): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  let guess = Date.UTC(y, m - 1, d, 12, 0, 0);
-  // Two passes converge across a DST boundary.
-  for (let i = 0; i < 2; i++) {
-    guess = Date.UTC(y, m - 1, d, 0, 0, 0) - etOffsetMs(new Date(guess));
-  }
-  return new Date(guess).toISOString();
 }
 
 /**
@@ -95,12 +60,17 @@ export async function GET(req: Request) {
       });
     }
 
-    const today = localDate(new Date());
+    const today = utcDate(new Date());
+    // Default range = the flight's own UTC calendar dates, so the
+    // report covers exactly [startsAt, endsAt) — the same window the
+    // banner is live. (Deriving them in Eastern time shifted the
+    // range a day: a flight starting midnight UTC Oct 26 reads as
+    // Oct 25 in ET.)
     const defaultStart = activeSponsor
-      ? localDate(new Date(activeSponsor.startsAt))
+      ? utcDate(new Date(activeSponsor.startsAt))
       : addDays(today, -13);
     const defaultEnd = activeSponsor
-      ? localDate(new Date(activeSponsor.endsAt))
+      ? utcDate(new Date(activeSponsor.endsAt))
       : addDays(today, 1);
     const startParam = url.searchParams.get("start")?.trim() || defaultStart;
     const endParam = url.searchParams.get("end")?.trim() || defaultEnd;
@@ -117,8 +87,8 @@ export async function GET(req: Request) {
         { status: 400 }
       );
     }
-    const startIso = etDateToUtcIso(startParam);
-    const endIso = etDateToUtcIso(endParam);
+    const startIso = `${startParam}T00:00:00.000Z`;
+    const endIso = `${endParam}T00:00:00.000Z`;
 
     const sb = getServiceSupabase();
     const viewsRes = await sb
@@ -152,20 +122,20 @@ export async function GET(req: Request) {
     const humanViews = views.filter((v) => !v.is_bot).length;
     const humanClicks = clickRows.filter((c) => !c.is_bot).length;
 
-    // Daily buckets in America/New_York, covering [start, end).
+    // Daily buckets in UTC, covering [start, end).
     const days: string[] = [];
     for (let d = startParam; d < endParam; d = addDays(d, 1)) days.push(d);
     const dailyMap = new Map(
       days.map((date) => [date, { date, humanViews: 0, totalViews: 0, clicks: 0, humanClicks: 0 }])
     );
     for (const v of views) {
-      const row = dailyMap.get(localDate(new Date(v.entered_at)));
+      const row = dailyMap.get(utcDate(new Date(v.entered_at)));
       if (!row) continue;
       row.totalViews += 1;
       if (!v.is_bot) row.humanViews += 1;
     }
     for (const c of clickRows) {
-      const row = dailyMap.get(localDate(new Date(c.clicked_at)));
+      const row = dailyMap.get(utcDate(new Date(c.clicked_at)));
       if (!row) continue;
       row.clicks += 1;
       if (!c.is_bot) row.humanClicks += 1;

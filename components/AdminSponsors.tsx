@@ -99,7 +99,7 @@ export default function AdminSponsors({ adminKey }: { adminKey: string }) {
   const reportText = data
     ? [
         `Sponsor report — ${data.sponsor?.name ?? (data.slug || "Triangle Price Book sponsor")}`,
-        `Flight: ${fmtDateShort(data.start)} – ${fmtDateShort(data.end)} (dates in US Eastern time; end date exclusive)`,
+        `Flight: ${fmtDateShort(data.start)} – ${fmtDateShort(data.end)} (dates in UTC; end date exclusive)`,
         ``,
         `Your banner appeared on ${data.impressions.human.toLocaleString()} human page views (${data.impressions.total.toLocaleString()} total page views including bots) and received ${data.clicks.human} human clicks (${data.clicks.total} total clicks including bots).`,
         `Human click-through rate: ${(data.ctrHuman * 100).toFixed(2)}%.`,
@@ -231,7 +231,7 @@ export default function AdminSponsors({ adminKey }: { adminKey: string }) {
             <div className="rounded-2xl border border-line bg-white p-5">
               <p className="font-serif text-4xl text-ink">{data.daily.length}</p>
               <p className="mt-1 text-sm text-muted">Days in flight</p>
-              <p className="mt-1 font-mono text-xs text-muted">US Eastern dates</p>
+              <p className="mt-1 font-mono text-xs text-muted">UTC dates</p>
             </div>
           </div>
 

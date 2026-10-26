@@ -73,7 +73,7 @@ export interface Sponsor {
   name: string;
   headline: string;
   destinationUrl: string;
-  /** ISO timestamp, flight start (inclusive). */
+  /** ISO timestamp, flight start (inclusive). The report uses the UTC calendar dates of these timestamps, so set them at midnight UTC for a clean date range. */
   startsAt: string;
   /** ISO timestamp, flight end (exclusive). */
   endsAt: string;
