@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { siteConfig } from "@/lib/site-config";
 import { isComingSoonGateActive } from "@/lib/coming-soon-gate";
+import TipJarIcon from "@/components/TipJarIcon";
 
 const nav = [
   { href: "/browse", label: "Browse Prices" },
@@ -36,6 +37,15 @@ export default async function SiteHeader() {
                   href={item.href}
                   className="whitespace-nowrap rounded-[10px] bg-black px-4 py-2 font-semibold text-white hover:bg-neutral-800"
                 >
+                  {item.label}
+                </Link>
+              ) : item.href === "/donate" ? (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="tip-jar-link whitespace-nowrap px-3 py-2 text-muted hover:text-ink font-medium flex items-center gap-1.5"
+                >
+                  <TipJarIcon className="h-[20px] w-[20px] shrink-0" />
                   {item.label}
                 </Link>
               ) : (
