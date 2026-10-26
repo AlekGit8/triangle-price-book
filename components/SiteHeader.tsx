@@ -43,7 +43,7 @@ export default async function SiteHeader() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="group whitespace-nowrap px-3 py-2 text-muted hover:text-ink font-medium flex items-center gap-1.5"
+                  className="tip-jar-link whitespace-nowrap px-3 py-2 text-muted hover:text-ink font-medium flex items-center gap-1.5"
                 >
                   <TipJarIcon className="h-[20px] w-[20px] shrink-0" />
                   {item.label}

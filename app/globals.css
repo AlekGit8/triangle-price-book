@@ -44,3 +44,16 @@
   outline: 2px solid #111111;
   outline-offset: 2px;
 }
+
+/* Tip jar icon in the header: the coin above the lid drops into the jar
+   and fades away when the link is hovered. Plain CSS on purpose — the
+   Tailwind group-hover version of this did not visibly run in two
+   browser checks even though the generated rules were present, so the
+   animation now depends on nothing but :hover. */
+.tip-jar-link .tip-jar-coin {
+  transition: transform 300ms ease, opacity 300ms ease;
+}
+.tip-jar-link:hover .tip-jar-coin {
+  transform: translateY(10px);
+  opacity: 0;
+}

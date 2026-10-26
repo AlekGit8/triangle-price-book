@@ -22,7 +22,7 @@ export default function TipJarIcon({ className }: { className?: string }) {
         cy="-0.5"
         r="2.4"
         fill="#F59E0B"
-        className="transition-all duration-300 group-hover:translate-y-[10px] group-hover:opacity-0"
+        className="tip-jar-coin"
       />
       {/* Lid */}
       <rect x="7.5" y="2" width="9" height="3.2" rx="1.2" fill="currentColor" />
