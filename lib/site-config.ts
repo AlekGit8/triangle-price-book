@@ -80,18 +80,10 @@ export interface Sponsor {
 }
 
 /**
- * BETA TEST sponsor — verifies the banner, /go redirect, and admin
- * report on the beta preview. NOT a real sponsor: revert to `null`
- * before merging to main.
+ * No active sponsor — the banner is hidden. Set this to a sponsor
+ * object (see the Sponsor interface above) to start a flight.
  */
-export const activeSponsor: Sponsor | null = {
-  slug: "test-sponsor",
-  name: "Test Sponsor",
-  headline: "Beta test banner — not a real sponsor.",
-  destinationUrl: "https://example.com",
-  startsAt: "2026-10-26T00:00:00.000Z",
-  endsAt: "2026-11-09T00:00:00.000Z",
-};
+export const activeSponsor: Sponsor | null = null;
 
 export type Category = (typeof siteConfig.categories)[number];
 
