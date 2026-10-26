@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { activeSponsor } from "@/lib/site-config";
+import { activeSponsor, outreachLinks } from "@/lib/site-config";
 import { getServiceSupabase } from "@/lib/supabase-server";
 import { isBotUserAgent } from "@/lib/bot-detect";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
@@ -9,19 +9,25 @@ export const dynamic = "force-dynamic";
 const MAX_PATH_LEN = 200;
 
 /**
- * GET /go/<sponsor-slug> — sponsor banner click redirect (Oct 26, 2026).
- * Logs one anonymous click to sponsor_clicks, then 302-redirects to
- * the sponsor's site. The click log is the click half of the
- * end-of-flight sponsor report; impressions come from the existing
- * analytics_page_views table (human page views while the banner is
- * live).
+ * GET /go/<slug> — tracked redirect (Oct 26, 2026).
+ * Logs one anonymous click to sponsor_clicks, then 302-redirects.
+ * Two kinds of slug:
+ * - Sponsor banner links: the slug must match the currently
+ *   configured `activeSponsor` AND today must be inside its flight;
+ *   anything else is a 404, so a stale or guessed link never
+ *   credits clicks to anyone. The click log is the click half of
+ *   the end-of-flight sponsor report.
+ * - Outreach links (lib/site-config.ts `outreachLinks`, slugs
+ *   prefixed "outreach-"): one per company in the sponsorship
+ *   cold-outreach emails, redirecting to the homepage. These have
+ *   no flight dates — they stay live for follow-ups and late
+ *   clicks. Their clicks land in the same table under their own
+ *   slug, so the Sponsors-tab report can show them per company
+ *   without touching any sponsor's numbers.
  *
- * - The slug must match the currently configured `activeSponsor` AND
- *   today must be inside its flight; anything else is a 404, so a
- *   stale or guessed link never credits clicks to anyone.
  * - Logging is best-effort: if the insert fails (e.g. the table
- *   isn't migrated yet), the visitor still reaches the sponsor —
- *   a logging failure must never break the sponsor's link.
+ *   isn't migrated yet), the visitor still reaches the destination —
+ *   a logging failure must never break the link.
  * - No IP address is stored. is_bot is decided server-side from the
  *   user agent, so bot/crawler clicks can be excluded from the
  *   human-click count in the report.
@@ -36,19 +42,25 @@ export async function GET(
   const { slug } = await params;
   const sponsor =
     activeSponsor && activeSponsor.slug === slug ? activeSponsor : null;
-  if (!sponsor) {
+  const outreach = !sponsor ? outreachLinks[slug] : undefined;
+  const destinationUrl = sponsor
+    ? sponsor.destinationUrl
+    : outreach?.destinationUrl;
+  if (!destinationUrl) {
     return NextResponse.json(
-      { ok: false, error: "Unknown sponsor." },
+      { ok: false, error: "Unknown link." },
       { status: 404 }
     );
   }
 
-  const now = new Date();
-  if (now < new Date(sponsor.startsAt) || now >= new Date(sponsor.endsAt)) {
-    return NextResponse.json(
-      { ok: false, error: "Sponsorship has ended." },
-      { status: 404 }
-    );
+  if (sponsor) {
+    const now = new Date();
+    if (now < new Date(sponsor.startsAt) || now >= new Date(sponsor.endsAt)) {
+      return NextResponse.json(
+        { ok: false, error: "Sponsorship has ended." },
+        { status: 404 }
+      );
+    }
   }
 
   const ip = clientIp(req);
@@ -81,9 +93,9 @@ export async function GET(
     });
     if (error) throw error;
   } catch (err) {
-    // Never break the sponsor's link over a logging failure.
-    console.error("sponsor click log error:", err);
+    // Never break the link over a logging failure.
+    console.error("go link log error:", err);
   }
 
-  return NextResponse.redirect(sponsor.destinationUrl, 302);
+  return NextResponse.redirect(destinationUrl, 302);
 }

@@ -85,6 +85,41 @@ export interface Sponsor {
  */
 export const activeSponsor: Sponsor | null = null;
 
+/**
+ * Outreach links (Oct 26, 2026) — one tracked link per company in
+ * the sponsorship cold-outreach emails. Each link goes through
+ * /go/<slug>, which logs one anonymous click to sponsor_clicks and
+ * 302-redirects to the homepage. Unlike sponsor banner links, these
+ * have no flight dates: they stay live so follow-up emails and late
+ * clicks keep counting. Check clicks in /admin under the Sponsors
+ * tab by entering the slug (e.g. outreach-blaze) — the report works
+ * for any slug, not just the active sponsor. Slugs are prefixed
+ * "outreach-" so they never collide with a sponsor slug and are
+ * easy to tell apart in the clicks table.
+ */
+export const outreachLinks: Record<string, { company: string; destinationUrl: string }> = {
+  "outreach-blaze": {
+    company: "Blaze Heating, Cooling, Electrical & Plumbing",
+    destinationUrl: siteConfig.siteUrl,
+  },
+  "outreach-cr3": {
+    company: "CR3 American Exteriors",
+    destinationUrl: siteConfig.siteUrl,
+  },
+  "outreach-faircloth": {
+    company: "Faircloth Roofing",
+    destinationUrl: siteConfig.siteUrl,
+  },
+  "outreach-roof-medic": {
+    company: "Roof Medic",
+    destinationUrl: siteConfig.siteUrl,
+  },
+  "outreach-big-bear": {
+    company: "Big Bear Roofing",
+    destinationUrl: siteConfig.siteUrl,
+  },
+};
+
 export type Category = (typeof siteConfig.categories)[number];
 
 /** URL slugs for per-category landing pages (/hvac, /plumbing, …). */

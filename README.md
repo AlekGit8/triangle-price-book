@@ -59,7 +59,11 @@ dependencies remain in the repo.
   the first-party analytics table. The end-of-flight report (impressions,
   human/bot clicks, CTR, daily breakdown, copy-ready sponsor text) is the
   Sponsors tab in `/admin` (`GET /api/admin/sponsors`). Sponsors get zero
-  influence over listings, prices, or moderation.
+  influence over listings, prices, or moderation. The same `/go` redirect
+  also powers the per-company outreach links (`outreachLinks` in
+  `lib/site-config.ts`, slugs prefixed `outreach-`, redirecting to the
+  homepage with no expiry) for the sponsorship cold-outreach emails; their
+  clicks are reported per slug from the same tab.
 - **Legal pages:** full Terms of Service (14 sections) and Privacy Policy
   (12 sections), both dated Oct 23, 2026. How-it-works page documents the
   verified/unverified model.

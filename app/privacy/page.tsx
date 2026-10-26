@@ -76,10 +76,11 @@ export default function PrivacyPage() {
             looks like a bot — with a first-party counter that sets no cookies and
             stores no IP addresses. A random session identifier is kept only in your
             browser tab and forgotten when you close it. Clicking a banner labelled
-            &ldquo;Sponsored&rdquo; takes you through a short redirect that records one
-            anonymous click — the sponsor name, the page you came from, and whether
-            the visit looks like a bot — so we can report clicks back to the sponsor.
-            No IP address is stored for that click either.
+            &ldquo;Sponsored&rdquo; — or a link in one of our emails that goes through
+            our site first — takes you through a short redirect that records one
+            anonymous click — which link it was, the page you came from, and whether
+            the visit looks like a bot — so we can count clicks. No IP address is
+            stored for that click either.
           </p>
         </section>
 
