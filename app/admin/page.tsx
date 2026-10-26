@@ -434,7 +434,13 @@ export default function AdminPage() {
                 <>
                   <button
                     onClick={() => moderate(r.id, "verify", "queue")}
-                    className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+                    disabled={r.verifications.length === 0}
+                    title={
+                      r.verifications.length === 0
+                        ? "No invoice attached — verify is unavailable"
+                        : undefined
+                    }
+                    className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black"
                   >
                     Verify &amp; publish
                   </button>
