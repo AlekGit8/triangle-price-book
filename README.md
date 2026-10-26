@@ -50,6 +50,16 @@ dependencies remain in the repo.
   Delete `middleware.ts` to launch the full site.
 - **Admin** (`/admin`, gated by `ADMIN_KEY`): moderation queue + published list
   + launch-signup totals and email list.
+- **Sponsorships** (Oct 26, 2026): a single top-of-site banner, clearly labelled
+  "Sponsored", sold as a 2-week founding sponsorship ($30 total). The active
+  sponsor lives in `lib/site-config.ts` (`activeSponsor`, `null` = no banner).
+  Clicks go through `/go/<slug>`, which logs one anonymous click
+  (`sponsor_clicks`, migration 0012 — no IP stored, server-side bot flag) and
+  302-redirects to the sponsor's site; impressions are human page views from
+  the first-party analytics table. The end-of-flight report (impressions,
+  human/bot clicks, CTR, daily breakdown, copy-ready sponsor text) is the
+  Sponsors tab in `/admin` (`GET /api/admin/sponsors`). Sponsors get zero
+  influence over listings, prices, or moderation.
 - **Legal pages:** full Terms of Service (14 sections) and Privacy Policy
   (12 sections), both dated Oct 23, 2026. How-it-works page documents the
   verified/unverified model.
@@ -58,7 +68,7 @@ dependencies remain in the repo.
 
 ### 1. Supabase project
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run the migrations in `supabase/migrations/` **in order** (0001–0007) via
+2. Run the migrations in `supabase/migrations/` **in order** (0001–0012) via
    **SQL Editor**, plus create the `launch_signups` table:
    ```sql
    create table launch_signups (
