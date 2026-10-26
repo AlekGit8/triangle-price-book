@@ -7,6 +7,7 @@ const nav = [
   { href: "/check-quote", label: "Check a Quote" },
   { href: "/how-it-works", label: "How This Works" },
   { href: "/feedback", label: "Feedback" },
+  { href: "/donate", label: "Tip Jar" },
   { href: "/submit", label: "Submit a Price" },
 ];
 

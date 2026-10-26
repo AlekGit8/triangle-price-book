@@ -264,6 +264,12 @@ export default function HomepageBody({
         >
           Share what you paid, anonymously →
         </Link>
+        <p className="mt-4 text-sm text-muted">
+          Built and maintained by one person — if this site has been useful,{" "}
+          <Link href="/donate" className="font-semibold text-ink hover:underline">
+            leave a tip →
+          </Link>
+        </p>
       </section>
     </div>
   );

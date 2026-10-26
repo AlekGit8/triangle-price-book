@@ -38,6 +38,14 @@ export const siteConfig = {
   /** Contact email placeholder (replace once a real inbox exists). */
   contactEmail: "hello@trianglepricebook.com",
 
+  /**
+   * Stripe Payment Link for tips (created Oct 25, 2026, livemode,
+   * Longsite Labs LLC). One link, donor chooses the amount ($1–$500,
+   * preset $10). Price: price_1UUeyMAJQeL1alfkuVSMgoIR;
+   * link: plink_1UUeyYAJQeL1alfk4D8zXRo2.
+   */
+  donateUrl: "https://donate.stripe.com/fZu14mcj1b565Er0Ql73G00",
+
   /** One-line description for meta tags. */
   metaDescription:
     "Crowdsourced, anonymized home-services prices for the Raleigh-Durham Triangle. See what neighbors actually paid for HVAC, plumbing, electrical and more.",
