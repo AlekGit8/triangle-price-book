@@ -281,6 +281,7 @@ export default function SubmitPage() {
   const turnstileWidgetIdRef = useRef<string | null>(null);
   const turnstileTokenRef = useRef("");
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileUnavailable, setTurnstileUnavailable] = useState(false);
 
   // Persist the manual form as it is typed, so a refresh doesn't wipe it.
   useEffect(() => {
@@ -327,12 +328,21 @@ export default function SubmitPage() {
       }
     }
     tryRender();
+    // If the script never loads (blocked CDN, strict content blocker),
+    // don't leave the form permanently disabled — let the submit proceed
+    // and let the server decide (it fails closed with "Spam check failed").
+    const unavailableTimer = window.setTimeout(() => {
+      if (!turnstileWidgetIdRef.current && !turnstileTokenRef.current) {
+        setTurnstileUnavailable(true);
+      }
+    }, 20000);
     const script = document.querySelector<HTMLScriptElement>(
       'script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]'
     );
     script?.addEventListener("load", tryRender);
     return () => {
       cancelled = true;
+      window.clearTimeout(unavailableTimer);
       script?.removeEventListener("load", tryRender);
       const id = turnstileWidgetIdRef.current;
       turnstileWidgetIdRef.current = null;
@@ -920,8 +930,13 @@ export default function SubmitPage() {
               defer
             />
             <div ref={turnstileContainerRef} />
-            {!turnstileToken && (
+            {!turnstileToken && !turnstileUnavailable && (
               <p className="text-xs text-muted">Complete the check above to publish.</p>
+            )}
+            {turnstileUnavailable && (
+              <p className="text-xs text-muted">
+                The spam check didn&rsquo;t load — you can still try publishing below.
+              </p>
             )}
           </>
         )}
@@ -942,7 +957,10 @@ export default function SubmitPage() {
 
         <button
           type="submit"
-          disabled={status === "sending" || (!!turnstileSiteKey && !turnstileToken)}
+          disabled={
+            status === "sending" ||
+            (!!turnstileSiteKey && !turnstileToken && !turnstileUnavailable)
+          }
           className="w-full rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
         >
           {status === "sending"
