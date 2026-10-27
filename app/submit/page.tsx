@@ -269,6 +269,7 @@ export default function SubmitPage() {
   const [publishingAll, setPublishingAll] = useState(false);
 
   const docInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const manualInputRef = useRef<HTMLInputElement>(null);
 
   // Cloudflare Turnstile, rendered explicitly (see the effect below). The
@@ -405,6 +406,7 @@ export default function SubmitPage() {
     setExtractMsg("");
     setExtractCount(0);
     if (docInputRef.current) docInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
   }
 
   /** Option 2 attachment: stored as proof only — no AI extraction runs. */
@@ -447,6 +449,7 @@ export default function SubmitPage() {
         // Document failed the relevance check — do not attach it.
         setDocFile(null);
         if (docInputRef.current) docInputRef.current.value = "";
+        if (cameraInputRef.current) cameraInputRef.current.value = "";
         setExtractState("rejected");
         setExtractMsg(
           typeof json.reason === "string"
@@ -474,6 +477,7 @@ export default function SubmitPage() {
       setExtractMsg(err instanceof Error ? err.message : "Could not read the document.");
       // Reset the input so the user can retry the same file.
       if (docInputRef.current) docInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
       setDocFile(null);
     }
   }
@@ -672,6 +676,27 @@ export default function SubmitPage() {
               : "Photo or PDF — we’ll pull out every quote it contains"}
           </span>
         </label>
+
+        {/* Mobile only: open the phone camera directly to photograph the
+            quote. A separate input with capture="environment" so the file
+            chooser stays available above. Hidden on desktop (sm and up),
+            where there is no camera to open. */}
+        <input
+          ref={cameraInputRef}
+          id="docCamera"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          onChange={handleDocChange}
+        />
+        <button
+          type="button"
+          onClick={() => cameraInputRef.current?.click()}
+          className="mx-auto mt-3 flex items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-black sm:hidden"
+        >
+          📷 Take a photo of your quote
+        </button>
 
         {extractState === "done" && (
           <p className="mt-2 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-800 text-center">
