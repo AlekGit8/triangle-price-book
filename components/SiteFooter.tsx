@@ -51,11 +51,25 @@ export default async function SiteFooter() {
           )}
         </div>
         <p className="mt-8 text-xs text-neutral-400">
-          Operated by {siteConfig.operatorName}. Prices are community-reported
-          and anonymous; verify before hiring.
+          Operated by{" "}
+          <a
+            href="https://longsitelabs.com"
+            className="text-inherit no-underline hover:text-inherit hover:no-underline focus:outline-none"
+          >
+            {siteConfig.operatorName}
+          </a>
+          . Prices are community-reported and anonymous; verify before
+          hiring.
         </p>
         <p className="mt-2 text-xs text-neutral-400">
-          © 2026 {siteConfig.operatorName}. All rights reserved.
+          © 2026{" "}
+          <a
+            href="https://longsitelabs.com"
+            className="text-inherit no-underline hover:text-inherit hover:no-underline focus:outline-none"
+          >
+            {siteConfig.operatorName}
+          </a>
+          . All rights reserved.
         </p>
       </div>
     </footer>
