@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { outreachLinks } from "@/lib/site-config";
 
 interface SponsorConfig {
   slug: string;
@@ -32,6 +31,16 @@ interface ReportData {
   topReferrers: Array<{ path: string; clicks: number }>;
   tableMissing: boolean;
   truncated: boolean;
+}
+
+interface SummaryRow {
+  slug: string;
+  company: string;
+  group: "contractors" | "news" | "sponsor";
+  total: number;
+  human: number;
+  bot: number;
+  lastClicked: string | null;
 }
 
 function fmtDate(iso: string): string {
@@ -66,6 +75,28 @@ export default function AdminSponsors({ adminKey }: { adminKey: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [summary, setSummary] = useState<SummaryRow[] | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState("");
+  const [summaryTotal, setSummaryTotal] = useState(0);
+
+  async function loadSummary() {
+    setSummaryLoading(true);
+    setSummaryError("");
+    try {
+      const res = await fetch(`/api/admin/sponsors?view=summary`, {
+        headers: { "x-admin-key": adminKey },
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "Failed to load");
+      setSummary(json.rows as SummaryRow[]);
+      setSummaryTotal(json.totalClicks ?? 0);
+    } catch (err) {
+      setSummaryError(err instanceof Error ? err.message : "Failed to load");
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
 
   async function load(s?: string, st?: string, en?: string) {
     setLoading(true);
@@ -93,6 +124,7 @@ export default function AdminSponsors({ adminKey }: { adminKey: string }) {
 
   useEffect(() => {
     load();
+    loadSummary();
     // Load once on mount; refreshes are manual, like the other tabs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminKey]);
@@ -151,44 +183,65 @@ export default function AdminSponsors({ adminKey }: { adminKey: string }) {
       </div>
 
       <div className="rounded-2xl border border-line bg-white p-5">
-        <h3 className="font-serif text-xl text-ink">Outreach links</h3>
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h3 className="font-serif text-xl text-ink">Outreach links</h3>
+          <button
+            onClick={loadSummary}
+            disabled={summaryLoading}
+            className="rounded-full border border-line bg-white px-4 py-1.5 text-sm font-semibold text-ink hover:border-black disabled:opacity-50"
+          >
+            {summaryLoading ? "Refreshing…" : "Refresh"}
+          </button>
+        </div>
         <p className="mt-1 text-sm text-muted">
           One tracked link per company in the sponsorship cold-outreach emails.
-          Clicks go to the homepage and are logged under the slug — load one
-          to see how many times that company clicked through.
+          Clicks go to the homepage and are logged under the slug. Click a row
+          to load that link&apos;s detailed report below.
         </p>
-        {(
-          [
-            ["Sponsorship outreach — contractors", "contractors"],
-            ["News outreach", "news"],
-          ] as const
-        ).map(([label, group]) => (
-          <div key={group} className="mt-4">
-            <h4 className="text-sm font-semibold text-ink">{label}</h4>
-            <div className="mt-2 space-y-2">
-              {Object.entries(outreachLinks)
-                .filter(([, link]) => link.group === group)
-                .map(([slug, link]) => (
-                  <div
-                    key={slug}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-line px-4 py-2.5"
+        {summaryError && <p className="mt-3 text-sm text-red-700">{summaryError}</p>}
+        {summaryLoading && !summary && <p className="mt-3 text-sm text-muted">Loading clicks…</p>}
+        {summary && (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-line font-mono text-xs uppercase tracking-wide text-muted">
+                  <th className="px-3 py-2 font-semibold">Company</th>
+                  <th className="px-3 py-2 font-semibold">Link</th>
+                  <th className="px-3 py-2 text-right font-semibold">Total</th>
+                  <th className="px-3 py-2 text-right font-semibold">Human</th>
+                  <th className="px-3 py-2 text-right font-semibold">Bots</th>
+                  <th className="px-3 py-2 text-right font-semibold">Last click</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.map((row) => (
+                  <tr
+                    key={row.slug}
+                    onClick={() => load(row.slug)}
+                    title="Load this link's detailed report below"
+                    className="cursor-pointer border-b border-line last:border-0 hover:bg-card"
                   >
-                    <span className="text-sm text-ink">
-                      {link.company}{" "}
-                      <span className="font-mono text-[13px] text-muted">/go/{slug}</span>
-                    </span>
-                    <button
-                      onClick={() => load(slug)}
-                      disabled={loading}
-                      className="whitespace-nowrap rounded-full border border-line bg-white px-4 py-1.5 text-sm font-semibold text-ink hover:border-black disabled:opacity-50"
-                    >
-                      Load clicks
-                    </button>
-                  </div>
+                    <td className="px-3 py-2.5 text-ink">
+                      {row.company}
+                      <span className="ml-2 font-mono text-xs text-muted">{row.group}</span>
+                    </td>
+                    <td className="px-3 py-2.5 font-mono text-[13px] text-muted">/go/{row.slug}</td>
+                    <td className="px-3 py-2.5 text-right font-mono font-semibold text-ink">{row.total}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-ink">{row.human}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-ink">{row.bot}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-[13px] text-ink">
+                      {row.lastClicked ? fmtDateShort(row.lastClicked.slice(0, 10)) : "—"}
+                    </td>
+                  </tr>
                 ))}
-            </div>
+              </tbody>
+            </table>
+            <p className="mt-3 text-sm text-muted">
+              {summaryTotal} clicks total across all links. Human clicks exclude
+              bots (detected from the user agent when the link is followed).
+            </p>
           </div>
-        ))}
+        )}
       </div>
 
       <div className="rounded-2xl border border-line bg-white p-5">
