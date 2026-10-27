@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase-server";
-import { activeSponsor } from "@/lib/site-config";
+import { activeSponsor, outreachLinks } from "@/lib/site-config";
 
 function authorized(req: Request): boolean {
   const expected = process.env.ADMIN_KEY;
@@ -42,6 +42,64 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   try {
     const url = new URL(req.url);
+
+    // Summary view (?view=summary): one row per outreach link (plus the
+    // active sponsor, if any) with all-time clicks — total, human, bot,
+    // last click — so the Sponsors tab can show every link at once
+    // instead of loading one slug at a time. Zero-click links are
+    // included with zeros. No date filter: outreach links have no
+    // flight, and the table is small.
+    if (url.searchParams.get("view") === "summary") {
+      const sb = getServiceSupabase();
+      let clickRows: Array<{ sponsor_slug: string; is_bot: boolean; clicked_at: string }> = [];
+      let tableMissing = false;
+      const clicksRes = await sb
+        .from("sponsor_clicks")
+        .select("sponsor_slug, is_bot, clicked_at")
+        .order("clicked_at", { ascending: true })
+        .limit(MAX_ROWS);
+      if (clicksRes.error) {
+        tableMissing = true;
+      } else {
+        clickRows = (clicksRes.data ?? []) as typeof clickRows;
+      }
+      const bySlug = new Map<
+        string,
+        { total: number; human: number; bot: number; lastClicked: string | null }
+      >();
+      for (const c of clickRows) {
+        const row = bySlug.get(c.sponsor_slug) ?? { total: 0, human: 0, bot: 0, lastClicked: null };
+        row.total += 1;
+        if (c.is_bot) row.bot += 1;
+        else row.human += 1;
+        row.lastClicked = c.clicked_at; // rows are ascending, so the last write is the latest
+        bySlug.set(c.sponsor_slug, row);
+      }
+      const rows = [
+        ...(activeSponsor
+          ? [{ slug: activeSponsor.slug, company: activeSponsor.name, group: "sponsor" as const }]
+          : []),
+        ...Object.entries(outreachLinks).map(([slug, link]) => ({
+          slug,
+          company: link.company,
+          group: link.group,
+        })),
+      ].map(({ slug, company, group }) => ({
+        slug,
+        company,
+        group,
+        ...(bySlug.get(slug) ?? { total: 0, human: 0, bot: 0, lastClicked: null }),
+      }));
+      return NextResponse.json({
+        ok: true,
+        view: "summary",
+        rows,
+        totalClicks: clickRows.length,
+        tableMissing,
+        truncated: clickRows.length >= MAX_ROWS,
+      });
+    }
+
     const slug = url.searchParams.get("slug")?.trim() || activeSponsor?.slug || "";
     if (!slug) {
       return NextResponse.json({
