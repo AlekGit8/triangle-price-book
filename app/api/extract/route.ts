@@ -25,7 +25,7 @@ Return ONLY a JSON object with these exact keys:
   "quotes": [
     {
       "serviceName": "short description of the work, e.g. 'Tankless water heater install (Rinnai RX199)'",
-      "category": one of ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Pools", "Septic Systems", "Handyman/Other"],
+      "category": one of ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Pools", "Septic Systems", "Garage Doors", "Crawl Spaces", "Gutter Guards", "Chimneys", "Garage Floors", "Handyman/Other"],
       "amount": grand total as a number with no commas or currency symbols, e.g. 5253.36,
       "town": town where the work was performed (the customer's town, not the business's), or null if unclear,
       "serviceDate": date of service or quote as YYYY-MM-DD, or null if unclear,
