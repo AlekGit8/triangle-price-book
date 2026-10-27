@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     const sb = getServiceSupabase();
     const { data, error } = await sb
       .from("feedback")
-      .select("id, message, created_at")
+      .select("id, message, email, created_at")
       .order("created_at", { ascending: false })
       .limit(500);
     if (error) throw error;

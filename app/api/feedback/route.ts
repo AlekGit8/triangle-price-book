@@ -5,10 +5,11 @@ import { getServiceSupabase } from "@/lib/supabase-server";
 const MAX_MESSAGE = 300;
 
 /**
- * POST /api/feedback — anonymous visitor feature request / feedback.
- * Body: { message: string }
- * Stored in the `feedback` table (service-role only; RLS has no public
- * policies). Read back via GET /api/admin/feedback with ADMIN_KEY.
+ * POST /api/feedback — visitor feature request / feedback.
+ * Body: { message: string, email?: string }
+ * The email is optional — only so the site owner can reply. Stored in
+ * the `feedback` table (service-role only; RLS has no public policies).
+ * Read back via GET /api/admin/feedback with ADMIN_KEY.
  * Rate-limited in middleware (10/hr per IP, same as /api/notify).
  */
 export async function POST(req: Request) {
@@ -23,6 +24,8 @@ export async function POST(req: Request) {
     }
     const body = await req.json().catch(() => ({}));
     const message = String(body.message ?? "").trim();
+    const email = String(body.email ?? "").trim();
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!message) {
       return NextResponse.json(
@@ -36,9 +39,15 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+    if (email && (email.length > 254 || !EMAIL_RE.test(email))) {
+      return NextResponse.json(
+        { ok: false, error: "Please enter a valid email address." },
+        { status: 400 }
+      );
+    }
 
     const sb = getServiceSupabase();
-    const { error } = await sb.from("feedback").insert({ message });
+    const { error } = await sb.from("feedback").insert({ message, email: email || null });
     if (error) throw error;
 
     return NextResponse.json({ ok: true });

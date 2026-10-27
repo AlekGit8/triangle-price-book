@@ -368,7 +368,11 @@ export default function SubmitPage() {
     return turnstileTokenRef.current || "";
   }
 
-  /** Clear the current token after a successful submit so the next submit gets a fresh one. */
+  /** Clear the current token after a server call used it (success or
+      failure) so the next submit gets a fresh one. Turnstile tokens are
+      single-use — re-sending a consumed token always fails verification,
+      so without this reset a retry after "Spam check failed" could never
+      work. */
   function clearTurnstileToken() {
     const id = turnstileWidgetIdRef.current;
     if (id) {
@@ -430,6 +434,9 @@ export default function SubmitPage() {
       form.set("turnstileToken", await getTurnstileToken());
       const res = await fetch("/api/extract", { method: "POST", body: form });
       const json = await res.json();
+      // The extract call consumed the token whether it worked or not —
+      // reset so the later publish gets a fresh one.
+      clearTurnstileToken();
       if (res.status === 501 && json.error === "not_configured") {
         // AI extraction not set up yet — the file is still attached as the
         // invoice for manual submission.
@@ -493,8 +500,11 @@ export default function SubmitPage() {
     form.set("turnstileToken", await getTurnstileToken());
     const res = await fetch("/api/submit", { method: "POST", body: form });
     const json = await res.json();
-    if (!res.ok || !json.ok) throw new Error(json.error ?? "Submission failed");
+    // The token is single-use: the server consumed it whether the submit
+    // worked or not. Reset now so a retry gets a fresh token instead of
+    // re-sending this dead one.
     clearTurnstileToken();
+    if (!res.ok || !json.ok) throw new Error(json.error ?? "Submission failed");
   }
 
   function draftValid(d: DraftQuote): string | null {
@@ -577,6 +587,10 @@ export default function SubmitPage() {
       form.set("turnstileToken", await getTurnstileToken());
       const res = await fetch("/api/submit", { method: "POST", body: form });
       const json = await res.json();
+      // The token is single-use: the server consumed it whether the submit
+      // worked or not. Reset now so a retry gets a fresh token instead of
+      // re-sending this dead one.
+      clearTurnstileToken();
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Submission failed");
       setSubmittedVerified(json.verified !== false);
       setStatus("done");
@@ -585,7 +599,6 @@ export default function SubmitPage() {
       setManualFile(null);
       if (manualInputRef.current) manualInputRef.current.value = "";
       if (docInputRef.current) docInputRef.current.value = "";
-      clearTurnstileToken();
     } catch (err) {
       setStatus("error");
       setErrorMsg(err instanceof Error ? err.message : "Submission failed");
