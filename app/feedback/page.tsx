@@ -20,8 +20,8 @@ export default function FeedbackPage() {
       <p className="mt-2 text-muted">
         Missing a category? Have an idea that would make this more useful? Or
         did you get a price you couldn&rsquo;t find a way to submit or tag to
-        an existing category? Tell us — 300 characters or less, anonymous, no
-        account needed.
+        an existing category? Tell us — 300 characters or less, no account
+        needed. Leave an email if you&rsquo;d like a reply.
       </p>
       <div className="mt-6">
         <FeedbackForm />

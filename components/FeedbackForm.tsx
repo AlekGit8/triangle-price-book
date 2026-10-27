@@ -9,10 +9,11 @@ const MAX_MESSAGE = 300;
  * Shared visitor feedback form: a 300-character message for feature
  * requests, missing categories, or a price the visitor couldn't find a
  * way to submit. Used on the coming-soon page and on /feedback.
- * Anonymous — no name, no email, no account.
+ * No account needed. An email is optional — only so we can reply.
  */
 export default function FeedbackForm() {
   const [message, setMessage] = useState("");
+  const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -34,7 +35,7 @@ export default function FeedbackForm() {
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({ message: trimmed, email: email.trim() || undefined }),
       });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Failed");
@@ -77,6 +78,20 @@ export default function FeedbackForm() {
         </p>
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
+      <label className="mt-3 block text-sm">
+        <span className="font-semibold text-ink">
+          Email <span className="font-normal text-muted">(optional — so we can reply)</span>
+        </span>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          autoComplete="email"
+          className="mt-1 w-full rounded-[10px] border border-line px-4 py-2.5 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10 disabled:bg-card disabled:text-muted"
+          disabled={busy}
+        />
+      </label>
       <button
         type="submit"
         disabled={busy || message.trim().length === 0}

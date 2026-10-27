@@ -29,6 +29,7 @@ interface Signup {
 interface Feedback {
   id: string;
   message: string;
+  email: string | null;
   created_at: string;
 }
 
@@ -396,6 +397,14 @@ export default function AdminPage() {
               <p className="text-sm text-ink">{f.message}</p>
               <p className="mt-1 font-mono text-xs text-muted">
                 {new Date(f.created_at).toLocaleDateString()}
+                {f.email && (
+                  <>
+                    {" · "}
+                    <a href={`mailto:${f.email}`} className="text-ink hover:underline">
+                      {f.email}
+                    </a>
+                  </>
+                )}
               </p>
             </div>
           ))}
