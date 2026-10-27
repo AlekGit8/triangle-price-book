@@ -80,7 +80,10 @@ export default function PrivacyPage() {
             our site first — takes you through a short redirect that records one
             anonymous click — which link it was, the page you came from, and whether
             the visit looks like a bot — so we can count clicks. No IP address is
-            stored for that click either.
+            stored for that click either. We also use Google Analytics, which sets
+            cookies and collects usage information such as the pages you visit and
+            your IP address; Google processes that data to show us how the Site is
+            used.
           </p>
         </section>
 

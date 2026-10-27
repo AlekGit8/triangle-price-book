@@ -50,6 +50,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9935150237512512"
           crossOrigin="anonymous"
         />
+        {/* Google Analytics (GA4) — measurement ID G-MC0YJN4QZZ. The tag
+            loads on every page via this root layout; do not add it
+            anywhere else. */}
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-MC0YJN4QZZ"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-MC0YJN4QZZ');`,
+          }}
+        />
       </head>
       <body
         className={`${display.variable} ${sans.variable} ${mono.variable} min-h-screen bg-paper font-sans text-ink antialiased`}
