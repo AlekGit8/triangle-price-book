@@ -5,9 +5,14 @@ import {
   siteConfig,
   categoryFromSlug,
 } from "@/lib/site-config";
-import { getServiceAggregates } from "@/lib/data";
+import {
+  getServiceAggregates,
+  getApprovedReports,
+  sortReportsByEffectiveDate,
+} from "@/lib/data";
 import { formatCents } from "@/lib/format";
 import AggregateCard from "@/components/AggregateCard";
+import ReportCard from "@/components/ReportCard";
 
 
 export const dynamic = 'force-dynamic';
@@ -38,7 +43,15 @@ export default async function CategoryPage({
   const aggregates = (await getServiceAggregates()).filter(
     (a) => a.category === category
   );
-  const totalReports = aggregates.reduce((n, a) => n + a.report_count, 0);
+  // Individual reports: ALL published entries in this category, verified
+  // and unverified — the aggregates above are verified-only by design,
+  // so an unverified-only service would otherwise be invisible here.
+  const reports = sortReportsByEffectiveDate(
+    await getApprovedReports(category)
+  );
+  // "Prices reported" counts every published report in this category, same
+  // as the homepage stat; the verified count still comes from aggregates.
+  const totalReports = reports.length;
   const verifiedReports = aggregates.reduce((n, a) => n + a.verified_count, 0);
   const low =
     aggregates.length > 0
@@ -78,7 +91,7 @@ export default async function CategoryPage({
 
       {/* Aggregates */}
       <section className="mt-8">
-        {aggregates.length === 0 ? (
+        {aggregates.length === 0 && reports.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-line bg-white p-8 text-center">
             <p className="text-muted">
               No {category.toLowerCase()} prices reported yet.
@@ -101,6 +114,25 @@ export default async function CategoryPage({
           </div>
         )}
       </section>
+
+      {/* Individual reports — every published entry in this category,
+          verified and unverified (unlike the aggregates above). */}
+      {reports.length > 0 && (
+        <section className="mt-12">
+          <h2 className="font-serif text-3xl text-ink sm:text-4xl">
+            Individual {category.toLowerCase()} reports
+          </h2>
+          <p className="mt-2 text-muted">
+            Every published {category.toLowerCase()} price — verified entries
+            and unverified community reports.
+          </p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {reports.map((report) => (
+              <ReportCard key={report.id} report={report} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="mt-12 rounded-[24px] bg-pitch p-8 text-white sm:p-10">

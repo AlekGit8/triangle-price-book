@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { siteConfig } from "@/lib/site-config";
 
@@ -8,7 +8,21 @@ const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 declare global {
   interface Window {
-    turnstile?: { getResponse: (id?: string) => string; reset: (id?: string) => void };
+    turnstile?: {
+      render: (
+        container: string | HTMLElement,
+        params: {
+          sitekey: string;
+          action?: string;
+          callback?: (token: string) => void;
+          "expired-callback"?: () => void;
+          "error-callback"?: () => void;
+        }
+      ) => string;
+      getResponse: (id?: string) => string;
+      reset: (id?: string) => void;
+      remove: (id?: string) => void;
+    };
   }
 }
 
@@ -39,6 +53,23 @@ const emptyFields: FormFields = {
   notes: "",
   submitterEmail: "",
 };
+
+// Manual-form persistence: typed fields survive a refresh (e.g. after a
+// Turnstile hiccup) instead of forcing a full re-type. Files can't be
+// stored, so an attachment still needs re-selecting after a refresh.
+const PERSISTED_FIELDS_KEY = "tpb-submit-fields";
+
+function loadPersistedFields(): FormFields {
+  if (typeof window === "undefined") return emptyFields;
+  try {
+    const raw = window.sessionStorage.getItem(PERSISTED_FIELDS_KEY);
+    if (!raw) return emptyFields;
+    const parsed = JSON.parse(raw) as Partial<FormFields>;
+    return { ...emptyFields, ...parsed };
+  } catch {
+    return emptyFields;
+  }
+}
 
 type DraftStatus = "pending" | "publishing" | "done" | "error";
 
@@ -219,7 +250,7 @@ function DraftCard({
 }
 
 export default function SubmitPage() {
-  const [fields, setFields] = useState<FormFields>(emptyFields);
+  const [fields, setFields] = useState<FormFields>(loadPersistedFields);
   const [docFile, setDocFile] = useState<File | null>(null);
   // Option 2 attachment: proof only, never sent to the AI extractor.
   // If set, /api/submit marks the entry verified on the file's presence alone.
@@ -239,6 +270,117 @@ export default function SubmitPage() {
 
   const docInputRef = useRef<HTMLInputElement>(null);
   const manualInputRef = useRef<HTMLInputElement>(null);
+
+  // Cloudflare Turnstile, rendered explicitly (see the effect below). The
+  // old code used implicit rendering (a .cf-turnstile div + async script)
+  // and called bare getResponse() with no widget id — that races the script
+  // load, and when the widget isn't registered yet api.js logs
+  // "[Cloudflare Turnstile] Could not find widget" and returns no token.
+  // The widget id returned by render() is the only reliable handle.
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetIdRef = useRef<string | null>(null);
+  const turnstileTokenRef = useRef("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileUnavailable, setTurnstileUnavailable] = useState(false);
+
+  // Persist the manual form as it is typed, so a refresh doesn't wipe it.
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(PERSISTED_FIELDS_KEY, JSON.stringify(fields));
+    } catch {
+      // Storage unavailable (private mode, etc.) — the form still works.
+    }
+  }, [fields]);
+
+  // Render the Turnstile widget explicitly once the script is ready, and
+  // re-render on remount (e.g. after the "Published!" view unmounts the
+  // form). The script tag's load listener covers the first load; the direct
+  // window.turnstile check covers remounts, where Next dedupes the script
+  // and the load event doesn't fire again.
+  useEffect(() => {
+    if (!turnstileSiteKey) return;
+    let cancelled = false;
+    function tryRender() {
+      if (cancelled) return;
+      const t = window.turnstile;
+      const container = turnstileContainerRef.current;
+      if (!t || !container || turnstileWidgetIdRef.current) return;
+      try {
+        const id = t.render(container, {
+          sitekey: turnstileSiteKey,
+          action: "submit",
+          callback: (token: string) => {
+            turnstileTokenRef.current = token;
+            setTurnstileToken(token);
+          },
+          "expired-callback": () => {
+            turnstileTokenRef.current = "";
+            setTurnstileToken("");
+          },
+          "error-callback": () => {
+            turnstileTokenRef.current = "";
+            setTurnstileToken("");
+          },
+        });
+        turnstileWidgetIdRef.current = id;
+      } catch {
+        // Render failed (script still loading) — the load listener retries.
+      }
+    }
+    tryRender();
+    // If the script never loads (blocked CDN, strict content blocker),
+    // don't leave the form permanently disabled — let the submit proceed
+    // and let the server decide (it fails closed with "Spam check failed").
+    const unavailableTimer = window.setTimeout(() => {
+      if (!turnstileWidgetIdRef.current && !turnstileTokenRef.current) {
+        setTurnstileUnavailable(true);
+      }
+    }, 20000);
+    const script = document.querySelector<HTMLScriptElement>(
+      'script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]'
+    );
+    script?.addEventListener("load", tryRender);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(unavailableTimer);
+      script?.removeEventListener("load", tryRender);
+      const id = turnstileWidgetIdRef.current;
+      turnstileWidgetIdRef.current = null;
+      turnstileTokenRef.current = "";
+      if (id) {
+        try {
+          window.turnstile?.remove(id);
+        } catch {
+          // Already gone.
+        }
+      }
+    };
+  }, []);
+
+  /** Wait briefly for a Turnstile token (widget still solving), then return it. */
+  async function getTurnstileToken(): Promise<string> {
+    if (!turnstileSiteKey) return "";
+    const started = Date.now();
+    while (Date.now() - started < 8000) {
+      if (turnstileTokenRef.current) return turnstileTokenRef.current;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return turnstileTokenRef.current || "";
+  }
+
+  /** Clear the current token after a successful submit so the next submit gets a fresh one. */
+  function clearTurnstileToken() {
+    const id = turnstileWidgetIdRef.current;
+    if (id) {
+      try {
+        window.turnstile?.reset(id);
+      } catch {
+        // Widget already gone.
+      }
+    }
+    turnstileTokenRef.current = "";
+    setTurnstileToken("");
+  }
 
   function set<K extends keyof FormFields>(key: K, value: FormFields[K]) {
     setFields((f) => ({ ...f, [key]: value }));
@@ -285,9 +427,7 @@ export default function SubmitPage() {
     try {
       const form = new FormData();
       form.set("document", file);
-      if (turnstileSiteKey && window.turnstile) {
-        form.set("turnstileToken", window.turnstile.getResponse() || "");
-      }
+      form.set("turnstileToken", await getTurnstileToken());
       const res = await fetch("/api/extract", { method: "POST", body: form });
       const json = await res.json();
       if (res.status === 501 && json.error === "not_configured") {
@@ -350,13 +490,11 @@ export default function SubmitPage() {
     );
     form.set("submitterEmail", draftEmail.trim());
     if (docFile) form.set("invoice", docFile);
-    if (turnstileSiteKey && window.turnstile) {
-      form.set("turnstileToken", window.turnstile.getResponse() || "");
-    }
+    form.set("turnstileToken", await getTurnstileToken());
     const res = await fetch("/api/submit", { method: "POST", body: form });
     const json = await res.json();
     if (!res.ok || !json.ok) throw new Error(json.error ?? "Submission failed");
-    if (turnstileSiteKey && window.turnstile) window.turnstile.reset();
+    clearTurnstileToken();
   }
 
   function draftValid(d: DraftQuote): string | null {
@@ -436,9 +574,7 @@ export default function SubmitPage() {
       // upload (its presence already means "verified" server-side).
       const invoiceFile = manualFile ?? docFile;
       if (invoiceFile) form.set("invoice", invoiceFile);
-      if (turnstileSiteKey && window.turnstile) {
-        form.set("turnstileToken", window.turnstile.getResponse() || "");
-      }
+      form.set("turnstileToken", await getTurnstileToken());
       const res = await fetch("/api/submit", { method: "POST", body: form });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Submission failed");
@@ -449,7 +585,7 @@ export default function SubmitPage() {
       setManualFile(null);
       if (manualInputRef.current) manualInputRef.current.value = "";
       if (docInputRef.current) docInputRef.current.value = "";
-      if (turnstileSiteKey && window.turnstile) window.turnstile.reset();
+      clearTurnstileToken();
     } catch (err) {
       setStatus("error");
       setErrorMsg(err instanceof Error ? err.message : "Submission failed");
@@ -784,11 +920,24 @@ export default function SubmitPage() {
           />
         </div>
 
-        {/* Cloudflare Turnstile: renders only when a site key is configured. */}
+        {/* Cloudflare Turnstile: rendered explicitly (see the effect above) so
+            the submit handlers always have a real widget id. */}
         {turnstileSiteKey && (
           <>
-            <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
-            <div className="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="submit" />
+            <Script
+              src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+              async
+              defer
+            />
+            <div ref={turnstileContainerRef} />
+            {!turnstileToken && !turnstileUnavailable && (
+              <p className="text-xs text-muted">Complete the check above to publish.</p>
+            )}
+            {turnstileUnavailable && (
+              <p className="text-xs text-muted">
+                The spam check didn&rsquo;t load — you can still try publishing below.
+              </p>
+            )}
           </>
         )}
 
@@ -808,7 +957,10 @@ export default function SubmitPage() {
 
         <button
           type="submit"
-          disabled={status === "sending"}
+          disabled={
+            status === "sending" ||
+            (!!turnstileSiteKey && !turnstileToken && !turnstileUnavailable)
+          }
           className="w-full rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
         >
           {status === "sending"
