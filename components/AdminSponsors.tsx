@@ -36,7 +36,7 @@ interface ReportData {
 interface SummaryRow {
   slug: string;
   company: string;
-  group: "contractors" | "news" | "sponsor";
+  group: "contractors" | "news" | "plumbing" | "sponsor";
   total: number;
   human: number;
   bot: number;

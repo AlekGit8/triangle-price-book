@@ -1,11 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Script from "next/script";
 import Link from "next/link";
 import { siteConfig } from "@/lib/site-config";
 import { formatCents, formatMonthYear } from "@/lib/format";
 import ReportCard from "@/components/ReportCard";
 import type { Report } from "@/lib/data";
+
+const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        container: string | HTMLElement,
+        params: {
+          sitekey: string;
+          action?: string;
+          callback?: (token: string) => void;
+          "expired-callback"?: () => void;
+          "error-callback"?: () => void;
+        }
+      ) => string;
+      getResponse: (id?: string) => string;
+      reset: (id?: string) => void;
+      remove: (id?: string) => void;
+    };
+  }
+}
 
 interface AiEstimate {
   low_cents: number;
@@ -66,6 +89,173 @@ export default function CheckQuotePage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Optional quote upload: read the document with /api/extract (the same
+  // Gemini extraction as /submit) and fill the three fields below.
+  const docInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [extractState, setExtractState] = useState<
+    "idle" | "reading" | "done" | "error" | "rejected" | "unavailable"
+  >("idle");
+  const [extractMsg, setExtractMsg] = useState("");
+
+  // Cloudflare Turnstile, rendered explicitly (same pattern as /submit).
+  // The extract call is the only one that needs a token here — the manual
+  // check below doesn't use Turnstile at all.
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetIdRef = useRef<string | null>(null);
+  const turnstileTokenRef = useRef("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileUnavailable, setTurnstileUnavailable] = useState(false);
+
+  useEffect(() => {
+    if (!turnstileSiteKey) return;
+    let cancelled = false;
+    function tryRender() {
+      if (cancelled) return;
+      const t = window.turnstile;
+      const container = turnstileContainerRef.current;
+      if (!t || !container || turnstileWidgetIdRef.current) return;
+      try {
+        const id = t.render(container, {
+          sitekey: turnstileSiteKey,
+          action: "submit",
+          callback: (token: string) => {
+            turnstileTokenRef.current = token;
+            setTurnstileToken(token);
+          },
+          "expired-callback": () => {
+            turnstileTokenRef.current = "";
+            setTurnstileToken("");
+          },
+          "error-callback": () => {
+            turnstileTokenRef.current = "";
+            setTurnstileToken("");
+          },
+        });
+        turnstileWidgetIdRef.current = id;
+      } catch {
+        // Render failed (script still loading) — the load listener retries.
+      }
+    }
+    tryRender();
+    // If the script never loads, don't strand the upload — the extract
+    // will fail closed server-side and the manual form still works.
+    const unavailableTimer = window.setTimeout(() => {
+      if (!turnstileWidgetIdRef.current && !turnstileTokenRef.current) {
+        setTurnstileUnavailable(true);
+      }
+    }, 20000);
+    const script = document.querySelector<HTMLScriptElement>(
+      'script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]'
+    );
+    script?.addEventListener("load", tryRender);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(unavailableTimer);
+      script?.removeEventListener("load", tryRender);
+      const id = turnstileWidgetIdRef.current;
+      turnstileWidgetIdRef.current = null;
+      turnstileTokenRef.current = "";
+      if (id) {
+        try {
+          window.turnstile?.remove(id);
+        } catch {
+          // Already gone.
+        }
+      }
+    };
+  }, []);
+
+  /** Wait briefly for a Turnstile token (widget still solving), then return it. */
+  async function getTurnstileToken(): Promise<string> {
+    if (!turnstileSiteKey) return "";
+    const started = Date.now();
+    while (Date.now() - started < 8000) {
+      if (turnstileTokenRef.current) return turnstileTokenRef.current;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return turnstileTokenRef.current || "";
+  }
+
+  /** Reset the widget after an extract call used the token (success or
+      failure) — tokens are single-use, so a retry needs a fresh one. */
+  function clearTurnstileToken() {
+    const id = turnstileWidgetIdRef.current;
+    if (id) {
+      try {
+        window.turnstile?.reset(id);
+      } catch {
+        // Widget already gone.
+      }
+    }
+    turnstileTokenRef.current = "";
+    setTurnstileToken("");
+  }
+
+  /** Upload flow: send the document to /api/extract and fill the three
+      form fields from the first quote found. */
+  async function handleDocChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setDocFile(file);
+    setExtractState("reading");
+    setExtractMsg("");
+    setResult(null);
+    try {
+      const form = new FormData();
+      form.set("document", file);
+      form.set("turnstileToken", await getTurnstileToken());
+      const res = await fetch("/api/extract", { method: "POST", body: form });
+      const json = await res.json();
+      clearTurnstileToken();
+      if (res.status === 501 && json.error === "not_configured") {
+        setExtractState("unavailable");
+        return;
+      }
+      if (res.status === 422 && json.error === "rejected") {
+        setDocFile(null);
+        if (docInputRef.current) docInputRef.current.value = "";
+        if (cameraInputRef.current) cameraInputRef.current.value = "";
+        setExtractState("rejected");
+        setExtractMsg(
+          typeof json.reason === "string"
+            ? json.reason
+            : "This document doesn't look like a home-services quote or invoice."
+        );
+        return;
+      }
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "Could not read the document.");
+      const quotes = Array.isArray(json.quotes) ? json.quotes : [];
+      if (quotes.length === 0) throw new Error("Could not read the document.");
+      const q = quotes[0] as Record<string, unknown>;
+      if (
+        typeof q.category === "string" &&
+        (siteConfig.categories as readonly string[]).includes(q.category)
+      ) {
+        setCategory(q.category);
+      }
+      if (typeof q.serviceName === "string" && q.serviceName) {
+        setDescription(q.serviceName);
+      }
+      if (typeof q.amount === "number" && Number.isFinite(q.amount) && q.amount > 0) {
+        setPrice(String(q.amount));
+      }
+      setExtractState("done");
+      setExtractMsg(
+        quotes.length > 1
+          ? `Found ${quotes.length} quotes — filled in the first one. Edit the fields below if that's not the right one, then check your quote.`
+          : "Filled in from your quote — review the fields below, then check your quote."
+      );
+    } catch (err) {
+      setExtractState("error");
+      setExtractMsg(err instanceof Error ? err.message : "Could not read the document.");
+      if (docInputRef.current) docInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+      setDocFile(null);
+    }
+  }
+
   async function check(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -119,9 +309,100 @@ export default function CheckQuotePage() {
     <div className="py-10 max-w-2xl mx-auto px-4">
       <h1 className="font-serif text-4xl text-ink sm:text-5xl">Is this quote fair?</h1>
       <p className="mt-2 text-muted">
-        Describe the job and enter your quoted price — we&rsquo;ll compare it against
-        similar verified prices from Triangle homeowners.
+        Upload a photo of your quote and we&rsquo;ll fill in the form for you —
+        or describe the job and enter your quoted price by hand. Either way,
+        we&rsquo;ll compare it against similar verified prices from Triangle
+        homeowners.
       </p>
+
+      {/* Optional: upload the quote instead of typing it in */}
+      <div className="mt-6 rounded-2xl border-2 border-dashed border-line bg-card p-5 focus-within:border-black focus-within:ring-2 focus-within:ring-black/10">
+        <input
+          ref={docInputRef}
+          id="cqUpload"
+          type="file"
+          accept="image/*,.pdf"
+          className="sr-only"
+          onChange={handleDocChange}
+        />
+        <label
+          htmlFor="cqUpload"
+          className="flex cursor-pointer flex-col items-center gap-2 py-2 text-center"
+        >
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-black text-2xl text-white">
+            {extractState === "reading" ? "…" : "📄"}
+          </span>
+          <span className="font-bold text-ink">
+            {docFile ? docFile.name : "Upload your quote"}
+          </span>
+          <span className="text-sm text-muted">
+            {extractState === "reading"
+              ? "Reading your quote…"
+              : "Photo or PDF — we'll fill in the category, job, and price below"}
+          </span>
+        </label>
+
+        {/* Mobile only: open the phone camera directly to photograph the
+            quote. Hidden on desktop (sm and up). */}
+        <input
+          ref={cameraInputRef}
+          id="cqCamera"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          onChange={handleDocChange}
+        />
+        <button
+          type="button"
+          onClick={() => cameraInputRef.current?.click()}
+          className="mx-auto mt-3 flex items-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink hover:border-black sm:hidden"
+        >
+          📷 Take a photo of your quote
+        </button>
+
+        {/* Cloudflare Turnstile: the extract call needs a token; the manual
+            check below doesn't. */}
+        {turnstileSiteKey && (
+          <div className="mt-4 flex flex-col items-center">
+            <Script
+              src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+              async
+              defer
+            />
+            <div ref={turnstileContainerRef} />
+            {!turnstileToken && !turnstileUnavailable && (
+              <p className="mt-1 text-xs text-muted">Complete the check above to read your quote.</p>
+            )}
+            {turnstileUnavailable && (
+              <p className="mt-1 text-xs text-muted">
+                The spam check didn&rsquo;t load — you can still fill in the form below by hand.
+              </p>
+            )}
+          </div>
+        )}
+
+        {extractState === "done" && (
+          <p className="mt-3 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-800 text-center">
+            ✓ {extractMsg}
+          </p>
+        )}
+        {extractState === "error" && (
+          <p className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800 text-center">
+            {extractMsg} You can fill in the form below by hand instead.
+          </p>
+        )}
+        {extractState === "rejected" && (
+          <p className="mt-3 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800 text-center">
+            {extractMsg}
+          </p>
+        )}
+        {extractState === "unavailable" && (
+          <p className="mt-3 rounded-lg bg-card border border-line px-4 py-2 text-sm text-muted text-center">
+            Auto-fill isn&rsquo;t enabled yet — fill in the form below by hand.
+          </p>
+        )}
+      </div>
 
       <form onSubmit={check} className="mt-6 rounded-2xl border border-line bg-white p-6 space-y-4">
         <div>

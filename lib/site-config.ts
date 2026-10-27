@@ -99,7 +99,7 @@ export const activeSponsor: Sponsor | null = null;
  */
 export const outreachLinks: Record<
   string,
-  { company: string; destinationUrl: string; group: "contractors" | "news" }
+  { company: string; destinationUrl: string; group: "contractors" | "news" | "plumbing" }
 > = {
   "outreach-blaze": {
     company: "Blaze Heating, Cooling, Electrical & Plumbing",
@@ -209,6 +209,39 @@ export const outreachLinks: Record<
     company: "Main & Broad",
     destinationUrl: siteConfig.siteUrl,
     group: "news",
+  },
+  // Plumbing companies (Oct 27, 2026) — one tracked link per company
+  // in the plumbing-outreach drafts. All 6 emails verified on the
+  // companies' own sites Oct 27 (see plumbing-outreach-drafts-2026-10-27.md).
+  "outreach-pooles": {
+    company: "Poole's Plumbing",
+    destinationUrl: siteConfig.siteUrl,
+    group: "plumbing",
+  },
+  "outreach-silver-brook": {
+    company: "Silver Brook Plumbing",
+    destinationUrl: siteConfig.siteUrl,
+    group: "plumbing",
+  },
+  "outreach-cks": {
+    company: "CK's Plumbing & Backflow",
+    destinationUrl: siteConfig.siteUrl,
+    group: "plumbing",
+  },
+  "outreach-a-team": {
+    company: "A-Team Plumbing & Drain",
+    destinationUrl: siteConfig.siteUrl,
+    group: "plumbing",
+  },
+  "outreach-full-stack": {
+    company: "Full Stack Plumbing & Well",
+    destinationUrl: siteConfig.siteUrl,
+    group: "plumbing",
+  },
+  "outreach-peak-durham": {
+    company: "Peak Durham Plumbers",
+    destinationUrl: siteConfig.siteUrl,
+    group: "plumbing",
   },
 };
 
