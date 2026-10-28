@@ -52,6 +52,21 @@ export default function HomepageBody({
   const [query, setQuery] = useState("");
   const resultsRef = useRef<HTMLElement>(null);
 
+  // Pills ordered by total published reports in each category, most to
+  // least; ties keep the site-config order. Categories with no reports
+  // sort last.
+  const categoriesByReports = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of allReports) {
+      counts.set(r.category, (counts.get(r.category) ?? 0) + 1);
+    }
+    return [...siteConfig.categories].sort((a, b) => {
+      const diff = (counts.get(b) ?? 0) - (counts.get(a) ?? 0);
+      if (diff !== 0) return diff;
+      return siteConfig.categories.indexOf(a) - siteConfig.categories.indexOf(b);
+    });
+  }, [allReports]);
+
   const isFiltering = normalize(query).length > 0;
   const filtered = useMemo(
     () => allReports.filter((r) => matchesReport(r, query)),
@@ -106,7 +121,7 @@ export default function HomepageBody({
         </form>
 
         <div className="mx-auto mt-6 flex max-w-2xl flex-wrap justify-center gap-2">
-          {siteConfig.categories.map((c) => (
+          {categoriesByReports.map((c) => (
             <Link
               key={c}
               href={`/${categorySlugs[c]}`}

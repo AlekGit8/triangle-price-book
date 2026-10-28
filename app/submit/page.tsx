@@ -43,6 +43,11 @@ interface FormFields {
   submitterEmail: string;
 }
 
+/** Category dropdowns are alphabetical (the site-config order is not). */
+const alphabeticalCategories = [...siteConfig.categories].sort((a, b) =>
+  a.localeCompare(b)
+);
+
 const emptyFields: FormFields = {
   category: "HVAC",
   serviceName: "",
@@ -183,7 +188,7 @@ function DraftCard({
                 value={d.category}
                 onChange={(e) => set({ category: e.target.value })}
               >
-                {siteConfig.categories.map((c) => (
+                {alphabeticalCategories.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
@@ -856,7 +861,7 @@ export default function SubmitPage() {
             id="category" required className={inputCls}
             value={fields.category} onChange={(e) => set("category", e.target.value)}
           >
-            {siteConfig.categories.map((c) => (
+            {alphabeticalCategories.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
