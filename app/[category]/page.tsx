@@ -11,6 +11,8 @@ import {
   sortReportsByEffectiveDate,
 } from "@/lib/data";
 import { formatCents } from "@/lib/format";
+import { canonicalUrl, breadcrumbJsonLd } from "@/lib/seo";
+import JsonLd from "@/components/JsonLd";
 import ReportCard from "@/components/ReportCard";
 
 
@@ -24,9 +26,18 @@ export async function generateMetadata({
   const { category: slug } = await params;
   const category = categoryFromSlug(slug);
   if (!category) return {};
+  const title = `${category} Prices in Raleigh-Durham, NC | ${siteConfig.siteName}`;
+  const description = `Real ${category.toLowerCase()} prices reported by Triangle homeowners — see the price range, median, and individual reports before you hire. Crowdsourced and anonymous.`;
   return {
-    title: `${category} Prices in Raleigh-Durham, NC | ${siteConfig.siteName}`,
-    description: `Real ${category.toLowerCase()} prices reported by Triangle homeowners — see the price range, median, and individual reports before you hire. Crowdsourced and anonymous.`,
+    title,
+    description,
+    alternates: { canonical: canonicalUrl(`/${slug}`) },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl(`/${slug}`),
+      type: "website",
+    },
   };
 }
 
@@ -60,6 +71,16 @@ export default async function CategoryPage({
 
   return (
     <div className="py-10">
+      {/* Breadcrumb structured data — Home → this category. */}
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", url: siteConfig.siteUrl },
+          {
+            name: `${category} Prices in Raleigh-Durham, NC`,
+            url: canonicalUrl(`/${slug}`),
+          },
+        ])}
+      />
       {/* Header */}
       <section className="max-w-2xl">
         <p className="font-mono text-xs font-bold uppercase tracking-widest text-muted">
@@ -83,6 +104,17 @@ export default async function CategoryPage({
               ` · range ${formatCents(low)} – ${formatCents(high)}`}
           </p>
         )}
+      </section>
+
+      {/* About this category — qualitative only, no price claims; the
+          numbers come from the reports below. Gives empty categories
+          substance before their first report (Oct 28, 2026 SEO). */}
+      <section className="mt-8 max-w-2xl rounded-2xl border border-line bg-white p-6">
+        <p className="text-muted">{siteConfig.categoryIntros[category].about}</p>
+        <p className="mt-3 text-sm text-muted">
+          <span className="font-semibold text-ink">What drives the price: </span>
+          {siteConfig.categoryIntros[category].drivers}
+        </p>
       </section>
 
       {/* Empty state — only when nothing has been reported in this

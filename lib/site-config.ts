@@ -33,6 +33,130 @@ export const siteConfig = {
   /** Report categories. Keep in sync with the DB check constraint in 0001_init.sql. */
   categories: ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Pools", "Septic Systems", "Garage Doors", "Crawl Spaces", "Gutter Guards", "Chimneys", "Garage Floors", "Concrete", "Handyman/Other"] as const,
 
+  /**
+   * Per-category intro copy for the category pages (Oct 28, 2026 SEO).
+   * Qualitative only — what the work covers and what drives the price.
+   * NEVER put a price range here; the numbers come from the reports
+   * themselves (the summary line above the reports). Empty categories
+   * still show this, so the page has substance before the first report.
+   */
+  categoryIntros: {
+    HVAC: {
+      about:
+        "Heating and cooling work — installs, replacements, repairs, and maintenance for furnaces, heat pumps, air conditioners, and ductwork.",
+      drivers:
+        "System size and efficiency rating, ductwork changes, and whether it's a like-for-like swap or a first-time install move the price most.",
+    },
+    Plumbing: {
+      about:
+        "Repairs, replacements, and installs for water heaters, fixtures, pipes, drains, and sewer lines.",
+      drivers:
+        "Access to the work area, pipe material, and whether walls or floors have to be opened up drive the cost.",
+    },
+    Electrical: {
+      about:
+        "Panel upgrades, circuits, outlets, lighting, EV chargers, and whole-home safety work.",
+      drivers:
+        "Panel capacity, permit requirements, and how much wiring has to be run through finished walls matter most.",
+    },
+    Roofing: {
+      about:
+        "Full roof replacements, repairs, flashing, and gutter work.",
+      drivers:
+        "Roof size and pitch, material choice, and how many layers have to come off drive the price.",
+    },
+    "Windows & Doors": {
+      about:
+        "Window and exterior door replacement and installation.",
+      drivers:
+        "Unit count, frame material, glass options, and whether the opening needs reframing set the cost.",
+    },
+    Painting: {
+      about:
+        "Interior and exterior painting, including prep, priming, and finish coats.",
+      drivers:
+        "Square footage, wall condition and prep work, ceiling height, and paint quality drive the price.",
+    },
+    Flooring: {
+      about:
+        "Hardwood, laminate, vinyl, tile, and carpet installation and refinishing.",
+      drivers:
+        "Material, square footage, subfloor condition, and removal of old flooring set the cost.",
+    },
+    Landscaping: {
+      about:
+        "Design, planting, grading, sod, mulch, and outdoor living work.",
+      drivers:
+        "Project size, plant and material choices, grading needs, and access for equipment drive the price.",
+    },
+    Fencing: {
+      about:
+        "Wood, vinyl, aluminum, and chain-link fence installation and repair.",
+      drivers:
+        "Linear feet, height, material, gates, and slope or rock in the ground set the cost.",
+    },
+    "Tree Service": {
+      about:
+        "Tree removal, trimming, stump grinding, and storm cleanup.",
+      drivers:
+        "Tree size and height, proximity to the house or power lines, and whether a crane is needed drive the price.",
+    },
+    Pools: {
+      about:
+        "Pool installation, resurfacing, equipment replacement, and repairs.",
+      drivers:
+        "Pool size and type, equipment choices, and decking or plumbing changes set the cost.",
+    },
+    "Septic Systems": {
+      about:
+        "Septic installs, repairs, pumping, and inspections.",
+      drivers:
+        "Tank size, drain-field condition, soil and permitting, and how much digging is required drive the price.",
+    },
+    "Garage Doors": {
+      about:
+        "Garage door and opener replacement, repair, and installation.",
+      drivers:
+        "Door size and material, insulation, opener features, and track or spring work set the cost.",
+    },
+    "Crawl Spaces": {
+      about:
+        "Encapsulation, vapor barriers, insulation, drainage, and dehumidifiers.",
+      drivers:
+        "Crawl space size, moisture damage, drainage needs, and insulation choice drive the price.",
+    },
+    "Gutter Guards": {
+      about:
+        "Gutter guard installation, plus gutter cleaning and repair.",
+      drivers:
+        "Linear feet, guard type, gutter condition, and roof height set the cost.",
+    },
+    Chimneys: {
+      about:
+        "Chimney cleaning, inspection, repair, and cap installation.",
+      drivers:
+        "Chimney height and condition, liner needs, and masonry repairs drive the price.",
+    },
+    "Garage Floors": {
+      about:
+        "Epoxy coatings, polished concrete, and garage floor refinishing.",
+      drivers:
+        "Square footage, floor condition and prep, coating type, and moisture issues set the cost.",
+    },
+    Concrete: {
+      about:
+        "Driveways, patios, walkways, slabs, and concrete repair.",
+      drivers:
+        "Square footage, thickness, finish, and site prep or demolition drive the price.",
+    },
+    "Handyman/Other": {
+      about:
+        "Small repairs, drywall, assembly, and miscellaneous home fixes.",
+      drivers:
+        "Job size and complexity, materials, and whether the work needs a licensed trade set the cost.",
+    },
+  } as const,
+
   /** Legal operator of the site, named in Terms, Privacy Policy, and footer. */
   operatorName: "Longsite Labs LLC",
 

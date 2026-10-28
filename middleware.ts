@@ -9,6 +9,9 @@ import { checkRateLimit, clientIp, utcDay } from "@/lib/rate-limit";
  * unauthenticated write vector with no Turnstile/double opt-in).
  *
  * This middleware enforces:
+ *  - canonical host: the apex domain 301-redirects to www (Oct 28,
+ *    2026 SEO — the sitemap, OG URLs, and canonical tags all use www;
+ *    without this, Google sees two copies of every page)
  *  - per-IP rate limits on /api/* (abuse / cost protection — see lib/rate-limit.ts)
  *  - baseline security headers on every response
  */
@@ -102,6 +105,16 @@ function withSecurityHeaders(res: NextResponse): NextResponse {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // 0. Canonical host: the apex domain 301-redirects to www. Only the
+  //    exact apex hostname redirects — Workers dev hostnames and
+  //    localhost are untouched, so beta and local dev keep working.
+  if (request.nextUrl.hostname === "trianglepricebook.com") {
+    const url = request.nextUrl.clone();
+    url.protocol = "https:";
+    url.hostname = "www.trianglepricebook.com";
+    return withSecurityHeaders(NextResponse.redirect(url, 301));
+  }
 
   // 1. Rate-limit API routes before anything else.
   if (pathname.startsWith("/api/")) {
