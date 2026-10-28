@@ -246,15 +246,6 @@ export const outreachLinks: Record<
     destinationUrl: siteConfig.siteUrl,
     group: "plumbing",
   },
-  // Moss Plumbing (Willow Spring, Oct 28, 2026) — small sole-proprietor
-  // shop, owner Chris Moss, since 2014. No website and no published
-  // email found (checked BBB, Angi, web + social search); phone-only:
-  // (919) 791-9617. Link built so it's ready if an email turns up.
-  "outreach-moss": {
-    company: "Moss Plumbing",
-    destinationUrl: siteConfig.siteUrl,
-    group: "plumbing",
-  },
 };
 
 export type Category = (typeof siteConfig.categories)[number];
