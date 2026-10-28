@@ -11,7 +11,6 @@ import {
   sortReportsByEffectiveDate,
 } from "@/lib/data";
 import { formatCents } from "@/lib/format";
-import AggregateCard from "@/components/AggregateCard";
 import ReportCard from "@/components/ReportCard";
 
 
@@ -44,8 +43,8 @@ export default async function CategoryPage({
     (a) => a.category === category
   );
   // Individual reports: ALL published entries in this category, verified
-  // and unverified — the aggregates above are verified-only by design,
-  // so an unverified-only service would otherwise be invisible here.
+  // and unverified — the header summary counts are verified-only by
+  // design, so an unverified-only service needs this list to be visible.
   const reports = sortReportsByEffectiveDate(
     await getApprovedReports(category)
   );
@@ -89,9 +88,12 @@ export default async function CategoryPage({
         )}
       </section>
 
-      {/* Aggregates */}
-      <section className="mt-8">
-        {aggregates.length === 0 && reports.length === 0 ? (
+      {/* Empty state — only when nothing has been reported in this
+          category at all. The per-service aggregate cards used to live
+          here; they were removed so the page goes straight from the
+          summary line to the individual reports. */}
+      {reports.length === 0 && (
+        <section className="mt-8">
           <div className="rounded-2xl border-2 border-dashed border-line bg-white p-8 text-center">
             <p className="text-muted">
               No {category.toLowerCase()} prices reported yet.
@@ -103,20 +105,11 @@ export default async function CategoryPage({
               Be the first — share what you paid, anonymously
             </Link>
           </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {aggregates.map((agg) => (
-              <AggregateCard
-                key={`${agg.category}-${agg.service_name}`}
-                agg={agg}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Individual reports — every published entry in this category,
-          verified and unverified (unlike the aggregates above). */}
+          verified and unverified. */}
       {reports.length > 0 && (
         <section className="mt-12">
           <h2 className="font-serif text-3xl text-ink sm:text-4xl">

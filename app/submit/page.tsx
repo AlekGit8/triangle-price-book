@@ -59,13 +59,27 @@ const emptyFields: FormFields = {
 // stored, so an attachment still needs re-selecting after a refresh.
 const PERSISTED_FIELDS_KEY = "tpb-submit-fields";
 
+/** The UI asks only for month + year; the server/DB still store a full
+    date, so a month becomes the 1st of that month at the API boundary. */
+function monthToDate(month: string): string {
+  if (/^\d{4}-\d{2}$/.test(month)) return `${month}-01`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(month)) return `${month.slice(0, 7)}-01`;
+  return "";
+}
+
 function loadPersistedFields(): FormFields {
   if (typeof window === "undefined") return emptyFields;
   try {
     const raw = window.sessionStorage.getItem(PERSISTED_FIELDS_KEY);
     if (!raw) return emptyFields;
     const parsed = JSON.parse(raw) as Partial<FormFields>;
-    return { ...emptyFields, ...parsed };
+    const fields = { ...emptyFields, ...parsed };
+    // The date field used to ask for a full date; only month + year is
+    // kept now — truncate any stored YYYY-MM-DD value.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fields.serviceDate)) {
+      fields.serviceDate = fields.serviceDate.slice(0, 7);
+    }
+    return fields;
   } catch {
     return emptyFields;
   }
@@ -94,7 +108,8 @@ function draftFromAI(key: string, q: Record<string, unknown>): DraftQuote {
     amount: typeof q.amount === "number" ? String(q.amount) : "",
     reportType: q.reportType === "quote" ? "quote" : "paid",
     town: typeof q.town === "string" ? q.town : "",
-    serviceDate: typeof q.serviceDate === "string" ? q.serviceDate : "",
+    serviceDate:
+      typeof q.serviceDate === "string" ? q.serviceDate.slice(0, 7) : "",
     notes: typeof q.notes === "string" ? q.notes : "",
     status: "pending",
     errorMsg: "",
@@ -208,9 +223,9 @@ function DraftCard({
               />
             </div>
             <div>
-              <label className={labelCls} htmlFor={id("date")}>Date</label>
+              <label className={labelCls} htmlFor={id("date")}>Month</label>
               <input
-                id={id("date")} type="date" className={inputCls}
+                id={id("date")} type="month" className={inputCls}
                 disabled={locked}
                 value={d.serviceDate}
                 onChange={(e) => set({ serviceDate: e.target.value })}
@@ -494,7 +509,7 @@ export default function SubmitPage() {
           amount: d.amount.trim(),
           reportType: d.reportType,
           town: d.town.trim(),
-          serviceDate: d.serviceDate,
+          serviceDate: monthToDate(d.serviceDate),
           notes: d.notes.trim(),
         }))
       )
@@ -581,7 +596,7 @@ export default function SubmitPage() {
       form.set("amount", fields.amount.trim());
       form.set("reportType", fields.reportType);
       form.set("town", fields.town.trim());
-      form.set("serviceDate", fields.serviceDate);
+      form.set("serviceDate", monthToDate(fields.serviceDate));
       form.set("notes", fields.notes.trim());
       form.set("submitterEmail", fields.submitterEmail.trim());
       // Option 2's own attachment wins; otherwise fall back to the Option 1
@@ -900,9 +915,9 @@ export default function SubmitPage() {
             />
           </div>
           <div>
-            <label className={labelCls} htmlFor="serviceDate">Date of service / quote</label>
+            <label className={labelCls} htmlFor="serviceDate">Month of service / quote</label>
             <input
-              id="serviceDate" type="date" className={inputCls}
+              id="serviceDate" type="month" className={inputCls}
               value={fields.serviceDate} onChange={(e) => set("serviceDate", e.target.value)}
             />
           </div>
