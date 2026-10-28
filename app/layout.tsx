@@ -44,11 +44,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Theme init — runs before first paint so the page never flashes
             the wrong theme. Saved choice in localStorage wins; otherwise
-            the OS preference. Must stay a plain inline script (no
-            next/script): it has to run synchronously in <head>. */}
+            the site is LIGHT — the OS dark-mode preference is ignored
+            (Oct 28, 2026: light by default, every visit). Must stay a
+            plain inline script (no next/script): it has to run
+            synchronously in <head>. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('tpb-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})();`,
+            __html: `(function(){try{if(localStorage.getItem('tpb-theme')==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
           }}
         />
         {/* Google AdSense — see components/AdSense.tsx (next/script,

@@ -10,7 +10,8 @@ const STORAGE_KEY = "tpb-theme";
  * it and remembers the choice in localStorage. The initial class is
  * applied before first paint by the inline script in app/layout.tsx, so
  * this component just syncs its icon from the class on mount. With no
- * saved choice, the script defaults to the OS preference.
+ * saved choice, the site is LIGHT — the OS dark-mode preference is
+ * ignored (Oct 28, 2026).
  */
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
