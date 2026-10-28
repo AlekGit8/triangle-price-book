@@ -4,6 +4,7 @@ export const metadata = {
   title: "Suggest a feature — Triangle Price Book",
   description:
     "Missing a category? Have a feature request? Tell us in 300 characters or less.",
+  alternates: { canonical: "/feedback" },
 };
 
 /**

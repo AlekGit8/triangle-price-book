@@ -27,6 +27,7 @@ export const metadata = {
   title: `How ${siteConfig.siteName} works`,
   description:
     "Real prices from real neighbors. How submissions, verification, and privacy work on Triangle Price Book.",
+  alternates: { canonical: "/how-it-works" },
 };
 
 export default function HowItWorksPage() {

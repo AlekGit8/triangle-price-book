@@ -20,16 +20,7 @@ function matchesReport(
   return tokens.every((t) => haystack.includes(t));
 }
 
-/** Exact "Quick answers" Q&As from /how-it-works. */
-const FAQ: Array<{ q: string; a: string }> = [
-  { q: "Do I need an account?", a: "No." },
-  { q: "Is it really free?", a: "Yes. Tips and Ads keep the lights on." },
-  {
-    q: "Can a business pay to change or remove prices?",
-    a: "No. There are no business profiles, rankings, or paid placements in listings — just one clearly labeled sponsor banner at the top of the site.",
-  },
-  { q: "Think an entry is wrong?", a: "Contact us and we'll review it." },
-];
+import { FAQ } from "@/lib/faq";
 
 export default function HomepageBody({
   aggregates,

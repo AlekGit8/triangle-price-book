@@ -6,11 +6,39 @@ import SiteFooter from "@/components/SiteFooter";
 import SponsorBanner from "@/components/SponsorBanner";
 import AnalyticsBeacon from "@/components/AnalyticsBeacon";
 import AdSense from "@/components/AdSense";
+import JsonLd from "@/components/JsonLd";
+import { websiteJsonLd } from "@/lib/seo";
 import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.siteUrl),
   title: `${siteConfig.siteName} — ${siteConfig.tagline}`,
   description: siteConfig.metaDescription,
+  // Canonical home is www — the apex 301-redirects there in
+  // middleware, so every page has exactly one indexable URL.
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: `${siteConfig.siteName} — ${siteConfig.tagline}`,
+    description: siteConfig.metaDescription,
+    url: siteConfig.siteUrl,
+    siteName: siteConfig.siteName,
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: `${siteConfig.siteName} — ${siteConfig.tagline}`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${siteConfig.siteName} — ${siteConfig.tagline}`,
+    description: siteConfig.metaDescription,
+    images: ["/og.png"],
+  },
 };
 
 /**
@@ -53,6 +81,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `(function(){try{if(localStorage.getItem('tpb-theme')==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
           }}
         />
+        {/* Structured data — WebSite on every page (see lib/seo.ts).
+            FAQPage lives on the homepage, BreadcrumbList on category
+            and browse pages. */}
+        <JsonLd data={websiteJsonLd()} />
         {/* Google AdSense — see components/AdSense.tsx (next/script,
             afterInteractive, skipped on /admin). */}
         {/* Google Analytics (GA4) — measurement ID G-MC0YJN4QZZ. The tag

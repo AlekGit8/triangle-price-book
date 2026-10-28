@@ -5,6 +5,7 @@ export const metadata = {
   title: "Leave a tip — Triangle Price Book",
   description:
     "Triangle Price Book is built and maintained by one person. If it helped you, a tip keeps it free for Triangle homeowners.",
+  alternates: { canonical: "/donate" },
 };
 
 /**
@@ -33,7 +34,7 @@ export default async function DonatePage({
         </p>
         <Link
           href="/"
-          className="mt-8 inline-block rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800"
+          className="mt-8 inline-block rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200"
         >
           Back to the Price Book →
         </Link>
@@ -61,7 +62,7 @@ export default async function DonatePage({
         </p>
         <a
           href={siteConfig.donateUrl}
-          className="mt-5 inline-block rounded-[10px] bg-black px-8 py-3.5 font-semibold text-white hover:bg-neutral-800"
+          className="mt-5 inline-block rounded-[10px] bg-black px-8 py-3.5 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200"
         >
           Leave a tip →
         </a>
