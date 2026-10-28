@@ -16,7 +16,11 @@ import JsonLd from "@/components/JsonLd";
 import ReportCard from "@/components/ReportCard";
 
 
-export const dynamic = 'force-dynamic';
+// Cached for 5 minutes (LCP, Oct 28, 2026): this page only reads public
+// report data for one category — no per-request data — so a fresh render
+// per request was pure overhead. Replacing the old force-dynamic: new
+// reports and takedowns now appear within 5 min.
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,

@@ -184,7 +184,7 @@ export default function HomepageBody({
             className="mt-6"
             durationMs={150_000}
           >
-            {allReports.slice(0, 30).map((report) => (
+            {allReports.slice(0, 15).map((report) => (
               <div key={report.id} className="w-[300px] shrink-0 sm:w-[340px]">
                 <ReportCard report={report} compact />
               </div>
