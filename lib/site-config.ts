@@ -30,7 +30,7 @@ export const siteConfig = {
   regionLongName: "Raleigh-Durham Triangle, North Carolina",
 
   /** Report categories. Keep in sync with the DB check constraint in 0001_init.sql. */
-  categories: ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Pools", "Septic Systems", "Garage Doors", "Crawl Spaces", "Gutter Guards", "Chimneys", "Garage Floors", "Handyman/Other"] as const,
+  categories: ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Pools", "Septic Systems", "Garage Doors", "Crawl Spaces", "Gutter Guards", "Chimneys", "Garage Floors", "Concrete", "Handyman/Other"] as const,
 
   /** Legal operator of the site, named in Terms, Privacy Policy, and footer. */
   operatorName: "Longsite Labs LLC",
@@ -266,6 +266,7 @@ export const categorySlugs = {
   "Gutter Guards": "gutter-guards",
   "Chimneys": "chimneys",
   "Garage Floors": "garage-floors",
+  "Concrete": "concrete",
   "Handyman/Other": "handyman",
 } as const satisfies Record<Category, string>;
 
