@@ -41,10 +41,12 @@ export const siteConfig = {
   /**
    * Stripe Payment Link for tips (created Oct 25, 2026, livemode,
    * Longsite Labs LLC). One link, donor chooses the amount ($1–$500,
-   * preset $10). Price: price_1UUeyMAJQeL1alfkuVSMgoIR;
-   * link: plink_1UUeyYAJQeL1alfk4D8zXRo2.
+   * preset $5 — changed from $10 on Oct 27, 2026; the $10 price is
+   * immutable, so this is a new price + new link and the old ones are
+   * deactivated). Price: price_1UVLJRAJQeL1alfkRrU6DOKA;
+   * link: plink_1UVLMgAJQeL1alfk1EJpOGfy.
    */
-  donateUrl: "https://donate.stripe.com/fZu14mcj1b565Er0Ql73G00",
+  donateUrl: "https://donate.stripe.com/7sYeVcdn55KM2sfeHb73G02",
 
   /** One-line description for meta tags. */
   metaDescription:
