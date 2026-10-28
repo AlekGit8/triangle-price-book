@@ -64,7 +64,7 @@ export default function AnalyticsChart({ buckets }: { buckets: ChartBucket[] }) 
           <span className="inline-block h-3 w-3 rounded-sm bg-black" /> Human visitors
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-sm bg-stone-300" /> Bots
+          <span className="inline-block h-3 w-3 rounded-sm bg-stone-300 dark:bg-neutral-500" /> Bots
         </span>
         <span className="ml-auto font-mono text-xs text-muted">
           {hovered
@@ -85,7 +85,7 @@ export default function AnalyticsChart({ buckets }: { buckets: ChartBucket[] }) 
               x2={W - 8}
               y1={PAD_TOP + chartH - f * chartH}
               y2={PAD_TOP + chartH - f * chartH}
-              stroke="#E7E5E4"
+              style={{ stroke: "rgb(var(--chart-grid))" }}
               strokeWidth={1}
             />
             <text
@@ -93,7 +93,7 @@ export default function AnalyticsChart({ buckets }: { buckets: ChartBucket[] }) 
               y={PAD_TOP + chartH - f * chartH + 4}
               textAnchor="end"
               fontSize={11}
-              fill="#78716C"
+              style={{ fill: "rgb(var(--chart-label))" }}
               fontFamily="monospace"
             >
               {Math.round(ceiling * f)}
@@ -115,7 +115,7 @@ export default function AnalyticsChart({ buckets }: { buckets: ChartBucket[] }) 
                 y={y(b.human)}
                 width={barW}
                 height={Math.max(0, PAD_TOP + chartH - y(b.human))}
-                fill="#111111"
+                style={{ fill: "rgb(var(--chart-human))" }}
                 rx={2}
               />
               <rect
@@ -123,7 +123,7 @@ export default function AnalyticsChart({ buckets }: { buckets: ChartBucket[] }) 
                 y={y(b.bots)}
                 width={barW}
                 height={Math.max(0, PAD_TOP + chartH - y(b.bots))}
-                fill="#D6D3D1"
+                style={{ fill: "rgb(var(--chart-bot))" }}
                 rx={2}
               />
               {i % labelEvery === 0 && (
@@ -132,7 +132,7 @@ export default function AnalyticsChart({ buckets }: { buckets: ChartBucket[] }) 
                   y={H - 8}
                   textAnchor="middle"
                   fontSize={11}
-                  fill="#78716C"
+                  style={{ fill: "rgb(var(--chart-label))" }}
                 >
                   {b.label}
                 </text>

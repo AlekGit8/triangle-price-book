@@ -134,7 +134,7 @@ export default function HomepageBody({
         <div className="mt-8">
           <Link
             href="/submit"
-            className="inline-block rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800"
+            className="inline-block rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200"
           >
             Share what you paid, anonymously →
           </Link>
@@ -244,7 +244,7 @@ export default function HomepageBody({
         </ol>
         <Link
           href="/how-it-works"
-          className="mt-7 inline-block rounded-[10px] bg-white px-5 py-2.5 font-semibold text-ink hover:bg-neutral-100"
+          className="mt-7 inline-block rounded-[10px] bg-white px-5 py-2.5 font-semibold text-ink hover:bg-neutral-100 dark:hover:bg-neutral-800"
         >
           Full transparency page
         </Link>
@@ -275,7 +275,7 @@ export default function HomepageBody({
         </h2>
         <Link
           href="/submit"
-          className="mt-7 inline-block rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800"
+          className="mt-7 inline-block rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200"
         >
           Share what you paid, anonymously →
         </Link>

@@ -2,10 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Theme variables (RGB triplets, consumed by tailwind.config.ts).
+ * Light is the default; `.dark` on <html> flips every semantic color —
+ * including white/black surfaces, so cards and buttons invert together.
+ * The toggle in components/ThemeToggle.tsx sets the class and persists
+ * the choice in localStorage; the inline script in app/layout.tsx applies
+ * it before first paint so the page never flashes the wrong theme.
+ */
+:root {
+  color-scheme: light;
+  --ink: 17 17 17;
+  --paper: 250 250 248;
+  --muted: 107 114 128;
+  --line: 229 231 235;
+  --card: 243 243 241;
+  --pitch: 10 10 10;
+  --surface: 255 255 255;
+  --inverse: 0 0 0;
+  --chart-grid: 231 229 228;
+  --chart-label: 120 113 108;
+  --chart-human: 17 17 17;
+  --chart-bot: 214 211 209;
+}
+.dark {
+  color-scheme: dark;
+  --ink: 245 245 244;
+  --paper: 10 10 10;
+  --muted: 163 163 163;
+  --line: 38 38 38;
+  --card: 23 23 23;
+  --pitch: 250 250 248;
+  --surface: 26 26 26;
+  --inverse: 255 255 255;
+  --chart-grid: 38 38 38;
+  --chart-label: 163 163 163;
+  --chart-human: 245 245 244;
+  --chart-bot: 115 115 115;
+}
+
 /* Faint dot-grid hero background (MailCheap). */
 .dot-grid {
   background-image: radial-gradient(circle, #d4d4d4 1px, transparent 1px);
   background-size: 22px 22px;
+}
+.dark .dot-grid {
+  background-image: radial-gradient(circle, #262626 1px, transparent 1px);
 }
 
 /* The old CSS-animated marquee (marquee-track / marquee-scroll) is gone:
@@ -43,6 +85,9 @@
 :focus-visible {
   outline: 2px solid #111111;
   outline-offset: 2px;
+}
+.dark :focus-visible {
+  outline-color: #fafaf8;
 }
 
 /* Tip jar icon in the header: the coin above the lid drops into the jar

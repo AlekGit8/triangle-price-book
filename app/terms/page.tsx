@@ -8,7 +8,7 @@ export const metadata = {
 export default function TermsPage() {
   return (
     <div className="py-10 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-extrabold text-brand-900">Terms of Service</h1>
+      <h1 className="text-3xl font-extrabold text-brand-900 dark:text-brand-100">Terms of Service</h1>
       <p className="mt-2 text-sm text-stone-500">Last updated: October 23, 2026</p>
       <p className="mt-4 text-[15px] leading-relaxed text-stone-700">
         {siteConfig.siteName} is operated by {siteConfig.operatorName} (&ldquo;we&rdquo;,
@@ -96,7 +96,7 @@ export default function TermsPage() {
             Anyone who believes an entry is false may dispute it by emailing{" "}
             <a
               href={`mailto:${siteConfig.contactEmail}`}
-              className="font-semibold text-brand-700 hover:underline"
+              className="font-semibold text-brand-700 dark:text-brand-200 hover:underline"
             >
               {siteConfig.contactEmail}
             </a>{" "}
@@ -181,7 +181,7 @@ export default function TermsPage() {
             Questions about these Terms:{" "}
             <a
               href={`mailto:${siteConfig.contactEmail}`}
-              className="font-semibold text-brand-700 hover:underline"
+              className="font-semibold text-brand-700 dark:text-brand-200 hover:underline"
             >
               {siteConfig.contactEmail}
             </a>

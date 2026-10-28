@@ -39,8 +39,17 @@ const mono = JetBrains_Mono({
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Theme init — runs before first paint so the page never flashes
+            the wrong theme. Saved choice in localStorage wins; otherwise
+            the OS preference. Must stay a plain inline script (no
+            next/script): it has to run synchronously in <head>. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('tpb-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})();`,
+          }}
+        />
         {/* Google AdSense — publisher ID pub-9935150237512512. The script
             connects the site to the AdSense account; ads show only after
             AdSense approves the site and Auto ads (or ad units) are

@@ -8,7 +8,7 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <div className="py-10 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-extrabold text-brand-900">Privacy Policy</h1>
+      <h1 className="text-3xl font-extrabold text-brand-900 dark:text-brand-100">Privacy Policy</h1>
       <p className="mt-2 text-sm text-stone-500">Last updated: October 26, 2026</p>
       <p className="mt-4 text-[15px] leading-relaxed text-stone-700">
         {siteConfig.siteName} is operated by {siteConfig.operatorName} (&ldquo;we&rdquo;,
@@ -123,7 +123,7 @@ export default function PrivacyPage() {
             any time by emailing{" "}
             <a
               href={`mailto:${siteConfig.contactEmail}`}
-              className="font-semibold text-brand-700 hover:underline"
+              className="font-semibold text-brand-700 dark:text-brand-200 hover:underline"
             >
               {siteConfig.contactEmail}
             </a>
@@ -164,7 +164,7 @@ export default function PrivacyPage() {
             Privacy questions or deletion requests:{" "}
             <a
               href={`mailto:${siteConfig.contactEmail}`}
-              className="font-semibold text-brand-700 hover:underline"
+              className="font-semibold text-brand-700 dark:text-brand-200 hover:underline"
             >
               {siteConfig.contactEmail}
             </a>

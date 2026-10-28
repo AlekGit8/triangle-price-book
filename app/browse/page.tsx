@@ -184,7 +184,7 @@ function BrowseInner() {
             <button
               onClick={() => setService("")}
               aria-label="Clear service filter"
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-200 text-ink hover:bg-neutral-300"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-card text-ink hover:bg-line"
             >
               ×
             </button>
@@ -233,7 +233,7 @@ function BrowseInner() {
         {loading ? (
           <p className="text-muted">Loading…</p>
         ) : unconfigured ? (
-          <div className="rounded-xl border border-amber-300 bg-amber-50 p-6 text-amber-900">
+          <div className="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 p-6 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
             <p className="font-semibold">Database not connected yet.</p>
             <p className="mt-1 text-sm">
               Add your Supabase keys to <code>.env.local</code> (see README.md) and
@@ -293,11 +293,11 @@ function BrowseInner() {
                         <p className="mt-1 text-xs text-muted">{note}</p>
                       )}
                       {r.verification_status === "verified" ? (
-                        <span className="mt-1 inline-block rounded bg-green-100 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-green-800">
+                        <span className="mt-1 inline-block rounded bg-green-100 dark:bg-green-950 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-green-800 dark:text-green-300">
                           Verified
                         </span>
                       ) : (
-                        <span className="mt-1 inline-block rounded bg-neutral-100 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
+                        <span className="mt-1 inline-block rounded bg-card px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-muted">
                           Unverified report
                         </span>
                       )}
@@ -309,11 +309,11 @@ function BrowseInner() {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       {r.report_type === "paid" ? (
-                        <span className="inline-block rounded bg-green-100 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-green-800">
+                        <span className="inline-block rounded bg-green-100 dark:bg-green-950 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-green-800 dark:text-green-300">
                           Paid
                         </span>
                       ) : (
-                        <span className="inline-block rounded bg-[#FEF3C7] px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-[#92400E]">
+                        <span className="inline-block rounded bg-amber-100 dark:bg-amber-950 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
                           Quote
                         </span>
                       )}
@@ -333,7 +333,7 @@ function BrowseInner() {
       {/* Detail card: click a row to see the full entry. */}
       {selected && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#000]/50 p-4"
           onClick={() => setSelected(null)}
           role="dialog"
           aria-modal="true"
@@ -347,7 +347,7 @@ function BrowseInner() {
             <button
               onClick={() => setSelected(null)}
               aria-label="Close details"
-              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-lg leading-none text-ink hover:bg-neutral-200"
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-card text-lg leading-none text-ink hover:bg-line"
             >
               ×
             </button>

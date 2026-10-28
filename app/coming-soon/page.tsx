@@ -57,7 +57,7 @@ export default function ComingSoonPage() {
   return (
     <div className="dot-grid -mx-4 px-4 py-16 sm:py-24">
       <div className="mx-auto flex max-w-xl flex-col items-center justify-center text-center">
-        <p className="inline-block rounded-full bg-[#FEF3C7] px-4 py-1.5 font-mono text-xs font-semibold uppercase tracking-wide text-[#92400E]">
+        <p className="inline-block rounded-full bg-amber-100 dark:bg-amber-950 px-4 py-1.5 font-mono text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
           Coming soon
         </p>
         <h1 className="mt-6 font-serif text-5xl leading-[1.05] text-ink sm:text-6xl">
@@ -100,11 +100,11 @@ export default function ComingSoonPage() {
                 className="mt-4 w-full rounded-[10px] border border-line px-4 py-2.5 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10 disabled:bg-card disabled:text-muted"
                 disabled={busy}
               />
-              {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+              {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-3 w-full rounded-[10px] bg-black px-6 py-2.5 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+                className="mt-3 w-full rounded-[10px] bg-black px-6 py-2.5 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50"
               >
                 {busy ? "Signing you up…" : "Notify me at launch →"}
               </button>
@@ -127,7 +127,7 @@ export default function ComingSoonPage() {
                 <button
                   onClick={() => answerUpdates(true)}
                   disabled={busy}
-                  className="rounded-[10px] bg-black px-4 py-2.5 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+                  className="rounded-[10px] bg-black px-4 py-2.5 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50"
                 >
                   Yes, keep me updated
                 </button>

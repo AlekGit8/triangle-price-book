@@ -2,6 +2,7 @@ import Link from "next/link";
 import { siteConfig } from "@/lib/site-config";
 import { isComingSoonGateActive } from "@/lib/coming-soon-gate";
 import TipJarIcon from "@/components/TipJarIcon";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const nav = [
   { href: "/browse", label: "Browse Prices" },
@@ -28,14 +29,15 @@ export default async function SiteHeader() {
             {siteConfig.siteName}
           </span>
         </Link>
-        {!gated && (
-          <nav className="flex items-center gap-1 sm:gap-2 text-sm overflow-x-auto">
-            {nav.map((item) =>
+        <div className="flex items-center gap-1">
+          {!gated && (
+            <nav className="flex items-center gap-1 sm:gap-2 text-sm overflow-x-auto">
+              {nav.map((item) =>
               item.href === "/submit" ? (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="whitespace-nowrap rounded-[10px] bg-black px-4 py-2 font-semibold text-white hover:bg-neutral-800"
+                  className="whitespace-nowrap rounded-[10px] bg-black px-4 py-2 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200"
                 >
                   {item.label}
                 </Link>
@@ -60,6 +62,8 @@ export default async function SiteHeader() {
             )}
           </nav>
         )}
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

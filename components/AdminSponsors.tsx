@@ -198,7 +198,7 @@ export default function AdminSponsors({ adminKey }: { adminKey: string }) {
           Clicks go to the homepage and are logged under the slug. Click a row
           to load that link&apos;s detailed report below.
         </p>
-        {summaryError && <p className="mt-3 text-sm text-red-700">{summaryError}</p>}
+        {summaryError && <p className="mt-3 text-sm text-red-700 dark:text-red-300">{summaryError}</p>}
         {summaryLoading && !summary && <p className="mt-3 text-sm text-muted">Loading clicks…</p>}
         {summary && (
           <div className="mt-4 overflow-x-auto">
@@ -283,14 +283,14 @@ export default function AdminSponsors({ adminKey }: { adminKey: string }) {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-[10px] bg-black px-4 py-2 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+            className="rounded-[10px] bg-black px-4 py-2 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50"
           >
             {loading ? "…" : "Load report"}
           </button>
         </form>
-        {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
+        {error && <p className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
         {data?.tableMissing && (
-          <p className="mt-3 text-sm text-amber-700">
+          <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">
             Click tracking table isn&apos;t in the database yet — run migration
             0012_sponsor_clicks.sql in Supabase. Impressions below are still accurate.
           </p>
