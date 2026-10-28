@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase-server";
+import { requireAdmin } from "@/lib/admin-auth";
 
-
-function authorized(req: Request): boolean {
-  const expected = process.env.ADMIN_KEY;
-  return !!expected && req.headers.get("x-admin-key") === expected;
-}
 
 type Action = "verify" | "publish_unverified" | "reject";
 
@@ -17,8 +13,8 @@ type Action = "verify" | "publish_unverified" | "reject";
  * Gated by ADMIN_KEY.
  */
 export async function POST(req: Request) {
-  if (!authorized(req))
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   try {
     // A moderation action is two small fields — reject giant bodies early,
     // like the other routes do.
@@ -64,6 +60,39 @@ export async function POST(req: Request) {
 
     const { error } = await sb.from("reports").update(patch).eq("id", id);
     if (error) throw error;
+
+    // Reject also deletes the evidence (M4): the Privacy Policy says
+    // documents are kept only as long as the entry remains posted, and
+    // a rejected entry is never posted. Delete the report's verification
+    // rows, and the stored file — but only when no other report still
+    // references that path (a multi-quote document is shared by several
+    // reports). Cleanup failures are logged, not fatal: the report is
+    // already rejected.
+    if (action === "reject") {
+      try {
+        const { data: vers } = await sb
+          .from("verifications")
+          .select("invoice_path")
+          .eq("report_id", id);
+        const paths = [...new Set((vers ?? []).map((v) => v.invoice_path))];
+        if (paths.length > 0) {
+          await sb.from("verifications").delete().eq("report_id", id);
+          for (const path of paths) {
+            const { data: others } = await sb
+              .from("verifications")
+              .select("id")
+              .eq("invoice_path", path)
+              .limit(1);
+            if (!others || others.length === 0) {
+              await sb.storage.from("invoices").remove([path]);
+            }
+          }
+        }
+      } catch (cleanupErr) {
+        console.error("admin moderate cleanup error:", cleanupErr);
+      }
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("admin moderate error:", err);

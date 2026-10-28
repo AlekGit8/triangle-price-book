@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { clientIp } from "@/lib/rate-limit";
 import { siteConfig } from "@/lib/site-config";
+import { getServiceSupabase } from "@/lib/supabase-server";
+import { callGemini } from "@/lib/gemini";
 
 
 const MAX_DOC_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -25,7 +28,7 @@ Return ONLY a JSON object with these exact keys:
   "quotes": [
     {
       "serviceName": "short description of the work, e.g. 'Tankless water heater install (Rinnai RX199)'",
-      "category": one of ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Pools", "Septic Systems", "Garage Doors", "Crawl Spaces", "Gutter Guards", "Chimneys", "Garage Floors", "Concrete", "Handyman/Other"],
+      "category": one of ${JSON.stringify(siteConfig.categories)},
       "amount": grand total as a number with no commas or currency symbols, e.g. 5253.36,
       "town": town where the work was performed (the customer's town, not the business's), or null if unclear,
       "serviceDate": date of service or quote as YYYY-MM-DD, or null if unclear,
@@ -40,6 +43,55 @@ Rules:
 - Never invent values. Use null for anything you cannot determine from the document.
 - Prefer the grand total / amount due for each quote. Ignore line-item subtotals.
 - The user will review every field before submitting, so completeness beats caution — but never guess a number.`;
+
+/**
+ * Sniff the real file type from magic bytes — the client-supplied MIME
+ * type is untrusted. Returns the detected type, or null when the bytes
+ * don't match any known signature (caller then falls back to the
+ * client MIME, which the extension check still constrains).
+ */
+function sniffMime(bytes: Buffer): string | null {
+  if (bytes.length >= 5 && bytes.subarray(0, 5).toString("latin1") === "%PDF-") {
+    return "application/pdf";
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 &&
+    bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a
+  ) {
+    return "image/png";
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes.subarray(0, 4).toString("latin1") === "RIFF" &&
+    bytes.subarray(8, 12).toString("latin1") === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  if (bytes.length >= 12 && bytes.subarray(4, 8).toString("latin1") === "ftyp") {
+    const brand = bytes.subarray(8, 12).toString("latin1");
+    if (["heic", "heix", "heim", "heis", "mif1", "msf1", "hevc", "hevx"].includes(brand)) {
+      return "image/heic";
+    }
+  }
+  return null;
+}
+
+/** Coerce a model amount to dollars: numbers pass through, and strings
+    like "12,400" or "$5,253.36" are parsed instead of dropped. */
+function coerceAmount(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v) && v > 0) {
+    return Math.round(v * 100) / 100;
+  }
+  if (typeof v === "string") {
+    const n = Number(v.replace(/[$,\s]/g, ""));
+    if (Number.isFinite(n) && n > 0) return Math.round(n * 100) / 100;
+  }
+  return null;
+}
 
 /**
  * POST /api/extract — accepts a quote/invoice document (photo or PDF),
@@ -104,7 +156,14 @@ export async function POST(req: Request) {
       );
     }
 
-    const mime = file.type || "image/jpeg";
+    const claimedMime = file.type || "image/jpeg";
+    const bytes = Buffer.from(await file.arrayBuffer());
+    // Trust magic bytes over the client-supplied MIME type. A file whose
+    // real type isn't an allowed photo/PDF is rejected even if the client
+    // claims otherwise; an unidentifiable file keeps the claimed type
+    // (the extension check below still constrains it).
+    const sniffed = sniffMime(bytes);
+    const mime = sniffed ?? claimedMime;
     const isPdf = mime === "application/pdf";
     if (!isPdf && !ALLOWED_IMAGE_TYPES.includes(mime)) {
       return NextResponse.json(
@@ -113,61 +172,32 @@ export async function POST(req: Request) {
       );
     }
 
-    const bytes = Buffer.from(await file.arrayBuffer());
     const base64 = bytes.toString("base64");
 
-    // gemini-3.5-flash-lite ONLY (verified Oct 24, 2026 against Google's
-    // docs): released Jul 21, 2026, free-tier eligible, good until
-    // Jul 21, 2027. Do NOT re-add gemini-3.6-flash (retires Nov 19, 2026)
-    // or gemini-3.5-flash (deprecated Oct 8, 2026 — routes to 3.6-flash).
-    const MODELS = ["gemini-3.5-flash-lite"];
-    let aiJson: Record<string, unknown> | null = null;
-    let lastStatus = 0;
-    for (const model of MODELS) {
-      const aiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-        {
-          method: "POST",
-          headers: {
-            "x-goog-api-key": apiKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: EXTRACTION_PROMPT },
-                  { inline_data: { mime_type: mime, data: base64 } },
-                ],
-              },
-            ],
-            generationConfig: {
-              response_mime_type: "application/json",
-              maxOutputTokens: 1500,
-            },
-          }),
-        }
-      );
-      lastStatus = aiRes.status;
-      if (aiRes.ok) {
-        aiJson = (await aiRes.json()) as Record<string, unknown>;
-        break;
-      }
-      console.error(`extract: Gemini model ${model} error`, aiRes.status);
-    }
+    // One Gemini call via the shared helper (lib/gemini.ts): model from
+    // GEMINI_MODEL, default gemini-3.5-flash-lite ONLY. Do NOT re-add
+    // gemini-3.6-flash (retires Nov 19, 2026) or gemini-3.5-flash
+    // (deprecated Oct 8, 2026 — routes to 3.6-flash).
+    const { text: raw, finishReason } = await callGemini({
+      apiKey,
+      parts: [
+        { text: EXTRACTION_PROMPT },
+        { inline_data: { mime_type: mime, data: base64 } },
+      ],
+      // Multi-quote documents need headroom: 1500 tokens could cut the
+      // JSON off mid-object (up to 20 quotes).
+      maxOutputTokens: 4000,
+      timeoutMs: 30_000,
+    });
 
-    if (!aiJson) {
-      console.error("extract: all Gemini models failed, last status", lastStatus);
+    // A MAX_TOKENS finish means the JSON was cut off mid-object — the
+    // parse below would fail or, worse, silently return partial quotes.
+    if (finishReason === "MAX_TOKENS" || !raw) {
       return NextResponse.json(
         { ok: false, error: "Could not read the document. Please fill in the form manually." },
         { status: 502 }
       );
     }
-
-    const candidates = aiJson.candidates as
-      | Array<{ content?: { parts?: Array<{ text?: string }> } }>
-      | undefined;
-    const raw = candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
     let fields: Record<string, unknown>;
     try {
       fields = JSON.parse(raw);
@@ -178,18 +208,18 @@ export async function POST(req: Request) {
       );
     }
 
-    // Sanitize: only pass through known fields with sane types.
-    const categories = siteConfig.categories as readonly string[];
-
-    // Relevance gate: the document must actually be a home-services
-    // quote/invoice. Anything else is rejected outright.
+    // Relevance gate (fail closed): the document must actually be a
+    // home-services quote/invoice. A missing documentCheck is treated
+    // the same as a negative one — the model is instructed to always
+    // return it, so an absent check means a malformed response, not a
+    // relevant document.
     const docCheck = fields.documentCheck as
       | { isRelevant?: boolean; reason?: string }
       | undefined;
-    if (docCheck && docCheck.isRelevant === false) {
+    if (docCheck?.isRelevant !== true) {
       const reason =
-        typeof docCheck.reason === "string" && docCheck.reason
-          ? docCheck.reason
+        typeof docCheck?.reason === "string" && docCheck.reason
+          ? docCheck.reason.slice(0, 200)
           : "it doesn't look like a home-services quote or invoice";
       return NextResponse.json(
         {
@@ -209,6 +239,9 @@ export async function POST(req: Request) {
         ? [fields]
         : [];
 
+    // Sanitize: only pass through known fields with sane types.
+    const categories = siteConfig.categories as readonly string[];
+
     const cleanQuote = (q: Record<string, unknown>): Record<string, string | number | null> => {
       return {
         serviceName:
@@ -217,10 +250,7 @@ export async function POST(req: Request) {
           typeof q.category === "string" && categories.includes(q.category)
             ? q.category
             : "Handyman/Other",
-        amount:
-          typeof q.amount === "number" && Number.isFinite(q.amount) && q.amount > 0
-            ? Math.round(q.amount * 100) / 100
-            : null,
+        amount: coerceAmount(q.amount),
         town: typeof q.town === "string" ? q.town.slice(0, 80) : null,
         serviceDate:
           typeof q.serviceDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(q.serviceDate)
@@ -249,7 +279,62 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, quotes });
+    // Receipts (H2): one row per extracted quote, binding the document's
+    // SHA-256 to the extracted amount. /api/submit only badges a report
+    // Verified when the uploaded file's hash matches an unconsumed
+    // receipt for the submitted amount — so editing the amount after
+    // extraction publishes as unverified instead of Verified.
+    const receiptIds = new Map<number, string>();
+    try {
+      const sb = getServiceSupabase();
+      const fileSha256 = createHash("sha256").update(bytes).digest("hex");
+      // Prune receipts older than 24h while we're here (cheap, indexed).
+      await sb
+        .from("extract_receipts")
+        .delete()
+        .lt("created_at", new Date(Date.now() - 24 * 3600 * 1000).toISOString());
+      const receiptRows = quotes
+        .map((q, i) => ({
+          i,
+          id: crypto.randomUUID(),
+          amount_cents:
+            typeof q.amount === "number" ? Math.round(q.amount * 100) : null,
+          category:
+            typeof q.category === "string" ? q.category : "Handyman/Other",
+          service_date:
+            typeof q.serviceDate === "string" ? q.serviceDate : null,
+        }))
+        .filter((r) => r.amount_cents !== null && r.amount_cents > 0);
+      if (receiptRows.length > 0) {
+        const { error } = await sb.from("extract_receipts").insert(
+          receiptRows.map((r) => ({
+            id: r.id,
+            file_sha256: fileSha256,
+            amount_cents: r.amount_cents as number,
+            category: r.category,
+            service_date: r.service_date,
+          }))
+        );
+        if (error) {
+          console.error("extract: receipt insert failed", error);
+        } else {
+          for (const r of receiptRows) receiptIds.set(r.i, r.id);
+        }
+      }
+    } catch (err) {
+      // Receipts are an integrity feature, not a blocker: if the table
+      // is missing (migration not applied yet), extraction still works
+      // and the quotes simply publish unverified.
+      console.error("extract: receipt error", err);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      quotes: quotes.map((q, i) => ({
+        ...q,
+        receiptId: receiptIds.get(i) ?? null,
+      })),
+    });
   } catch (err) {
     console.error("extract error:", err);
     return NextResponse.json(

@@ -1,15 +1,7 @@
 import Link from "next/link";
 import { siteConfig } from "@/lib/site-config";
-import { isComingSoonGateActive } from "@/lib/coming-soon-gate";
 
-export default async function SiteFooter() {
-  // While the coming-soon gate is live, every footer link below rewrites
-  // to /coming-soon, so the whole nav block is dead — hide it and keep
-  // the rest of the footer. After launch (rewrite block removed from
-  // middleware.ts) the nav returns automatically. See
-  // lib/coming-soon-gate.ts.
-  const gated = await isComingSoonGateActive();
-
+export default function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-line bg-white">
       <div className="mx-auto max-w-6xl px-4 py-10 text-sm text-muted">
@@ -24,8 +16,7 @@ export default async function SiteFooter() {
               Built by a local Triangle homeowner to make all our lives easier.
             </p>
           </div>
-          {!gated && (
-            <nav className="flex flex-col gap-2 font-mono text-[13px]">
+          <nav className="flex flex-col gap-2 font-mono text-[13px]">
               <Link href="/how-it-works" className="hover:text-ink">
                 How this works &amp; transparency
               </Link>
@@ -48,7 +39,6 @@ export default async function SiteFooter() {
                 Tip Jar
               </Link>
             </nav>
-          )}
         </div>
         <p className="mt-8 text-xs text-neutral-400">
           Operated by{" "}

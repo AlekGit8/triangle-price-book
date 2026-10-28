@@ -4,9 +4,9 @@ import { checkRateLimit, clientIp, utcDay } from "@/lib/rate-limit";
 
 /**
  * LAUNCHED Oct 25, 2026 — the coming-soon gate was removed: all public
- * traffic now sees the real site. The coming-soon page
- * (app/coming-soon/page.tsx) stays in the repo so the gate can be
- * reinstated if needed.
+ * traffic now sees the real site. The coming-soon page and /api/notify
+ * were deleted Oct 27, 2026 (the launch is over; the signup form was an
+ * unauthenticated write vector with no Turnstile/double opt-in).
  *
  * This middleware enforces:
  *  - per-IP rate limits on /api/* (abuse / cost protection — see lib/rate-limit.ts)
@@ -30,18 +30,25 @@ const API_LIMITS: ApiLimit[] = [
   { prefix: "/api/extract", limit: 10, windowMs: HOUR, dayLimit: 30 },
   // /api/submit writes to the DB (spam vector).
   { prefix: "/api/submit", limit: 30, windowMs: HOUR },
-  // /api/notify writes signup rows (list-bombing / DB bloat vector).
-  { prefix: "/api/notify", limit: 10, windowMs: HOUR },
-  // /api/feedback writes feedback rows (same vector as notify).
+  // /api/feedback writes feedback rows (list-bombing / DB bloat vector).
   { prefix: "/api/feedback", limit: 10, windowMs: HOUR },
   // Public read API; generous, but not unlimited (full-table scans).
-  { prefix: "/api/check-quote", limit: 120, windowMs: HOUR },
+  // 120/hr let one IP burn 120 Gemini calls an hour — 30/hr with a
+  // 60/day cap is plenty for a human checking quotes, and the estimate
+  // cache (migration 0018) means repeat checks of the same job cost
+  // nothing at all.
+  { prefix: "/api/check-quote", limit: 30, windowMs: HOUR, dayLimit: 60 },
   // Analytics ingest: page views + a heartbeat every 30s while the
   // tab is visible — one active visitor is ~120/hr, so 600 leaves
   // headroom for a shared IP while still bounding DB bloat.
   { prefix: "/api/analytics/event", limit: 600, windowMs: HOUR },
-  // Slow down ADMIN_KEY guessing. The key must still be long and random.
-  { prefix: "/api/admin/", limit: 30, windowMs: HOUR },
+  // Admin: generous per-IP limit for legitimate use (one unlock + one
+  // refresh fires ~5 requests, so 30/hr locked the admin out after a
+  // few refreshes). Brute-force guessing is throttled separately, in
+  // route: lib/admin-auth.ts counts only *failed* auth attempts
+  // (10/hr per IP) and 429s after that. The key must still be long
+  // and random.
+  { prefix: "/api/admin/", limit: 300, windowMs: HOUR },
 ];
 
 function tooMany(retryAfterMs: number): NextResponse {
@@ -103,15 +110,8 @@ export function middleware(request: NextRequest) {
   }
 
   // 2. Passthrough with security headers for everything: public pages,
-  //    /coming-soon itself, /admin, /api, and static assets. A direct
-  //    request for the coming-soon page itself also hides the
-  //    header/footer nav (the page shares the root layout); /admin and
-  //    /api deliberately do NOT get the gate header.
-  const res = NextResponse.next();
-  if (pathname === "/coming-soon") {
-    res.headers.set("x-tpb-coming-soon", "1");
-  }
-  return withSecurityHeaders(res);
+  //    /admin, /api, and static assets.
+  return withSecurityHeaders(NextResponse.next());
 }
 
 export const config = {

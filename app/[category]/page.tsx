@@ -39,15 +39,12 @@ export default async function CategoryPage({
   const category = categoryFromSlug(slug);
   if (!category) notFound();
 
-  const aggregates = (await getServiceAggregates()).filter(
-    (a) => a.category === category
-  );
-  // Individual reports: ALL published entries in this category, verified
-  // and unverified — the header summary counts are verified-only by
-  // design, so an unverified-only service needs this list to be visible.
-  const reports = sortReportsByEffectiveDate(
-    await getApprovedReports(category)
-  );
+  // Both fetches run in parallel (P4 — they were sequential), and the
+  // aggregates query is narrowed to this category at the DB.
+  const [aggregates, reports] = await Promise.all([
+    getServiceAggregates(category),
+    getApprovedReports(category).then(sortReportsByEffectiveDate),
+  ]);
   // "Prices reported" counts every published report in this category, same
   // as the homepage stat; the verified count still comes from aggregates.
   const totalReports = reports.length;

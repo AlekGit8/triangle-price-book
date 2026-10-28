@@ -24,9 +24,9 @@ interface ReportData {
   sponsor: SponsorConfig | null;
   start: string;
   end: string;
-  impressions: { total: number; human: number };
+  impressions: { total: number; human: number } | null;
   clicks: { total: number; human: number; bot: number };
-  ctrHuman: number;
+  ctrHuman: number | null;
   daily: DayRow[];
   topReferrers: Array<{ path: string; clicks: number }>;
   tableMissing: boolean;
@@ -129,16 +129,26 @@ export default function AdminSponsors({ adminKey }: { adminKey: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminKey]);
 
+  // Outreach links have no banner flight, so there are no impressions
+  // or CTR to report — clicks only (M12). The copy-ready text below is
+  // only for a real sponsor flight.
   const reportText = data
-    ? [
-        `Sponsor report — ${data.sponsor?.name ?? (data.slug || "Triangle Price Book sponsor")}`,
-        `Flight: ${fmtDateShort(data.start)} – ${fmtDateShort(data.end)} (dates in UTC; end date exclusive)`,
-        ``,
-        `Your banner appeared on ${data.impressions.human.toLocaleString()} human page views (${data.impressions.total.toLocaleString()} total page views including bots) and received ${data.clicks.human} human clicks (${data.clicks.total} total clicks including bots).`,
-        `Human click-through rate: ${(data.ctrHuman * 100).toFixed(2)}%.`,
-        ``,
-        `Clicks are counted when a visitor clicks the Sponsored banner and is sent to your site; impressions are counted from our own first-party analytics, which excludes bots from the human numbers. Thank you for being a founding sponsor — your support keeps the site free for Triangle homeowners.`,
-      ].join("\n")
+    ? data.impressions === null
+      ? [
+          `Click report — ${data.slug}`,
+          `Range: ${fmtDateShort(data.start)} – ${fmtDateShort(data.end)} (dates in UTC; end date exclusive)`,
+          ``,
+          `This link received ${data.clicks.human} human clicks (${data.clicks.total} total clicks including bots). Outreach links have no banner, so there are no impressions to report — clicks are a floor on interest, not proof of it.`,
+        ].join("\n")
+      : [
+          `Sponsor report — ${data.sponsor?.name ?? (data.slug || "Triangle Price Book sponsor")}`,
+          `Flight: ${fmtDateShort(data.start)} – ${fmtDateShort(data.end)} (dates in UTC; end date exclusive)`,
+          ``,
+          `Your banner appeared on ${data.impressions.human.toLocaleString()} human page views (${data.impressions.total.toLocaleString()} total page views including bots) and received ${data.clicks.human} human clicks (${data.clicks.total} total clicks including bots).`,
+          `Human click-through rate: ${((data.ctrHuman ?? 0) * 100).toFixed(2)}%.`,
+          ``,
+          `Clicks are counted when a visitor clicks the Sponsored banner and is sent to your site; impressions are counted from our own first-party analytics, which excludes bots from the human numbers. Thank you for being a founding sponsor — your support keeps the site free for Triangle homeowners.`,
+        ].join("\n")
     : "";
 
   async function copyReport() {
@@ -303,10 +313,14 @@ export default function AdminSponsors({ adminKey }: { adminKey: string }) {
         <>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div className="rounded-2xl border border-line bg-white p-5">
-              <p className="font-serif text-4xl text-ink">{data.impressions.human.toLocaleString()}</p>
+              <p className="font-serif text-4xl text-ink">
+                {data.impressions === null ? "—" : data.impressions.human.toLocaleString()}
+              </p>
               <p className="mt-1 text-sm text-muted">Human impressions</p>
               <p className="mt-1 font-mono text-xs text-muted">
-                {data.impressions.total.toLocaleString()} total views
+                {data.impressions === null
+                  ? "Outreach link — no banner, no impressions"
+                  : `${data.impressions.total.toLocaleString()} total views`}
               </p>
             </div>
             <div className="rounded-2xl border border-line bg-white p-5">
@@ -317,7 +331,9 @@ export default function AdminSponsors({ adminKey }: { adminKey: string }) {
               </p>
             </div>
             <div className="rounded-2xl border border-line bg-white p-5">
-              <p className="font-serif text-4xl text-ink">{(data.ctrHuman * 100).toFixed(2)}%</p>
+              <p className="font-serif text-4xl text-ink">
+                {data.ctrHuman === null ? "—" : `${(data.ctrHuman * 100).toFixed(2)}%`}
+              </p>
               <p className="mt-1 text-sm text-muted">Human click-through</p>
               <p className="mt-1 font-mono text-xs text-muted">
                 {fmtDateShort(data.start)} – {fmtDateShort(data.end)}
@@ -407,12 +423,22 @@ export default function AdminSponsors({ adminKey }: { adminKey: string }) {
           </div>
 
           <p className="text-sm text-muted">
-            Impressions count every human page view while the banner is live — the
-            banner sits on every page, so that&apos;s the honest impression count.
-            Clicks count only through the /go redirect. A handful of clicks over
-            two weeks is the expected outcome at current traffic; the pitch is
-            founding support plus a high-intent local audience, not a performance
-            guarantee.
+            {data.impressions === null ? (
+              <>
+                Outreach links have no banner, so there are no impressions or
+                click-through rate to report — clicks only. A click is a floor
+                on interest, not proof of it (email scanners prefetch links).
+              </>
+            ) : (
+              <>
+                Impressions count every human page view while the banner is live — the
+                banner sits on every page, so that&apos;s the honest impression count.
+                Clicks count only through the /go redirect. A handful of clicks over
+                two weeks is the expected outcome at current traffic; the pitch is
+                founding support plus a high-intent local audience, not a performance
+                guarantee.
+              </>
+            )}
           </p>
         </>
       )}

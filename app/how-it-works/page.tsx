@@ -98,7 +98,10 @@ export default function HowItWorksPage() {
             things really cost, nobody overpays. To cover hosting costs, we run
             ads, and we hope they&rsquo;re useful ones, like local home-service
             deals. Ads are separate from the price data and have no influence on
-            what gets posted.
+            what gets posted. The site may also show a single banner labelled
+            &ldquo;Sponsored&rdquo; at the top of the page; sponsors pay for the
+            banner only and get no influence over listings, prices, or
+            moderation.
           </p>
         </PlainSection>
 
@@ -114,7 +117,7 @@ export default function HowItWorksPage() {
             </div>
             <div>
               <dt className="font-semibold text-ink">Can a business pay to change or remove prices?</dt>
-              <dd>No. There are no business profiles, rankings, or paid placements.</dd>
+              <dd>No. There are no business profiles, rankings, or paid placements in listings — just one clearly labeled sponsor banner at the top of the site.</dd>
             </div>
             <div>
               <dt className="font-semibold text-ink">Think an entry is wrong?</dt>

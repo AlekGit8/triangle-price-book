@@ -8,7 +8,7 @@ const MAX_MESSAGE = 300;
 /**
  * Shared visitor feedback form: a 300-character message for feature
  * requests, missing categories, or a price the visitor couldn't find a
- * way to submit. Used on the coming-soon page and on /feedback.
+ * way to submit. Used on /feedback.
  * No account needed. An email is optional — only so we can reply.
  */
 export default function FeedbackForm() {

@@ -1,4 +1,4 @@
-import { getServiceSupabase } from "./supabase-server";
+import { getAnonSupabase } from "./supabase-server";
 import type { Category } from "./site-config";
 
 export interface Report {
@@ -49,12 +49,16 @@ export interface ServiceAggregate {  service_name: string;
  */
 /**
  * Reports visible to the public: verified entries plus unverified community
- * reports. Rejected entries never surface. (Currently unused by pages —
- * /browse queries Supabase directly — but kept truthful for future callers.)
+ * reports. Rejected entries never surface. Used by the homepage and
+ * category pages.
  */
 export async function getApprovedReports(category?: string): Promise<Report[]> {
   try {
-    const sb = getServiceSupabase();
+    // Public read — anon key, so RLS (not the service role) decides
+    // what's visible: (verified AND moderated) OR unverified; rejected
+    // rows stay hidden. The .neq filter below is redundant under RLS
+    // but harmless, and keeps the intent explicit.
+    const sb = getAnonSupabase();
     let q = sb
       .from("reports")
       .select(
@@ -75,13 +79,21 @@ export async function getApprovedReports(category?: string): Promise<Report[]> {
   }
 }
 
-export async function getServiceAggregates(): Promise<ServiceAggregate[]> {
+export async function getServiceAggregates(
+  category?: string
+): Promise<ServiceAggregate[]> {
   try {
-    const sb = getServiceSupabase();
-    const { data, error } = await sb
+    // Public read — anon key (M5). The service_aggregates view is
+    // security_invoker, so the anon role's RLS on reports applies.
+    const sb = getAnonSupabase();
+    let q = sb
       .from("service_aggregates")
       .select("*")
       .order("report_count", { ascending: false });
+    // Narrow at the DB: a category page only needs its own rows, not the
+    // whole view (P4 — the old code pulled every aggregate then filtered).
+    if (category) q = q.eq("category", category);
+    const { data, error } = await q;
     if (error) throw error;
     return (data ?? []) as ServiceAggregate[];
   } catch {

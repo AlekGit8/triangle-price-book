@@ -3,22 +3,11 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { siteConfig, categorySlugs } from "@/lib/site-config";
+import { normalizeText as normalize, singularize } from "@/lib/search";
 import type { ServiceAggregate, Report } from "@/lib/data";
 import StatsStrip from "@/components/StatsStrip";
 import ReportCard from "@/components/ReportCard";
 import Marquee from "@/components/Marquee";
-
-function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function singularize(w: string): string {
-  return w.length > 3 && w.endsWith("s") ? w.slice(0, -1) : w;
-}
 
 /** Every word in the query (plural-insensitive) must appear in the service name, category, or town. */
 function matchesReport(
@@ -37,7 +26,7 @@ const FAQ: Array<{ q: string; a: string }> = [
   { q: "Is it really free?", a: "Yes. Tips and Ads keep the lights on." },
   {
     q: "Can a business pay to change or remove prices?",
-    a: "No. There are no business profiles, rankings, or paid placements.",
+    a: "No. There are no business profiles, rankings, or paid placements in listings — just one clearly labeled sponsor banner at the top of the site.",
   },
   { q: "Think an entry is wrong?", a: "Contact us and we'll review it." },
 ];
@@ -204,7 +193,7 @@ export default function HomepageBody({
             className="mt-6"
             durationMs={150_000}
           >
-            {allReports.map((report) => (
+            {allReports.slice(0, 30).map((report) => (
               <div key={report.id} className="w-[300px] shrink-0 sm:w-[340px]">
                 <ReportCard report={report} compact />
               </div>

@@ -1,9 +1,10 @@
 # Cloudflare Turnstile setup (spam protection)
 
-**Status: CONFIGURED Oct 24, 2026** — both keys are set in Cloudflare Pages
-env vars (Production): `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and
-`TURNSTILE_SECRET_KEY`. The widget renders on `/submit` and `/api/submit` +
-`/api/extract` verify the token server-side (success + action + hostname).
+**Status: CONFIGURED Oct 24, 2026** — both keys are set in the Cloudflare
+Worker's env vars (Worker `triangle-price-book` → Settings → Variables):
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`. The widget
+renders on `/submit` and `/api/submit` + `/api/extract` verify the token
+server-side (success + action + hostname).
 
 ## Why it matters
 
@@ -19,8 +20,9 @@ Turnstile is the real bot defense — and it's free forever.
    - Domain: `trianglepricebook.com` (add `www.trianglepricebook.com` too)
    - Widget mode: **Managed** (invisible unless suspicious — best UX)
 3. Copy the two keys:
-   - **Site key** → Cloudflare Pages → triangle-price-book → Settings →
-     Environment variables → add `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+   - **Site key** → Cloudflare Dashboard → Workers & Pages →
+     triangle-price-book → Settings → Variables → add
+     `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
    - **Secret key** → same place → add `TURNSTILE_SECRET_KEY`
    - Set both for **Production** (and Preview if you want it on previews).
 4. **Redeploy** (or wait for the next push) so the new env vars take effect.
@@ -38,6 +40,14 @@ Turnstile is the real bot defense — and it's free forever.
 
 - Keys are **never committed** — they live only in the Cloudflare dashboard
   (`.env.example` lists the variable names).
-- If Turnstile ever has an outage, the site keeps working only if you
-  temporarily remove the secret — otherwise all submissions fail closed.
-  That fail-closed behavior is intentional.
+- Verification **fails closed**: if Turnstile itself has an outage, or the
+  secret goes missing, submissions are rejected rather than accepted
+  unprotected. Removing the secret does NOT re-enable submissions in
+  production — that fail-closed behavior is intentional, so the escape
+  hatch for a Turnstile outage is a code change, not a dashboard edit.
+- The widget's domain allowlist (Cloudflare Dashboard → Turnstile → the
+  site → Domains) must include every host that serves the site:
+  `trianglepricebook.com`, `www.trianglepricebook.com`, and both Workers
+  hosts (`triangle-price-book.longsitelabsllc.workers.dev`,
+  `beta-triangle-price-book.longsitelabsllc.workers.dev`). A missing host
+  fails every verification from that host with "Spam check failed."

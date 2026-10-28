@@ -47,14 +47,36 @@ const BOT_SUBSTRINGS = [
   "java/",
   "curl",
   "wget",
+  // Link-preview / uptime / email-scanner agents that carry no "bot"
+  // word the old regex could catch.
+  "whatsapp",
+  "pingdom",
+  "lighthouse",
+  "slack",
+  "discord",
+  "telegram",
 ];
 
-const GENERIC_BOT = /\b(bot|crawler|spider|scraper)\b/i;
+/**
+ * Generic bot substrings — a plain substring check, not a word-boundary
+ * regex: "Slackbot", "Discordbot", "Amazonbot" and friends contain "bot"
+ * mid-word, so \bbot\b never matched them.
+ */
+const GENERIC_BOT_SUBSTRINGS = [
+  "bot",
+  "crawl",
+  "spider",
+  "scrap",
+  "fetch",
+  "preview",
+  "monitor",
+  "lighthouse",
+];
 
 export function isBotUserAgent(ua: string | null, webdriver = false): boolean {
   if (webdriver) return true;
   if (!ua || ua.trim() === "") return true;
   const lower = ua.toLowerCase();
   if (BOT_SUBSTRINGS.some((p) => lower.includes(p))) return true;
-  return GENERIC_BOT.test(ua);
+  return GENERIC_BOT_SUBSTRINGS.some((p) => lower.includes(p));
 }

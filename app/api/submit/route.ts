@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { getServiceSupabase } from "@/lib/supabase-server";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { clientIp } from "@/lib/rate-limit";
 import { siteConfig } from "@/lib/site-config";
+import { isValidEmail } from "@/lib/validation";
 
 
 const MAX_INVOICE_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -14,10 +16,10 @@ const MAX_BODY_BYTES = 12 * 1024 * 1024;
 const MAX_SERVICE_NAME = 200;
 const MAX_TOWN = 80;
 const MAX_NOTES = 2000;
-// $20M in cents — stays inside the Postgres integer column (max ~$21.4M).
-const MAX_AMOUNT_CENTS = 2_000_000_000;
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// $2M in cents — a generous ceiling for any home service (a full roof +
+// HVAC + remodel rarely tops $500k); the old $20M cap was far above any
+// real price and let typos like 1e5 slip through as $100,000.
+const MAX_AMOUNT_CENTS = 200_000_000;
 
 // Invoice attachments are stored privately and opened by the owner during
 // moderation. Restrict to image/PDF types the extraction flow already
@@ -46,15 +48,63 @@ const INVOICE_MIME_BY_EXT: Record<string, string> = {
   pdf: "application/pdf",
 };
 
-/** True for a real calendar date in YYYY-MM-DD form (not just the shape). */
+// Extract receipts (migration 0017) live 24h and are single-use.
+const RECEIPT_TTL_MS = 24 * 3600 * 1000;
+/** Amount tolerance for a receipt match: max $1 or 1% of the extracted
+ *  amount — covers rounding, not an edited price. */
+function receiptTolerance(extractedCents: number): number {
+  return Math.max(100, Math.round(extractedCents * 0.01));
+}
+
+/** True for a real calendar date in YYYY-MM-DD form (not just the shape),
+ *  and not in the future — a service date is a date something was paid
+ *  for or quoted, so tomorrow makes no sense. */
 function validServiceDate(s: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
   const [y, m, d] = s.split("-").map(Number);
   if (y < 1900 || y > 2100) return false;
   const dt = new Date(Date.UTC(y, m - 1, d));
-  return (
-    dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d
-  );
+  if (
+    dt.getUTCFullYear() !== y ||
+    dt.getUTCMonth() !== m - 1 ||
+    dt.getUTCDate() !== d
+  ) {
+    return false;
+  }
+  // Today in America/New_York (the site's audience), not UTC — after
+  // 7 PM ET the UTC date is already tomorrow.
+  const todayET = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return s <= todayET;
+}
+
+/**
+ * Parse an amount from its string form into integer cents — never via
+ * Number() (which accepts "1e5" and has float rounding: 1.005 * 100 is
+ * 100.4999…). Only the client pattern is accepted: digits, optionally
+ * with up to two decimal places.
+ */
+function parseAmountCents(raw: string): number | null {
+  if (!/^\d+(\.\d{1,2})?$/.test(raw)) return null;
+  const [dollars, cents = ""] = raw.split(".");
+  return Number(dollars) * 100 + Number(cents.padEnd(2, "0"));
+}
+
+/**
+ * Redact contact details from free text shown publicly. The Terms
+ * already forbid emails, phone numbers, and URLs in reports; the
+ * server enforces it by redacting rather than rejecting, so a typo'd
+ * note doesn't lose the whole submission.
+ */
+function redactContactInfo(text: string): string {
+  return text
+    .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[email removed]")
+    .replace(/\b(?:https?:\/\/|www\.)[^\s]+/gi, "[link removed]")
+    .replace(/(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?){2}\d{4}/g, "[phone removed]");
 }
 
 interface ReportInput {
@@ -65,6 +115,7 @@ interface ReportInput {
   town: unknown;
   serviceDate: unknown;
   notes: unknown;
+  receiptId?: unknown;
 }
 
 function bad(error: string, status = 400) {
@@ -106,12 +157,14 @@ function validateReport(
   input: ReportInput
 ): { row: Record<string, unknown> } | { error: string } {
   const category = String(input.category ?? "");
-  const serviceName = String(input.serviceName ?? "").trim();
+  const serviceName = redactContactInfo(String(input.serviceName ?? "").trim());
   const amountRaw = String(input.amount ?? "").trim();
   const reportType = String(input.reportType ?? "");
-  const town = normalizeTown(String(input.town ?? ""));
+  const town = redactContactInfo(normalizeTown(String(input.town ?? "")));
   const serviceDateRaw = String(input.serviceDate ?? "").trim() || null;
-  const notes = String(input.notes ?? "").trim() || null;
+  const notes = String(input.notes ?? "").trim()
+    ? redactContactInfo(String(input.notes ?? "").trim())
+    : null;
 
   if (!siteConfig.categories.includes(category as never))
     return { error: "Invalid category." };
@@ -125,15 +178,15 @@ function validateReport(
     return { error: `Notes must be under ${MAX_NOTES} characters.` };
   if (!["paid", "quote"].includes(reportType))
     return { error: "Report type must be paid or quote." };
-  const amountCents = Math.round(Number(amountRaw) * 100);
-  if (!Number.isFinite(amountCents) || amountCents <= 0)
-    return { error: "Amount must be a positive number." };
+  const amountCents = parseAmountCents(amountRaw);
+  if (amountCents === null || amountCents <= 0)
+    return { error: "Amount must be a number like 1234.56." };
   if (amountCents > MAX_AMOUNT_CENTS)
     return { error: "Amount looks unrealistically large. Please check it." };
   let serviceDate: string | null = null;
   if (serviceDateRaw) {
     if (!validServiceDate(serviceDateRaw))
-      return { error: "Service date must be a real date (YYYY-MM-DD)." };
+      return { error: "Service date must be a real date (YYYY-MM-DD), not in the future." };
     serviceDate = serviceDateRaw;
   }
 
@@ -150,23 +203,98 @@ function validateReport(
   };
 }
 
+type Sb = ReturnType<typeof getServiceSupabase>;
+
+/**
+ * Has this exact document already been submitted for this amount? The
+ * (file hash, amount) pair is the dedup key: a multi-quote document can
+ * still verify several reports at different amounts, but the same quote
+ * can't be published twice. (No DB unique constraint — two identical
+ * amounts in one batch insert would trip it — so a narrow race remains:
+ * two simultaneous duplicate submissions could both pass. Low harm:
+ * both are visible and an admin can reject one.)
+ */
+async function duplicateExists(
+  sb: Sb,
+  fileHash: string,
+  amountCents: number
+): Promise<boolean> {
+  const { data, error } = await sb
+    .from("verifications")
+    .select("id")
+    .eq("file_sha256", fileHash)
+    .eq("amount_cents", amountCents)
+    .limit(1);
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
+}
+
+/**
+ * Does an extract receipt back this report? The receipt must exist, be
+ * unconsumed and fresh (24h), match the uploaded file's SHA-256, and the
+ * submitted amount must be within tolerance of the extracted amount.
+ * Anything else — no receipt, an edited amount, a different file —
+ * publishes as unverified.
+ */
+async function receiptVerifies(
+  sb: Sb,
+  receiptId: string | null,
+  fileHash: string | null,
+  amountCents: number
+): Promise<boolean> {
+  if (!receiptId || !fileHash) return false;
+  const { data, error } = await sb
+    .from("extract_receipts")
+    .select("file_sha256, amount_cents, created_at, consumed_at")
+    .eq("id", receiptId)
+    .single();
+  if (error || !data) return false;
+  if (data.consumed_at) return false;
+  if (Date.now() - new Date(data.created_at).getTime() > RECEIPT_TTL_MS)
+    return false;
+  if (data.file_sha256 !== fileHash) return false;
+  return (
+    Math.abs(amountCents - data.amount_cents) <=
+    receiptTolerance(data.amount_cents)
+  );
+}
+
+/** Storage path already holding this document, if any — so a shared
+ *  multi-quote document is uploaded once, not once per quote published. */
+async function existingInvoicePath(
+  sb: Sb,
+  fileHash: string
+): Promise<string | null> {
+  const { data, error } = await sb
+    .from("verifications")
+    .select("invoice_path")
+    .eq("file_sha256", fileHash)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return data?.[0]?.invoice_path ?? null;
+}
+
 /**
  * POST /api/submit — accepts the /submit form.
  *
  * Two modes:
- *  - Single: flat form fields (the manual no-document form). One report.
+ *  - Single: flat form fields (the manual no-AI form). One report. Always
+ *    publishes as unverified — even with a document attached (Option 2):
+ *    the document was never read, so nothing backs the amount. A moderator
+ *    can promote it from /admin after reviewing the invoice.
  *  - Batch: a "reports" field containing a JSON array of report objects, plus
  *    one shared "invoice" file. Used when an uploaded document contained
- *    multiple quotes — each becomes its own report, all verified against the
- *    same stored document.
+ *    multiple quotes — each becomes its own report. Each report may carry
+ *    the receiptId /api/extract returned for it; a report is Verified only
+ *    when its receipt matches the uploaded file's hash and the amount is
+ *    within tolerance of the extracted amount.
  *
- * With a quote/invoice document, reports publish immediately as verified
- * (the document is the verification) and the file is stored in the private
- * bucket, linked via verification rows. Without a document, entries publish
- * immediately as unverified community reports (badged in the UI, excluded
- * from aggregates). There is no moderation queue; takedowns happen via
- * /admin if abuse appears. Uses the service role server-side so the browser
- * never needs elevated keys.
+ * The invoice file is validated (size, extension) and hashed BEFORE any
+ * row is written — rows used to be inserted as "verified" first and the
+ * file checked after, with manual rollback deletes. A duplicate document
+ * (same file hash + amount already verified) is rejected outright.
+ * Uses the service role server-side so the browser never needs elevated keys.
  */
 export async function POST(req: Request) {
   try {
@@ -196,7 +324,7 @@ export async function POST(req: Request) {
     const rawEmail = String(form.get("submitterEmail") ?? "").trim();
     let submitterEmail: string | null = null;
     if (rawEmail) {
-      if (rawEmail.length > 254 || !EMAIL_RE.test(rawEmail)) {
+      if (!isValidEmail(rawEmail)) {
         return bad("Please enter a valid email address.");
       }
       submitterEmail = rawEmail.toLowerCase();
@@ -205,6 +333,25 @@ export async function POST(req: Request) {
     const hasInvoice = invoice instanceof File && invoice.size > 0;
     const now = new Date().toISOString();
     const sb = getServiceSupabase();
+
+    // Validate the invoice before writing anything: size, extension, and
+    // its SHA-256 (used for receipts, dedup, and upload-once reuse).
+    let invoiceBuf: Buffer | null = null;
+    let invoiceHash: string | null = null;
+    let invoiceExt: string | null = null;
+    if (hasInvoice) {
+      const inv = invoice as File;
+      if (inv.size > MAX_INVOICE_BYTES) {
+        return bad("Invoice file must be under 8 MB.");
+      }
+      invoiceExt =
+        inv.name.split(".").pop()?.toLowerCase() ?? "bin";
+      if (!ALLOWED_INVOICE_EXTS.has(invoiceExt)) {
+        return bad("Invoice must be a photo (JPG, PNG, WebP, HEIC) or a PDF.");
+      }
+      invoiceBuf = Buffer.from(await inv.arrayBuffer());
+      invoiceHash = createHash("sha256").update(invoiceBuf).digest("hex");
+    }
 
     // ---- Batch mode: N reports, one shared invoice ----
     const reportsRaw = form.get("reports");
@@ -221,15 +368,30 @@ export async function POST(req: Request) {
 
       // Validate everything before writing anything — no partial batches.
       const rows: Record<string, unknown>[] = [];
+      const verifiedFlags: boolean[] = [];
+      const usedReceiptIds: string[] = [];
       for (const item of items) {
         const v = validateReport((item ?? {}) as ReportInput);
         if ("error" in v) return bad(v.error);
+        const amountCents = v.row.amount_cents as number;
+        let verified = false;
+        if (hasInvoice && invoiceHash) {
+          if (await duplicateExists(sb, invoiceHash, amountCents)) {
+            return bad("This document was already submitted for this amount.");
+          }
+          const receiptId =
+            typeof (item as Record<string, unknown>).receiptId === "string"
+              ? ((item as Record<string, unknown>).receiptId as string)
+              : null;
+          verified = await receiptVerifies(sb, receiptId, invoiceHash, amountCents);
+          if (verified && receiptId) usedReceiptIds.push(receiptId);
+        }
         rows.push({
           ...v.row,
-          // A source document means instant verification for every report.
-          verification_status: hasInvoice ? "verified" : "unverified",
-          moderated_at: hasInvoice ? now : null,
+          verification_status: verified ? "verified" : "unverified",
+          moderated_at: verified ? now : null,
         });
+        verifiedFlags.push(verified);
       }
 
       const { data: inserted, error: insErr } = await sb
@@ -252,45 +414,66 @@ export async function POST(req: Request) {
       }
 
       if (!hasInvoice) {
-        return NextResponse.json({ ok: true, ids, verified: false });
+        return NextResponse.json({
+          ok: true,
+          ids,
+          results: ids.map((id, i) => ({ id, verified: verifiedFlags[i] })),
+        });
       }
 
-      // Upload the document once; link every report to the same file.
-      const inv = invoice as File;
-      if (inv.size > MAX_INVOICE_BYTES) {
-        await sb.from("reports").delete().in("id", ids);
-        return bad("Invoice file must be under 8 MB.");
+      // Upload the document once (reuse the stored path if this file was
+      // already uploaded for an earlier quote from the same document),
+      // then link every report to it.
+      let path = await existingInvoicePath(sb, invoiceHash as string);
+      let uploadedNew = false;
+      if (!path) {
+        path = `shared/${crypto.randomUUID()}/${Date.now()}.${invoiceExt}`;
+        const { error: upErr } = await sb.storage
+          .from("invoices")
+          .upload(path, invoiceBuf as Buffer, {
+            contentType: INVOICE_MIME_BY_EXT[invoiceExt as string] ?? "application/octet-stream",
+          });
+        if (upErr) {
+          await sb.from("reports").delete().in("id", ids);
+          throw upErr;
+        }
+        uploadedNew = true;
       }
-      const ext = inv.name.split(".").pop()?.toLowerCase() ?? "bin";
-      if (!ALLOWED_INVOICE_EXTS.has(ext)) {
-        await sb.from("reports").delete().in("id", ids);
-        return bad("Invoice must be a photo (JPG, PNG, WebP, HEIC) or a PDF.");
-      }
-      const path = `shared/${crypto.randomUUID()}/${Date.now()}.${ext}`;
-      const { error: upErr } = await sb.storage
-        .from("invoices")
-        .upload(path, inv, { contentType: INVOICE_MIME_BY_EXT[ext] ?? "application/octet-stream" });
-      if (upErr) {
-        await sb.from("reports").delete().in("id", ids);
-        throw upErr;
-      }
-      const { error: verErr } = await sb
-        .from("verifications")
-        .insert(ids.map((id) => ({ report_id: id, invoice_path: path })));
+      const { error: verErr } = await sb.from("verifications").insert(
+        ids.map((id, i) => ({
+          report_id: id,
+          invoice_path: path as string,
+          file_sha256: invoiceHash as string,
+          amount_cents: rows[i].amount_cents as number,
+        }))
+      );
       if (verErr) {
         // Never leave rows marked "verified" with no backing invoice:
         // the verification link is what the badge means. Roll back the
-        // reports (and the now-orphaned file) instead of publishing
-        // unverified evidence.
+        // reports (and the file, if this call uploaded it).
         await sb.from("reports").delete().in("id", ids);
-        await sb.storage.from("invoices").remove([path]);
+        if (uploadedNew) await sb.storage.from("invoices").remove([path as string]);
         throw verErr;
       }
+      // Consume the receipts that verified reports (single-use).
+      if (usedReceiptIds.length > 0) {
+        await sb
+          .from("extract_receipts")
+          .update({ consumed_at: now })
+          .in("id", usedReceiptIds);
+      }
 
-      return NextResponse.json({ ok: true, ids, verified: true });
+      return NextResponse.json({
+        ok: true,
+        ids,
+        results: ids.map((id, i) => ({ id, verified: verifiedFlags[i] })),
+      });
     }
 
     // ---- Single mode: flat fields (manual form) ----
+    // Manual entries publish as unverified even with a document attached:
+    // only the AI-read flow (batch + receipt) earns Verified. A moderator
+    // can promote it from /admin after reviewing the invoice.
     const v = validateReport({
       category: form.get("category"),
       serviceName: form.get("serviceName"),
@@ -301,16 +484,18 @@ export async function POST(req: Request) {
       notes: form.get("notes"),
     });
     if ("error" in v) return bad(v.error);
+    if (hasInvoice && invoiceHash) {
+      if (await duplicateExists(sb, invoiceHash, v.row.amount_cents as number)) {
+        return bad("This document was already submitted for this amount.");
+      }
+    }
 
     const { data: report, error: repErr } = await sb
       .from("reports")
       .insert({
         ...v.row,
-        // A source document means instant verification. Without one, the
-        // entry publishes as an unverified community report (badged in the
-        // UI, excluded from aggregates). Takedowns happen via /admin.
-        verification_status: hasInvoice ? "verified" : "unverified",
-        moderated_at: hasInvoice ? now : null,
+        verification_status: "unverified",
+        moderated_at: null,
       })
       .select("id")
       .single();
@@ -331,38 +516,38 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, id: report.id, verified: false });
     }
 
-    // Invoice path: validate, store in the private bucket, link a verification.
-    const inv = invoice as File;
-    if (inv.size > MAX_INVOICE_BYTES) {
-      await sb.from("reports").delete().eq("id", report.id);
-      return bad("Invoice file must be under 8 MB.");
+    // Invoice path: reuse the stored path when this file was already
+    // uploaded, otherwise store it under this report.
+    let path = await existingInvoicePath(sb, invoiceHash as string);
+    let uploadedNew = false;
+    if (!path) {
+      path = `${report.id}/${Date.now()}.${invoiceExt}`;
+      const { error: upErr } = await sb.storage
+        .from("invoices")
+        .upload(path, invoiceBuf as Buffer, {
+          contentType: INVOICE_MIME_BY_EXT[invoiceExt as string] ?? "application/octet-stream",
+        });
+      if (upErr) {
+        await sb.from("reports").delete().eq("id", report.id);
+        throw upErr;
+      }
+      uploadedNew = true;
     }
-    const ext = inv.name.split(".").pop()?.toLowerCase() ?? "bin";
-    if (!ALLOWED_INVOICE_EXTS.has(ext)) {
-      await sb.from("reports").delete().eq("id", report.id);
-      return bad("Invoice must be a photo (JPG, PNG, WebP, HEIC) or a PDF.");
-    }
-    const path = `${report.id}/${Date.now()}.${ext}`;
-    const { error: upErr } = await sb.storage
-      .from("invoices")
-      .upload(path, inv, { contentType: INVOICE_MIME_BY_EXT[ext] ?? "application/octet-stream" });
-    if (upErr) {
-      await sb.from("reports").delete().eq("id", report.id);
-      throw upErr;
-    }
-    const { error: verErr } = await sb
-      .from("verifications")
-      .insert({ report_id: report.id, invoice_path: path });
+    const { error: verErr } = await sb.from("verifications").insert({
+      report_id: report.id,
+      invoice_path: path,
+      file_sha256: invoiceHash as string,
+      amount_cents: v.row.amount_cents as number,
+    });
     if (verErr) {
-      // Never leave a row marked "verified" with no backing invoice —
-      // see the batch-mode note above. Roll back the report and the
-      // now-orphaned file.
+      // Never leave a row with no backing invoice — see the batch-mode
+      // note above. Roll back the report and the file (if newly uploaded).
       await sb.from("reports").delete().eq("id", report.id);
-      await sb.storage.from("invoices").remove([path]);
+      if (uploadedNew) await sb.storage.from("invoices").remove([path as string]);
       throw verErr;
     }
 
-    return NextResponse.json({ ok: true, id: report.id, verified: true });
+    return NextResponse.json({ ok: true, id: report.id, verified: false });
   } catch (err) {
     console.error("submit error:", err);
     return NextResponse.json(

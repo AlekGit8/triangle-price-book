@@ -1,7 +1,8 @@
 /**
  * CENTRALIZED BRANDING — rename the site by editing ONLY this file.
- * The name is currently being verified for trademark/domain availability,
- * so every component, page, and piece of metadata reads from here.
+ * Name cleared Oct 17–21, 2026 (USPTO, NC SOS, common-law checks);
+ * trianglepricebook.com bought Oct 22, 2026. Every component, page,
+ * and piece of metadata reads from here.
  */
 export const siteConfig = {
   /** Public brand name shown everywhere (header, hero, footer, metadata). */

@@ -12,8 +12,7 @@ import { activeSponsor } from "@/lib/site-config";
  *   flight (startsAt inclusive, endsAt exclusive). With no active
  *   sponsor the banner renders nothing — there is no placeholder,
  *   house ad, or empty slot.
- * - Hidden on /admin and /coming-soon (the admin's own visits are
- *   not sponsor traffic, and the coming-soon page shares the layout).
+ * - Hidden on /admin (the admin's own visits are not sponsor traffic).
  * - Clearly labeled "Sponsored". The link goes through /go/<slug>,
  *   which logs one anonymous click and redirects to the sponsor's
  *   site; rel="sponsored" marks the link for search engines.
@@ -26,7 +25,7 @@ export default function SponsorBanner() {
   const sponsor = activeSponsor;
 
   if (!sponsor) return null;
-  if (pathname.startsWith("/admin") || pathname.startsWith("/coming-soon")) return null;
+  if (pathname.startsWith("/admin")) return null;
 
   const now = new Date();
   if (now < new Date(sponsor.startsAt) || now >= new Date(sponsor.endsAt)) return null;

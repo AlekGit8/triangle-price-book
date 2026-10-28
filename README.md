@@ -23,7 +23,12 @@ towns, and dates. No business names are collected anywhere user-facing.
 | AI extraction | Google Gemini (free tier) | free |
 | Spam protection | Cloudflare Turnstile (configured Oct 24, 2026) | free |
 | DNS | Cloudflare (nameservers; domain registered at Porkbun) | free |
-| Email list | Supabase `launch_signups` → export to Kit at launch | free |
+| Email list | Supabase `launch_signups` → Kit (launch email sent Oct 27, 2026) | free |
+
+**Launched Oct 25, 2026** — the coming-soon gate was removed that day, and
+the `/coming-soon` page + `/api/notify` were deleted Oct 27, 2026 (the launch
+is over; the signup form was an unauthenticated write vector). Do NOT delete
+`middleware.ts` — rate limits and security headers live there.
 
 Build command: `npx opennextjs-cloudflare build` (config in `wrangler.jsonc` +
 `open-next.config.ts`). All routes run on the Node.js runtime (OpenNext does
@@ -41,15 +46,20 @@ dependencies remain in the repo.
   against similar verified jobs via token matching, shows Triangle-wide range,
   median, and the matched jobs by name. Honest "not enough data" states.
 - **Browse** (`/browse`): filterable report feed with sort + search.
-- **13 categories** (HVAC, Plumbing, Electrical, Roofing, Windows & Doors,
+- **19 categories** (HVAC, Plumbing, Electrical, Roofing, Windows & Doors,
   Painting, Flooring, Landscaping, Fencing, Tree Service, Pools, Septic Systems,
+  Garage Doors, Crawl Spaces, Gutter Guards, Chimneys, Garage Floors, Concrete,
   Handyman/Other), each with an SEO landing page.
 - **Aggregates are verified-only** (median shown with 2+ verified reports).
-- **Coming-soon mode** (temporary): `middleware.ts` rewrites all public traffic
-  to `/coming-soon` with a two-step email signup (`launch_signups` table).
-  Delete `middleware.ts` to launch the full site.
+- **Launched Oct 25, 2026.** The coming-soon gate is gone; `/coming-soon`
+  and `/api/notify` were deleted Oct 27, 2026.
+  **Never delete `middleware.ts` to launch** — rate limits and security
+  headers live there, and deleting it would remove them.
 - **Admin** (`/admin`, gated by `ADMIN_KEY`): moderation queue + published list
-  + launch-signup totals and email list.
+  + launch-signup totals and email list. Admin API routes share one auth
+  helper (`lib/admin-auth.ts`, constant-time key compare); the middleware
+  limit for `/api/admin/` is generous (300/hr) and only *failed* auth
+  attempts count against a strict 10/hr bucket.
 - **Sponsorships** (Oct 26, 2026): a single top-of-site banner, clearly labelled
   "Sponsored", sold as a 2-week founding sponsorship ($30 total). The active
   sponsor lives in `lib/site-config.ts` (`activeSponsor`, `null` = no banner).
@@ -67,25 +77,16 @@ dependencies remain in the repo.
   grouped in the Sponsors tab); their
   clicks are reported per slug from the same tab.
 - **Legal pages:** full Terms of Service (14 sections) and Privacy Policy
-  (12 sections), both dated Oct 23, 2026. How-it-works page documents the
+  (12 sections), both dated Oct 27, 2026. How-it-works page documents the
   verified/unverified model.
 
 ## Setup (owner checklist)
 
 ### 1. Supabase project
 1. Create a project at [supabase.com](https://supabase.com).
-2. Run the migrations in `supabase/migrations/` **in order** (0001–0012) via
-   **SQL Editor**, plus create the `launch_signups` table:
-   ```sql
-   create table launch_signups (
-     id uuid primary key default gen_random_uuid(),
-     email text unique not null,
-     wants_updates boolean default false,
-     created_at timestamptz default now()
-   );
-   alter table launch_signups enable row level security;
-   -- no public policies: API uses the service-role key
-   ```
+2. Run the migrations in `supabase/migrations/` **in order** (0001–0018) via
+   **SQL Editor**. (`launch_signups` is migration 0016; it used to be a
+   hand-run snippet — that snippet is gone.)
 3. **Project Settings → API**, copy:
    - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -113,8 +114,8 @@ Every push to `main` redeploys automatically.
 Changes are tested on the `beta` branch first — never straight to `main`:
 - Push to `beta` → Cloudflare builds a preview at
   `https://beta-triangle-price-book.longsitelabsllc.workers.dev`.
-  Preview hostnames bypass the coming-soon gate (`lib/preview-host.ts`),
-  so the preview shows the full site; production stays gated.
+  The preview shows the full site (the coming-soon gate was removed
+  Oct 25, 2026; `lib/preview-host.ts` is dead code kept for reference).
 - If the change is approved, merge `beta` → `main` (goes live).
   If not, delete the branch / revert the commit — production never changes
   until a merge happens.
@@ -133,21 +134,18 @@ app/
   browse/page.tsx           # Filterable report feed (client-rendered)
   submit/page.tsx           # Two-tier submission form
   check-quote/page.tsx      # Quote fairness checker
-  coming-soon/page.tsx      # Pre-launch landing + email signup
   how-it-works/page.tsx     # Transparency page (verified vs unverified)
-  terms/page.tsx / privacy/page.tsx  # Legal pages (Oct 23, 2026)
+  terms/page.tsx / privacy/page.tsx  # Legal pages (Oct 27, 2026)
   admin/page.tsx            # Moderation + signups (ADMIN_KEY)
   [category]/page.tsx       # Category landing pages (dynamic)
   api/
     submit/route.ts         # Validates + inserts reports, uploads invoice
     extract/route.ts        # Gemini quote extraction
     check-quote/route.ts    # Similar-job matching
-    notify/route.ts         # Launch email signup
     admin/reports/route.ts  # Lists reports (ADMIN_KEY)
     admin/moderate/route.ts # verify / reject
     admin/signups/route.ts  # Launch signup list (ADMIN_KEY)
-  coming-soon/ ...
-middleware.ts               # TEMPORARY: rewrites public traffic to /coming-soon
+middleware.ts               # Rate limits + security headers
 components/
   SiteHeader.tsx / SiteFooter.tsx / ReportCard.tsx / AggregateCard.tsx /
   StatsStrip.tsx / ...
@@ -157,7 +155,7 @@ lib/
   supabase-client.ts        # Browser client (anon key, RLS-enforced)
   supabase-server.ts        # Service-role client (API routes only)
   format.ts                 # formatCents, date helpers
-supabase/migrations/        # 0001–0007: schema, RLS, views, seeds
+supabase/migrations/        # 0001–0015: schema, RLS, views, seeds, categories
 public/
   logo.svg / icon.svg       # Brand assets
 ```
@@ -183,17 +181,16 @@ Everything runs on free tiers. Real costs kick in only with traction:
 - Supabase: free until 500 MB DB / 1 GB storage — thousands of reports fit.
 - Cloudflare Workers: free (100k requests/day, 3 MiB Worker size limit), commercial use allowed.
 - Gemini: free tier for extraction.
-- Turnstile: free (keys not set up yet — first fix if spam appears).
+- Turnstile: free (configured Oct 24, 2026; widget allowlist covers
+  production + beta Workers hosts). Missing secret fails closed in
+  production — spam protection is never silently off.
 
-## Before public launch
+## Launch status (launched Oct 25, 2026)
 
-- [x] Attorney-grade Terms + Privacy Policy (Oct 23, 2026)
-- [ ] Delete only the `if (gateApplies)` rewrite block in `middleware.ts`
-      to lift coming-soon mode (NOT the whole file — rate limits and
-      security headers live there too)
-- [ ] Submit sitemap in Google Search Console
-- [ ] Pick analytics (Cloudflare Web Analytics is the natural free choice)
+- [x] Attorney-grade Terms + Privacy Policy (Oct 23, 2026; updated Oct 27)
+- [x] Coming-soon gate removed (Oct 25, 2026) — `middleware.ts` kept for
+      rate limits and security headers
 - [x] Set up Turnstile keys (Oct 24, 2026)
-- [ ] Decide on business email provider; create Google account under
-      `hello@trianglepricebook.com` for Search Console / AdSense
-- [ ] Export launch signups → Kit for launch email
+- [x] Analytics: Cloudflare Web Analytics + GA4 (Oct 27, 2026)
+- [x] Launch email sent via Kit (Oct 27, 2026)
+- [ ] Submit sitemap in Google Search Console (owner step)

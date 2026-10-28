@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import AnalyticsChart, { type ChartBucket } from "@/components/AnalyticsChart";
 
-type Range = "24h" | "7d" | "30d" | "90d" | "12m";
+type Range = "24h" | "7d" | "30d" | "90d" | "6m";
 type Granularity = "hour" | "day" | "week" | "month";
 
 const RANGES: { id: Range; label: string; defaultGranularity: Granularity }[] = [
@@ -11,7 +11,7 @@ const RANGES: { id: Range; label: string; defaultGranularity: Granularity }[] = 
   { id: "7d", label: "7 days", defaultGranularity: "day" },
   { id: "30d", label: "30 days", defaultGranularity: "day" },
   { id: "90d", label: "90 days", defaultGranularity: "week" },
-  { id: "12m", label: "12 months", defaultGranularity: "month" },
+  { id: "6m", label: "6 months", defaultGranularity: "month" },
 ];
 
 const GRANULARITIES: { id: Granularity; label: string }[] = [
@@ -124,7 +124,7 @@ export default function AdminAnalytics({ adminKey }: { adminKey: string }) {
       </div>
 
       {loading && !data && <p className="text-muted">Loading analytics…</p>}
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-sm text-red-700 dark:text-red-300">{error}</p>}
 
       {data && (
         <>
@@ -168,11 +168,6 @@ export default function AdminAnalytics({ adminKey }: { adminKey: string }) {
             <div className="mt-3">
               <AnalyticsChart buckets={data.buckets} />
             </div>
-            {data.truncated && (
-              <p className="mt-2 text-sm text-muted">
-                Showing the first 50,000 page views in this range — the tail is cut off.
-              </p>
-            )}
           </div>
 
           <div>

@@ -10,8 +10,10 @@
 
 create table if not exists businesses (
   id         uuid primary key default gen_random_uuid(),
-  -- Business name is collected at submission time and used ONLY for
-  -- aggregate statistics. It is never shown on individual price entries.
+  -- LEFTOVER (Oct 18, 2026): business names were removed entirely —
+  -- they are never collected, shown, or used for aggregates. This table
+  -- is unused and kept only so old migrations still apply cleanly.
+  -- Do NOT reintroduce business names without a new decision.
   name       text not null,
   category   text not null default 'Other',
   created_at timestamptz not null default now()
