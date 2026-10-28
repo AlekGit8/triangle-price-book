@@ -57,24 +57,24 @@ function verdictFor(priceCents: number, r: CheckResult): { headline: string; det
     return {
       headline: "Below the typical range for this job",
       detail: `Your quote is under the lowest similar verified price (${formatCents(min)}). That looks like a strong deal — just confirm the scope matches.`,
-      tone: "text-green-700",
+      tone: "text-green-700 dark:text-green-400",
     };
   if (priceCents <= median)
     return {
       headline: "Within the typical range for this job",
       detail: `Your quote sits at or below the middle of similar verified prices (median ${formatCents(median)}). Looks fair.`,
-      tone: "text-green-700",
+      tone: "text-green-700 dark:text-green-400",
     };
   if (priceCents <= max)
     return {
       headline: "Above the typical range for this job",
       detail: `Your quote is above the median for similar jobs (${formatCents(median)}). Not necessarily unfair — scope and materials matter — but a second quote is worth getting.`,
-      tone: "text-amber-700",
+      tone: "text-amber-700 dark:text-amber-400",
     };
   return {
     headline: "Above the typical range for this job",
     detail: `Your quote tops the highest similar verified price (${formatCents(max)}). Definitely get at least one more quote before committing.`,
-    tone: "text-red-700",
+    tone: "text-red-700 dark:text-red-300",
   };
 }
 
@@ -383,17 +383,17 @@ export default function CheckQuotePage() {
         )}
 
         {extractState === "done" && (
-          <p className="mt-3 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-800 text-center">
+          <p className="mt-3 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-800 dark:text-green-300 dark:bg-green-950 dark:border-green-800 dark:text-green-200 text-center">
             ✓ {extractMsg}
           </p>
         )}
         {extractState === "error" && (
-          <p className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800 text-center">
+          <p className="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800 text-center dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200">
             {extractMsg} You can fill in the form below by hand instead.
           </p>
         )}
         {extractState === "rejected" && (
-          <p className="mt-3 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800 text-center">
+          <p className="mt-3 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-200 text-center">
             {extractMsg}
           </p>
         )}
@@ -448,11 +448,11 @@ export default function CheckQuotePage() {
             className="mt-1 w-full rounded-[10px] border border-line px-3 py-2.5 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10"
           />
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-[10px] bg-black px-4 py-2.5 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+          className="w-full rounded-[10px] bg-black px-4 py-2.5 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50"
         >
           {busy ? "Checking…" : "Check my quote"}
         </button>

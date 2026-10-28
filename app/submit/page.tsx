@@ -142,7 +142,7 @@ function DraftCard({
   return (
     <div
       className={`rounded-2xl border bg-white p-4 sm:p-5 ${
-        d.status === "done" ? "border-green-300" : "border-line"
+        d.status === "done" ? "border-green-300 dark:border-green-700" : "border-line"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -165,7 +165,7 @@ function DraftCard({
       </div>
 
       {d.status === "done" ? (
-        <p className="mt-3 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-800">
+        <p className="mt-3 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-800 dark:text-green-300 dark:bg-green-950 dark:border-green-800 dark:text-green-200">
           ✓ Published — live and anonymous with a Verified badge.
         </p>
       ) : (
@@ -249,7 +249,7 @@ function DraftCard({
           </div>
 
           {d.status === "error" && (
-            <p className="rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800">
+            <p className="rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-200">
               {d.errorMsg}
             </p>
           )}
@@ -259,7 +259,7 @@ function DraftCard({
             disabled={locked || !agreed}
             onClick={() => onPublish(d.key)}
             title={!agreed ? "Please confirm the truthfulness checkbox below first" : undefined}
-            className="w-full rounded-[10px] bg-black px-6 py-2.5 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+            className="w-full rounded-[10px] bg-black px-6 py-2.5 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50"
           >
             {d.status === "publishing" ? "Publishing…" : "Publish this quote"}
           </button>
@@ -719,18 +719,18 @@ export default function SubmitPage() {
         </button>
 
         {extractState === "done" && (
-          <p className="mt-2 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-800 text-center">
+          <p className="mt-2 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-800 dark:text-green-300 dark:bg-green-950 dark:border-green-800 dark:text-green-200 text-center">
             ✓ {extractCount} quote{extractCount === 1 ? "" : "s"} detected — review
             {extractCount === 1 ? "" : " each"} below, then publish.
           </p>
         )}
         {extractState === "error" && (
-          <p className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800 text-center">
+          <p className="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800 text-center dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200">
             {extractMsg} Please try uploading again.
           </p>
         )}
         {extractState === "rejected" && (
-          <p className="mt-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800 text-center">
+          <p className="mt-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-200 text-center">
             {extractMsg}
           </p>
         )}
@@ -758,21 +758,21 @@ export default function SubmitPage() {
           </p>
 
           {doneCount === drafts.length && (
-            <div className="mt-4 rounded-xl border border-green-300 bg-green-50 p-5 text-center">
-              <p className="font-bold text-green-900">
+            <div className="mt-4 rounded-xl border border-green-300 dark:border-green-700 bg-green-50 p-5 text-center dark:border-green-800 dark:bg-green-950">
+              <p className="font-bold text-green-900 dark:text-green-200">
                 All {drafts.length} published! Thank you for contributing.
               </p>
               <div className="mt-3 flex flex-wrap justify-center gap-3">
                 <button
                   type="button"
                   onClick={resetUpload}
-                  className="rounded-full border border-green-700 px-5 py-2 text-sm font-semibold text-green-900 hover:bg-green-100"
+                  className="rounded-full border border-green-700 px-5 py-2 text-sm font-semibold text-green-900 dark:text-green-200 hover:bg-green-100 dark:bg-green-950 dark:border-green-600 dark:hover:bg-green-950"
                 >
                   Upload another document
                 </button>
                 <a
                   href="/browse"
-                  className="rounded-[10px] bg-black px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+                  className="rounded-[10px] bg-black px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200"
                 >
                   Browse prices →
                 </a>
@@ -829,7 +829,7 @@ export default function SubmitPage() {
                 type="button"
                 disabled={!draftsAgreed || publishingAll || pendingCount === 0}
                 onClick={publishAll}
-                className="mt-4 w-full rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+                className="mt-4 w-full rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50"
               >
                 {publishingAll
                   ? "Publishing…"
@@ -1008,7 +1008,7 @@ export default function SubmitPage() {
         </label>
 
         {status === "error" && (
-          <p className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+          <p className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-200">
             {errorMsg}
           </p>
         )}
@@ -1019,7 +1019,7 @@ export default function SubmitPage() {
             status === "sending" ||
             (!!turnstileSiteKey && !turnstileToken && !turnstileUnavailable)
           }
-          className="w-full rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+          className="w-full rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50"
         >
           {status === "sending"
             ? "Publishing…"

@@ -9,9 +9,9 @@ function Badge({
   tone: "green" | "yellow" | "grey";
 }) {
   const tones = {
-    green: "bg-green-100 text-green-800",
-    yellow: "bg-[#FEF3C7] text-[#92400E]",
-    grey: "bg-neutral-100 text-neutral-600",
+    green: "bg-green-100 dark:bg-green-950 text-green-800 dark:text-green-300 dark:bg-green-950 dark:text-green-300",
+    yellow: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+    grey: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300",
   };
   return (
     <span

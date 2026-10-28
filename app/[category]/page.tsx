@@ -100,7 +100,7 @@ export default async function CategoryPage({
             </p>
             <Link
               href="/submit"
-              className="mt-4 inline-block rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800"
+              className="mt-4 inline-block rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200"
             >
               Be the first — share what you paid, anonymously
             </Link>
@@ -139,7 +139,7 @@ export default async function CategoryPage({
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             href="/submit"
-            className="inline-block rounded-[10px] bg-white px-6 py-3 font-semibold text-ink hover:bg-neutral-100"
+            className="inline-block rounded-[10px] bg-white px-6 py-3 font-semibold text-ink hover:bg-neutral-100 dark:hover:bg-neutral-800"
           >
             Share what you paid, anonymously
           </Link>

@@ -1,6 +1,16 @@
 import type { Config } from "tailwindcss";
 
+/**
+ * A Tailwind color value that reads from a CSS variable (defined in
+ * app/globals.css), so the whole palette flips in dark mode without a
+ * `dark:` variant on every use. The variable holds an RGB triplet, e.g.
+ * `--ink: 17 17 17`, and `<alpha-value>` lets opacity modifiers like
+ * `bg-white/90` keep working.
+ */
+const rgb = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+
 const config: Config = {
+  darkMode: "class",
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -24,12 +34,16 @@ const config: Config = {
           600: "#d97706",
         },
         /** Marc Lou redesign palette: warm paper, near-black ink, grey secondary. */
-        ink: "#111111",
-        paper: "#FAFAF8",
-        muted: "#6B7280",
-        line: "#E5E7EB",
-        card: "#F3F3F1",
-        pitch: "#0A0A0A",
+        ink: rgb("ink"),
+        paper: rgb("paper"),
+        muted: rgb("muted"),
+        line: rgb("line"),
+        card: rgb("card"),
+        pitch: rgb("pitch"),
+        /** Surfaces flip too: white cards become dark cards, black buttons
+            become white buttons (with white text flipping to dark). */
+        white: rgb("surface"),
+        black: rgb("inverse"),
       },
       fontFamily: {
         serif: ["var(--font-display)", "Georgia", "Times New Roman", "serif"],

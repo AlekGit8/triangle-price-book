@@ -76,7 +76,7 @@ export default function FeedbackForm() {
         <p className="font-mono text-xs text-muted">
           {message.length}/{MAX_MESSAGE}
         </p>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       </div>
       <label className="mt-3 block text-sm">
         <span className="font-semibold text-ink">
@@ -95,7 +95,7 @@ export default function FeedbackForm() {
       <button
         type="submit"
         disabled={busy || message.trim().length === 0}
-        className="mt-3 w-full rounded-[10px] bg-black px-6 py-2.5 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+        className="mt-3 w-full rounded-[10px] bg-black px-6 py-2.5 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50"
       >
         {busy ? "Sending…" : "Send feedback →"}
       </button>

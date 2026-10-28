@@ -196,12 +196,12 @@ export default function AdminPage() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-[10px] bg-black px-4 py-2 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+            className="rounded-[10px] bg-black px-4 py-2 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50"
           >
             {loading ? "…" : "Unlock"}
           </button>
         </form>
-        {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
+        {error && <p className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p>}
       </div>
     );
   }
@@ -375,7 +375,7 @@ export default function AdminPage() {
                 <span className="text-sm text-ink">{s.email}</span>
                 <span className="flex items-center gap-3">
                   {s.wants_updates && (
-                    <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
+                    <span className="rounded-full bg-green-100 dark:bg-green-950 px-2.5 py-0.5 text-xs font-semibold text-green-800 dark:text-green-300">
                       Updates
                     </span>
                   )}
@@ -431,7 +431,7 @@ export default function AdminPage() {
                   <p className="mt-1 font-mono text-xs text-muted">Submitter: {r.submitter_email}</p>
                 )}
                 {r.verifications.length > 0 ? (
-                  <p className="mt-1 text-xs font-semibold text-green-700">
+                  <p className="mt-1 text-xs font-semibold text-green-700 dark:text-green-400">
                     Invoice attached: {r.verifications.length} file(s) — review in Supabase
                     Storage → invoices bucket, path prefix {r.id}/
                   </p>
@@ -454,7 +454,7 @@ export default function AdminPage() {
                         ? "No invoice attached — verify is unavailable"
                         : undefined
                     }
-                    className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black"
+                    className="rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-black"
                   >
                     Verify &amp; publish
                   </button>
@@ -466,7 +466,7 @@ export default function AdminPage() {
                   </button>
                   <button
                     onClick={() => moderate(r.id, "reject", "queue")}
-                    className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+                    className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 dark:text-red-300 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950"
                   >
                     Reject
                   </button>
@@ -478,7 +478,7 @@ export default function AdminPage() {
                       moderate(r.id, "reject", "published");
                     }
                   }}
-                  className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+                  className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 dark:text-red-300 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950"
                 >
                   Take down
                 </button>
