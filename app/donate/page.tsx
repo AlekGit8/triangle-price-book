@@ -9,7 +9,7 @@ export const metadata = {
 
 /**
  * /donate — the tip jar. A Stripe Payment Link (donor chooses the
- * amount, $1–$500, preset $10) handles the payment on Stripe's hosted
+ * amount, $1–$500, preset $5) handles the payment on Stripe's hosted
  * page; after paying, Stripe redirects back here with ?thanks=1.
  * No account needed, no code or secrets on our side — the link is a
  * static URL in siteConfig.donateUrl.
