@@ -73,7 +73,6 @@ function monthToDate(month: string): string {
 }
 
 function loadPersistedFields(): FormFields {
-  if (typeof window === "undefined") return emptyFields;
   try {
     const raw = window.sessionStorage.getItem(PERSISTED_FIELDS_KEY);
     if (!raw) return emptyFields;
@@ -84,6 +83,9 @@ function loadPersistedFields(): FormFields {
     if (/^\d{4}-\d{2}-\d{2}$/.test(fields.serviceDate)) {
       fields.serviceDate = fields.serviceDate.slice(0, 7);
     }
+    // The email is never restored (it isn't persisted either, below):
+    // re-typing one field beats keeping a contact address in storage.
+    fields.submitterEmail = "";
     return fields;
   } catch {
     return emptyFields;
@@ -103,6 +105,12 @@ interface DraftQuote {
   notes: string;
   status: DraftStatus;
   errorMsg: string;
+  /** Receipt id from /api/extract, binding this quote's amount to the
+   *  uploaded document — the server only badges Verified when the
+   *  receipt matches. Editing the amount after extraction voids it. */
+  receiptId: string | null;
+  /** Set on publish: whether the server badged this entry Verified. */
+  verified?: boolean;
 }
 
 function draftFromAI(key: string, q: Record<string, unknown>): DraftQuote {
@@ -118,6 +126,7 @@ function draftFromAI(key: string, q: Record<string, unknown>): DraftQuote {
     notes: typeof q.notes === "string" ? q.notes : "",
     status: "pending",
     errorMsg: "",
+    receiptId: typeof q.receiptId === "string" ? q.receiptId : null,
   };
 }
 
@@ -166,7 +175,9 @@ function DraftCard({
 
       {d.status === "done" ? (
         <p className="mt-3 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-800 dark:text-green-300 dark:bg-green-950 dark:border-green-800 dark:text-green-200">
-          ✓ Published — live and anonymous with a Verified badge.
+          {d.verified === false
+            ? "✓ Published — live and anonymous as an unverified report. (The amount didn't match the document we read, so it has no Verified badge — a moderator can still review it.)"
+            : "✓ Published — live and anonymous with a Verified badge."}
         </p>
       ) : (
         <div className="mt-3 space-y-4">
@@ -270,7 +281,11 @@ function DraftCard({
 }
 
 export default function SubmitPage() {
-  const [fields, setFields] = useState<FormFields>(loadPersistedFields);
+  // Initialize with empty fields and restore persisted values after
+  // mount: reading sessionStorage during render returns empty fields on
+  // the server and stored values on the client, which mismatches
+  // hydration (and can warn). The post-mount restore avoids that.
+  const [fields, setFields] = useState<FormFields>(emptyFields);
   const [docFile, setDocFile] = useState<File | null>(null);
   // Option 2 attachment: proof only, never sent to the AI extractor.
   // If set, /api/submit marks the entry verified on the file's presence alone.
@@ -280,6 +295,7 @@ export default function SubmitPage() {
   const [extractCount, setExtractCount] = useState(0);
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [submittedVerified, setSubmittedVerified] = useState(true);
+  const [submittedWithDoc, setSubmittedWithDoc] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   // Multi-quote drafts from an uploaded document.
@@ -304,10 +320,19 @@ export default function SubmitPage() {
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileUnavailable, setTurnstileUnavailable] = useState(false);
 
+  // Restore the persisted manual form once, after mount (see above).
+  useEffect(() => {
+    setFields(loadPersistedFields());
+  }, []);
+
   // Persist the manual form as it is typed, so a refresh doesn't wipe it.
+  // The email is excluded: it is never written to storage.
   useEffect(() => {
     try {
-      window.sessionStorage.setItem(PERSISTED_FIELDS_KEY, JSON.stringify(fields));
+      window.sessionStorage.setItem(
+        PERSISTED_FIELDS_KEY,
+        JSON.stringify({ ...fields, submitterEmail: "" })
+      );
     } catch {
       // Storage unavailable (private mode, etc.) — the form still works.
     }
@@ -493,6 +518,11 @@ export default function SubmitPage() {
       setExtractCount(quotes.length);
       setExtractState("done");
     } catch (err) {
+      // The token is single-use: if fetch()/res.json() threw after the
+      // server consumed it, the inline reset above never ran and a retry
+      // would re-send a dead token. Resetting here is harmless when the
+      // token was never consumed (the widget just issues a fresh one).
+      clearTurnstileToken();
       setExtractState("error");
       setExtractMsg(err instanceof Error ? err.message : "Could not read the document.");
       // Reset the input so the user can retry the same file.
@@ -502,8 +532,12 @@ export default function SubmitPage() {
     }
   }
 
-  /** Publish one or more drafts; the uploaded document verifies all of them. */
-  async function publishDraftBatch(items: DraftQuote[]) {
+  /** Publish one or more drafts; the uploaded document verifies all of
+      them whose amount still matches what was read from it. Returns the
+      per-report verified flags so each draft card can say so. */
+  async function publishDraftBatch(
+    items: DraftQuote[]
+  ): Promise<Array<{ id: string; verified: boolean }>> {
     const form = new FormData();
     form.set(
       "reports",
@@ -516,19 +550,27 @@ export default function SubmitPage() {
           town: d.town.trim(),
           serviceDate: monthToDate(d.serviceDate),
           notes: d.notes.trim(),
+          receiptId: d.receiptId,
         }))
       )
     );
     form.set("submitterEmail", draftEmail.trim());
     if (docFile) form.set("invoice", docFile);
     form.set("turnstileToken", await getTurnstileToken());
-    const res = await fetch("/api/submit", { method: "POST", body: form });
-    const json = await res.json();
-    // The token is single-use: the server consumed it whether the submit
-    // worked or not. Reset now so a retry gets a fresh token instead of
-    // re-sending this dead one.
-    clearTurnstileToken();
+    let res: Response;
+    let json: { ok?: boolean; error?: string; results?: Array<{ id: string; verified: boolean }> };
+    try {
+      res = await fetch("/api/submit", { method: "POST", body: form });
+      json = await res.json();
+    } finally {
+      // The token is single-use: the server consumed it whether the submit
+      // worked or not. Reset now so a retry gets a fresh token instead of
+      // re-sending this dead one — including when fetch()/res.json()
+      // throws after the server consumed it.
+      clearTurnstileToken();
+    }
     if (!res.ok || !json.ok) throw new Error(json.error ?? "Submission failed");
+    return json.results ?? [];
   }
 
   function draftValid(d: DraftQuote): string | null {
@@ -549,8 +591,8 @@ export default function SubmitPage() {
     }
     updateDraft(key, { status: "publishing", errorMsg: "" });
     try {
-      await publishDraftBatch([d]);
-      updateDraft(key, { status: "done" });
+      const results = await publishDraftBatch([d]);
+      updateDraft(key, { status: "done", verified: results[0]?.verified ?? false });
     } catch (err) {
       updateDraft(key, {
         status: "error",
@@ -574,10 +616,16 @@ export default function SubmitPage() {
       ds.map((d) => (d.status === "pending" ? { ...d, status: "publishing" as const, errorMsg: "" } : d))
     );
     try {
-      await publishDraftBatch(pending);
-      setDrafts((ds) =>
-        ds.map((d) => (d.status === "publishing" ? { ...d, status: "done" as const } : d))
-      );
+      const results = await publishDraftBatch(pending);
+      setDrafts((ds) => {
+        // Results come back in the same order as the submitted drafts.
+        let i = -1;
+        return ds.map((d) => {
+          if (d.status !== "publishing") return d;
+          i += 1;
+          return { ...d, status: "done" as const, verified: results[i]?.verified ?? false };
+        });
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Submission failed";
       setDrafts((ds) =>
@@ -617,6 +665,7 @@ export default function SubmitPage() {
       clearTurnstileToken();
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Submission failed");
       setSubmittedVerified(json.verified !== false);
+      setSubmittedWithDoc(!!invoiceFile);
       setStatus("done");
       setFields(emptyFields);
       setDocFile(null);
@@ -624,6 +673,10 @@ export default function SubmitPage() {
       if (manualInputRef.current) manualInputRef.current.value = "";
       if (docInputRef.current) docInputRef.current.value = "";
     } catch (err) {
+      // See handleDocChange: reset the token here too, so a fetch() /
+      // res.json() failure after the server consumed it doesn't leave a
+      // dead token for the retry.
+      clearTurnstileToken();
       setStatus("error");
       setErrorMsg(err instanceof Error ? err.message : "Submission failed");
     }
@@ -642,8 +695,10 @@ export default function SubmitPage() {
           ) : (
             <>
               Your price is live — anonymously, as an unverified community
-              report. Thank you for contributing. (Uploading a document next
-              time earns a Verified badge.)
+              report. Thank you for contributing.{" "}
+              {submittedWithDoc
+                ? "(Your document is attached — a moderator reviews it and can add a Verified badge.)"
+                : "(Uploading a document next time earns a Verified badge.)"}
             </>
           )}
         </p>
@@ -662,9 +717,9 @@ export default function SubmitPage() {
       <h1 className="font-serif text-4xl text-ink">Submit a price</h1>
       <p className="mt-2 text-muted">
         Two ways to contribute. <strong>Uploading</strong> a quote or invoice
-        gets your entries Verified badges — and if your document contains
-        multiple quotes, each one becomes its own entry. A manual entry still
-        helps your neighbors.
+        lets us read it — entries publish with Verified badges when the price
+        matches the document. If your document contains multiple quotes, each
+        one becomes its own entry. A manual entry still helps your neighbors.
       </p>
 
       {/* Option 1: smart upload card */}
@@ -741,7 +796,7 @@ export default function SubmitPage() {
         )}
         {docFile && extractState !== "reading" && (
           <p className="mt-2 text-xs text-muted text-center">
-            Attached as proof — entries publish with Verified badges. Files stay private.
+            Attached as proof — entries publish with Verified badges. Files stay private and are never published.
           </p>
         )}
       </div>
@@ -1024,14 +1079,14 @@ export default function SubmitPage() {
           {status === "sending"
             ? "Publishing…"
             : manualFile
-              ? "Publish as verified report"
+              ? "Publish with document attached"
               : docFile
                 ? "Review above, then publish"
                 : "Publish as unverified report"}
         </button>
         <p className="text-xs text-muted text-center">
           {manualFile || docFile
-            ? "Your price publishes instantly and anonymously with a Verified badge."
+            ? "Your price publishes instantly and anonymously as an unverified report — a moderator reviews your document and can add a Verified badge."
             : "Your price publishes instantly and anonymously as an unverified community report — no document needed."}
         </p>
       </form>

@@ -8,27 +8,27 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <div className="py-10 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-extrabold text-brand-900 dark:text-brand-100">Privacy Policy</h1>
-      <p className="mt-2 text-sm text-stone-500">Last updated: October 26, 2026</p>
-      <p className="mt-4 text-[15px] leading-relaxed text-stone-700">
+      <h1 className="text-3xl font-extrabold text-ink">Privacy Policy</h1>
+      <p className="mt-2 text-sm text-muted">Last updated: October 27, 2026</p>
+      <p className="mt-4 text-[15px] leading-relaxed text-ink">
         {siteConfig.siteName} is operated by {siteConfig.operatorName} (&ldquo;we&rdquo;,
         &ldquo;us&rdquo;).
       </p>
 
-      <div className="mt-8 space-y-6 text-[15px] leading-relaxed text-stone-700">
-        <section className="rounded-xl border border-stone-200 bg-white p-6">
-          <h2 className="text-lg font-bold text-stone-900">The short version</h2>
+      <div className="mt-8 space-y-6 text-[15px] leading-relaxed text-ink">
+        <section className="rounded-xl border border-line bg-white p-6">
+          <h2 className="text-lg font-bold text-ink">The short version</h2>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li>No account or login is needed to browse or submit.</li>
             <li>Public entries show only the <strong>service, price, town, and date</strong>, never names, addresses, or business names.</li>
-            <li>Quotes and invoices stay private. Only moderators see them, and only to verify an entry.</li>
+            <li>Quotes and invoices stay private. Only moderators see them, and only to verify an entry — except that a document you ask us to read is also sent to Google&rsquo;s Gemini AI to extract the service details and price from it (see Section 2).</li>
             <li>We never sell or share your submission, uploaded documents, or email with advertisers.</li>
             <li>The Site runs ads, and the ad provider may use cookies (see Section 6).</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-stone-900">1. Anonymous by default</h2>
+          <h2 className="text-lg font-bold text-ink">1. Anonymous by default</h2>
           <p className="mt-2">
             Browsing {siteConfig.siteName} requires no account and no login. Public price
             entries are attributed only as &ldquo;reported by a homeowner in {`{town}`},&rdquo;
@@ -37,17 +37,17 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-stone-900">2. Information we collect</h2>
+          <h2 className="text-lg font-bold text-ink">2. Information we collect</h2>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li><strong>Price report details:</strong> service, category, amount, whether it was paid or quoted, town, date, and optional notes. These are published anonymously. Please don&rsquo;t put names, addresses, phone numbers, or business names in notes; we remove them when we find them.</li>
-            <li><strong>Quote or invoice uploads (optional):</strong> these documents may contain names, addresses, and business details. They are stored privately, visible only to moderators, and used only to verify the entry. They are never published.</li>
+            <li><strong>Quote or invoice uploads (optional):</strong> these documents may contain names, addresses, and business details. They are stored privately, visible only to moderators, and used only to verify the entry. They are never published. If you use the upload-and-auto-fill option, the document is also sent to Google&rsquo;s Gemini AI service to read the service details and price from it; Google processes it only to return that extraction to us.</li>
             <li><strong>Email address (optional):</strong> used only to follow up about your submission if needed.</li>
             <li><strong>Technical information:</strong> such as IP address, browser and device type, and pages visited, collected automatically by our hosting, analytics, and security tools.</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-stone-900">3. How we use information</h2>
+          <h2 className="text-lg font-bold text-ink">3. How we use information</h2>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li>To publish price reports and verify entries.</li>
             <li>To prevent spam, fraud, and abuse.</li>
@@ -58,16 +58,16 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-stone-900">4. What we never do</h2>
+          <h2 className="text-lg font-bold text-ink">4. What we never do</h2>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li>We never sell or share your submission, uploaded documents, or email address with advertisers or anyone else.</li>
             <li>We never publish submitter names, addresses, phone numbers, emails, or business names.</li>
-            <li>We never share uploaded documents with anyone except site moderators and the secure service providers that store them, unless the law requires it.</li>
+            <li>We never share uploaded documents with anyone except site moderators, the secure service providers that store them, and Google&rsquo;s Gemini AI service when you ask us to read a document (see Section 2), unless the law requires it.</li>
           </ul>
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-stone-900">5. Analytics and cookies</h2>
+          <h2 className="text-lg font-bold text-ink">5. Analytics and cookies</h2>
           <p className="mt-2">
             We use privacy-friendly analytics with no cross-site tracking profiles. The
             submission form may use Cloudflare Turnstile, a privacy-preserving spam
@@ -88,7 +88,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-stone-900">6. Advertising</h2>
+          <h2 className="text-lg font-bold text-ink">6. Advertising</h2>
           <p className="mt-2">
             The Site may run ads to help cover its costs. Our ad provider may use cookies
             or similar technologies to show ads, which may be based on your browsing. We
@@ -102,17 +102,17 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-stone-900">7. Service providers and legal requests</h2>
+          <h2 className="text-lg font-bold text-ink">7. Service providers and legal requests</h2>
           <p className="mt-2">
             We use trusted providers for hosting, file storage, spam protection,
-            analytics, and ads. They handle data only to provide those services to us.
+            AI document reading (Google Gemini), analytics, and ads. They handle data only to provide those services to us.
             We may also disclose information if required by law or to protect the Site
             and its users.
           </p>
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-stone-900">8. Data retention and deletion</h2>
+          <h2 className="text-lg font-bold text-ink">8. Data retention and deletion</h2>
           <p className="mt-2">
             Published reports are kept as long as they remain useful as historical data.
             Uploaded documents are kept up to as long as the entry remains posted on the
@@ -123,7 +123,7 @@ export default function PrivacyPage() {
             any time by emailing{" "}
             <a
               href={`mailto:${siteConfig.contactEmail}`}
-              className="font-semibold text-brand-700 dark:text-brand-200 hover:underline"
+              className="font-semibold text-ink hover:underline"
             >
               {siteConfig.contactEmail}
             </a>
@@ -133,7 +133,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-stone-900">9. Security</h2>
+          <h2 className="text-lg font-bold text-ink">9. Security</h2>
           <p className="mt-2">
             We use reasonable measures to protect the information we hold, including
             keeping uploaded documents in private storage. No method of storing or
@@ -143,7 +143,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-stone-900">10. Children</h2>
+          <h2 className="text-lg font-bold text-ink">10. Children</h2>
           <p className="mt-2">
             The Site is intended for adults. We do not knowingly collect information from
             anyone under 18.
@@ -151,7 +151,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-stone-900">11. Changes</h2>
+          <h2 className="text-lg font-bold text-ink">11. Changes</h2>
           <p className="mt-2">
             We may update this policy. Material changes will be noted on this page with
             a new revision date.
@@ -159,12 +159,12 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-stone-900">12. Contact</h2>
+          <h2 className="text-lg font-bold text-ink">12. Contact</h2>
           <p className="mt-2">
             Privacy questions or deletion requests:{" "}
             <a
               href={`mailto:${siteConfig.contactEmail}`}
-              className="font-semibold text-brand-700 dark:text-brand-200 hover:underline"
+              className="font-semibold text-ink hover:underline"
             >
               {siteConfig.contactEmail}
             </a>

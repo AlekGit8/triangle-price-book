@@ -1,8 +1,10 @@
 /**
  * Shared Cloudflare Turnstile verification for API routes.
- * Verification is only enforced when TURNSTILE_SECRET_KEY is configured;
- * otherwise it passes through (spam protection disabled).
- * When enforced, requires success === true, the expected action, and a
+ * Verification is enforced whenever TURNSTILE_SECRET_KEY is configured,
+ * and FAILS CLOSED in production when it is missing: a deleted secret
+ * must never silently disable spam protection (in local dev, with no
+ * secret, verification is skipped so the forms still work). When
+ * enforced, requires success === true, the expected action, and a
  * hostname on the allowlist (TURNSTILE_HOSTNAMES, defaulting to the known
  * production hosts). The allowlist must cover every host that serves the
  * site — custom domains AND the Workers hosts — or verification fails
@@ -16,7 +18,10 @@ export async function verifyTurnstile(
   expectedAction?: string
 ): Promise<boolean> {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return true; // Turnstile not configured -> skip verification
+  if (!secret) {
+    // Fail closed in production; pass through only in local dev.
+    return process.env.NODE_ENV !== "production";
+  }
   if (!token) return false;
   try {
     const res = await fetch(

@@ -100,6 +100,12 @@ export default function Marquee({
 
     let raf = 0;
     let last = performance.now();
+    let ticking = false;
+    // The rAF loop only runs while the marquee is on screen and the tab
+    // is visible (P3): an off-screen ticker scrolling 60×/s burns CPU
+    // for nothing. The IntersectionObserver + visibilitychange restart
+    // it when the marquee comes back into view.
+    let inView = true;
     function tick(now: number) {
       const dt = Math.min(now - last, 100);
       last = now;
@@ -116,14 +122,35 @@ export default function Marquee({
           }
         }
       }
+      if (inView && !document.hidden) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        ticking = false;
+      }
+    }
+    function startTicking() {
+      if (ticking) return;
+      ticking = true;
+      last = performance.now();
       raf = requestAnimationFrame(tick);
     }
-    raf = requestAnimationFrame(tick);
+    const io = new IntersectionObserver((entries) => {
+      inView = entries[0]?.isIntersecting ?? true;
+      if (inView && !document.hidden) startTicking();
+    });
+    io.observe(scroller);
+    const onVis = () => {
+      if (!document.hidden && inView) startTicking();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    startTicking();
 
     return () => {
       cancelAnimationFrame(raf);
       scroller.removeEventListener("scroll", normalize);
       ro.disconnect();
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVis);
       if (resumeTimerRef.current) {
         clearTimeout(resumeTimerRef.current);
         resumeTimerRef.current = null;

@@ -17,7 +17,7 @@ interface QueueReport {
   verification_status: string;
   submitter_email: string | null;
   created_at: string;
-  verifications: Array<{ id: string; invoice_path: string; created_at: string }>;
+  verifications: Array<{ id: string; invoice_path: string; created_at: string; signed_url?: string | null }>;
 }
 
 interface Signup {
@@ -431,10 +431,29 @@ export default function AdminPage() {
                   <p className="mt-1 font-mono text-xs text-muted">Submitter: {r.submitter_email}</p>
                 )}
                 {r.verifications.length > 0 ? (
-                  <p className="mt-1 text-xs font-semibold text-green-700 dark:text-green-400">
-                    Invoice attached: {r.verifications.length} file(s) — review in Supabase
-                    Storage → invoices bucket, path prefix {r.id}/
-                  </p>
+                  <div className="mt-1 space-y-1">
+                    {r.verifications.map((v) => (
+                      <p key={v.id} className="text-xs text-muted">
+                        Invoice: <span className="font-mono break-all">{v.invoice_path}</span>
+                        {v.signed_url ? (
+                          <>
+                            {" — "}
+                            <a
+                              href={v.signed_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-semibold text-ink hover:underline"
+                            >
+                              View invoice
+                            </a>{" "}
+                            <span className="text-muted">(link expires in 5 min)</span>
+                          </>
+                        ) : (
+                          " — view in Supabase Storage → invoices bucket"
+                        )}
+                      </p>
+                    ))}
+                  </div>
                 ) : (
                   <p className="mt-1 text-xs text-muted">No invoice attached.</p>
                 )}
@@ -474,7 +493,7 @@ export default function AdminPage() {
               ) : (
                 <button
                   onClick={() => {
-                    if (confirm("Take down this published entry? It will be hidden from the site.")) {
+                    if (confirm("Take down this published entry? It will be hidden from the site and its invoice file deleted.")) {
                       moderate(r.id, "reject", "published");
                     }
                   }}

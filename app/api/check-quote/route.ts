@@ -1,34 +1,15 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase-server";
 import { siteConfig } from "@/lib/site-config";
+import { searchTokens, matchScore } from "@/lib/search";
+import { callGemini, geminiModelName } from "@/lib/gemini";
 
 
 // Guard against giant JSON bodies; a description is a sentence, not a novel.
 const MAX_BODY_BYTES = 16 * 1024;
 const MAX_DESCRIPTION = 300;
-// $20M in cents — sanity cap, matching /api/submit.
-const MAX_PRICE_CENTS = 2_000_000_000;
-
-const STOPWORDS = new Set([
-  "a", "an", "the", "and", "or", "for", "with", "of", "to", "in", "on", "at",
-]);
-
-function tokens(s: string): Set<string> {
-  return new Set(
-    s
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ")
-      .split(/\s+/)
-      .filter((w) => w.length > 2 && !STOPWORDS.has(w))
-  );
-}
-
-/** Shared significant tokens between the user's description and a report name. */
-function matchScore(query: Set<string>, name: Set<string>): number {
-  let shared = 0;
-  query.forEach((t) => { if (name.has(t)) shared++; });
-  return shared;
-}
+// $2M in cents — sanity cap, matching /api/submit.
+const MAX_PRICE_CENTS = 200_000_000;
 
 interface AiEstimate {
   low_cents: number;
@@ -37,14 +18,14 @@ interface AiEstimate {
   basis: string;
 }
 
-// gemini-3.5-flash-lite ONLY (user direction, verified Oct 24, 2026 against
-// Google's docs): released Jul 21, 2026, free-tier eligible, lifecycle good
-// until Jul 21, 2027. Do NOT re-add gemini-2.5-flash (retired Oct 20, 2026
-// on Vertex; Developer API access restricted to prior users — our key is
-// new, so it does not work), gemini-3.5-flash (deprecated Oct 8, 2026 —
-// calls now route to gemini-3.6-flash, so it was never a real fallback),
-// or gemini-3.6-flash (retires Nov 19, 2026).
-const AI_MODELS = ["gemini-3.5-flash-lite"];
+// The model comes from lib/gemini.ts (GEMINI_MODEL env, default
+// gemini-3.5-flash-lite ONLY — user direction, verified Oct 24, 2026
+// against Google's docs: released Jul 21, 2026, free-tier eligible,
+// lifecycle good until Jul 21, 2027. Do NOT re-add gemini-2.5-flash
+// (retired Oct 20, 2026 on Vertex; Developer API access restricted to
+// prior users — our key is new, so it does not work), gemini-3.5-flash
+// (deprecated Oct 8, 2026 — calls now route to gemini-3.6-flash, so it
+// was never a real fallback), or gemini-3.6-flash (retires Nov 19, 2026).
 // Total budget for the Gemini call(s) so a slow model can never hang the
 // whole quote check.
 const AI_TOTAL_TIMEOUT_MS = 15_000;
@@ -120,67 +101,98 @@ async function fetchAiEstimate(
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
   const deadline = Date.now() + AI_TOTAL_TIMEOUT_MS;
-  // One attempt per model — see the no-retry note above. Any failure falls
-  // through to the next model; timeouts, parse failures, and invalid
-  // estimates are never retried either.
-  for (const model of AI_MODELS) {
-    const remaining = deadline - Date.now();
-    if (remaining <= 0) break;
-    let res: Response;
-    try {
-      res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-        {
-          method: "POST",
-          headers: {
-            "x-goog-api-key": apiKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              { parts: [{ text: aiEstimatePrompt(description, category) }] },
-            ],
-            generationConfig: {
-              response_mime_type: "application/json",
-              maxOutputTokens: 500,
-            },
-          }),
-          signal: AbortSignal.timeout(Math.max(1000, remaining)),
-        }
-      );
-    } catch (err) {
-      console.error(`check-quote: Gemini model ${model} fetch failed`, err);
-      continue;
-    }
-    if (!res.ok) {
-      console.error(`check-quote: Gemini model ${model} error`, res.status);
-      continue;
-    }
-    let aiJson: Record<string, unknown>;
-    try {
-      aiJson = (await res.json()) as Record<string, unknown>;
-    } catch (err) {
-      console.error(`check-quote: Gemini model ${model} bad JSON`, err);
-      continue;
-    }
-    const candidates = aiJson.candidates as
-      | Array<{ content?: { parts?: Array<{ text?: string }> } }>
-      | undefined;
-    const raw = candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(stripCodeFences(raw));
-    } catch {
-      console.error(
-        `check-quote: Gemini model ${model} unparsable JSON, raw: ${raw.slice(0, 300)}`
-      );
-      continue;
-    }
-    const estimate = sanitizeAiEstimate(parsed);
-    if (estimate) return estimate;
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) return null;
+  const model = geminiModelName();
+  const { text: raw } = await callGemini({
+    apiKey,
+    model,
+    parts: [{ text: aiEstimatePrompt(description, category) }],
+    maxOutputTokens: 500,
+    timeoutMs: Math.max(1000, remaining),
+  });
+  if (!raw) return null;
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(stripCodeFences(raw));
+  } catch {
+    console.error(
+      `check-quote: Gemini model ${model} unparsable JSON, raw: ${raw.slice(0, 300)}`
+    );
+    return null;
+  }
+  const estimate = sanitizeAiEstimate(parsed);
+  if (!estimate) {
     console.error(`check-quote: Gemini model ${model} invalid estimate`);
   }
-  return null;
+  return estimate;
+}
+
+/**
+ * Cache Gemini's estimate per (category, normalized description) for 24h
+ * (migration 0018), so repeat checks of the same job don't burn another
+ * Gemini call. The key is the sorted significant tokens, so "water heater
+ * install" and "Install water heater" hit the same row. A cache miss
+ * calls Gemini once and stores the result; a too-vague job (null
+ * estimate) is never cached.
+ */
+const ESTIMATE_TTL_MS = 24 * 3600 * 1000;
+
+function estimateKey(category: string, description: string): string {
+  return [...searchTokens(description)].sort().join(" ");
+}
+
+async function fetchAiEstimateCached(
+  sb: ReturnType<typeof getServiceSupabase>,
+  description: string,
+  category: string
+): Promise<AiEstimate | null> {
+  const key = estimateKey(category, description);
+  try {
+    const { data } = await sb
+      .from("check_quote_estimates")
+      .select("low_cents, median_cents, high_cents, basis, created_at")
+      .eq("category", category)
+      .eq("description_key", key)
+      .single();
+    if (
+      data &&
+      Date.now() - new Date(data.created_at).getTime() < ESTIMATE_TTL_MS
+    ) {
+      return {
+        low_cents: data.low_cents,
+        median_cents: data.median_cents,
+        high_cents: data.high_cents,
+        basis: data.basis,
+      };
+    }
+  } catch {
+    // Cache is a bonus, not a dependency — fall through to Gemini.
+  }
+  const fresh = await fetchAiEstimate(description, category);
+  if (fresh) {
+    try {
+      await sb.from("check_quote_estimates").upsert(
+        {
+          category,
+          description_key: key,
+          low_cents: fresh.low_cents,
+          median_cents: fresh.median_cents,
+          high_cents: fresh.high_cents,
+          basis: fresh.basis,
+        },
+        { onConflict: "category,description_key" }
+      );
+      // Prune stale rows while we're here (cheap, indexed).
+      await sb
+        .from("check_quote_estimates")
+        .delete()
+        .lt("created_at", new Date(Date.now() - ESTIMATE_TTL_MS).toISOString());
+    } catch {
+      // Cache write failure must never fail the check.
+    }
+  }
+  return fresh;
 }
 
 /**
@@ -247,7 +259,7 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const queryTokens = tokens(description);
+    const queryTokens = searchTokens(description);
     if (queryTokens.size === 0) {
       return NextResponse.json(
         { ok: false, error: "Please describe the job (e.g. “water heater install”)." },
@@ -256,7 +268,9 @@ export async function POST(req: Request) {
     }
 
     const sb = getServiceSupabase();
-    const { data, error } = await sb
+    // DB query and AI estimate run in parallel (they were sequential):
+    // the AI call is the slow one, so the DB rows are ready when it lands.
+    const dbPromise = sb
       .from("reports")
       .select("id, amount_cents, service_name, town, service_date, report_type, created_at")
       .eq("category", category)
@@ -264,22 +278,25 @@ export async function POST(req: Request) {
       .not("moderated_at", "is", null)
       // Bound the fetch: the token-match needs the category's verified
       // rows, but an unbounded pull grows with the table (DoS / egress).
-      // 500 is far above any realistic per-category match set.
+      // 500 is far above any realistic per-category match set. Newest
+      // first, so beyond 500 rows the matched subset is the recent one,
+      // not an arbitrary slice.
+      .order("created_at", { ascending: false })
       .limit(500);
+    const aiPromise = fetchAiEstimateCached(sb, description, category);
+    const [{ data, error }, aiEstimate] = await Promise.all([dbPromise, aiPromise]);
     if (error) throw error;
 
+    // One-word descriptions ("roof") can match on their single token;
+    // longer descriptions still need two shared tokens to be a real match.
+    const minScore = queryTokens.size === 1 ? 1 : 2;
     const scored = (data ?? [])
       .map((r) => ({
         ...r,
-        score: matchScore(queryTokens, tokens(r.service_name)),
+        score: matchScore(queryTokens, searchTokens(r.service_name)),
       }))
-      .filter((r) => r.score >= 2)
+      .filter((r) => r.score >= minScore)
       .sort((a, b) => b.score - a.score || a.amount_cents - b.amount_cents);
-
-    // Broad-market AI estimate, shown first on the results page. It must
-    // never fail the check: a missing key or bad response yields null and
-    // the database comparison below still runs.
-    const aiEstimate = await fetchAiEstimate(description, category);
 
     if (scored.length < 2) {
       return NextResponse.json({
@@ -312,7 +329,7 @@ export async function POST(req: Request) {
       max_cents: max,
       ai_estimate: aiEstimate,
       matched: Array.from(queryTokens).filter((t) =>
-        scored.some((r) => tokens(r.service_name).has(t))
+        scored.some((r) => searchTokens(r.service_name).has(t))
       ),
       // Every matched entry, uncapped — the results page lists them all
       // below the comparison.

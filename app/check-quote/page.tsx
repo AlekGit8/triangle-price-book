@@ -248,6 +248,10 @@ export default function CheckQuotePage() {
           : "Filled in from your quote — review the fields below, then check your quote."
       );
     } catch (err) {
+      // See submit/page.tsx: reset the token here too, so a fetch() /
+      // res.json() failure after the server consumed it doesn't leave a
+      // dead token for the retry.
+      clearTurnstileToken();
       setExtractState("error");
       setExtractMsg(err instanceof Error ? err.message : "Could not read the document.");
       if (docInputRef.current) docInputRef.current.value = "";
@@ -291,12 +295,21 @@ export default function CheckQuotePage() {
 
   const hasRange =
     result && !result.notEnoughData && result.min_cents! < result.max_cents!;
+  // A verdict exists whenever there are 2+ matches — including when every
+  // matched job cost exactly the same (min == max), which used to show
+  // no verdict at all. The scale bar still needs a real range, so it
+  // stays gated on hasRange.
+  const hasData =
+    result &&
+    !result.notEnoughData &&
+    result.min_cents != null &&
+    result.max_cents != null;
   const scalePos = (v: number) => {
     const min = result!.min_cents!, max = result!.max_cents!;
     return Math.min(100, Math.max(0, ((v - min) / (max - min)) * 100));
   };
 
-  const verdict = hasRange ? verdictFor(submittedPrice, result!) : null;
+  const verdict = hasData ? verdictFor(submittedPrice, result!) : null;
 
   const aiPlacement =
     result?.ai_estimate && submittedPrice < result.ai_estimate.low_cents
@@ -503,9 +516,18 @@ export default function CheckQuotePage() {
         <div className="mt-6 rounded-2xl border border-line bg-white p-6">
           <p className={`text-xl font-bold ${verdict.tone}`}>{verdict.headline}</p>
           <p className="mt-3 text-lg text-ink">
-            Similar Triangle jobs range from{" "}
-            <span className="font-bold">{formatCents(result.min_cents!)}</span> to{" "}
-            <span className="font-bold">{formatCents(result.max_cents!)}</span>.
+            {hasRange ? (
+              <>
+                Similar Triangle jobs range from{" "}
+                <span className="font-bold">{formatCents(result.min_cents!)}</span> to{" "}
+                <span className="font-bold">{formatCents(result.max_cents!)}</span>.
+              </>
+            ) : (
+              <>
+                Every similar Triangle job cost exactly{" "}
+                <span className="font-bold">{formatCents(result.min_cents!)}</span>.
+              </>
+            )}
           </p>
           <p className="mt-2 text-muted">{verdict.detail}</p>
 

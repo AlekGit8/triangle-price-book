@@ -64,7 +64,7 @@ export default function AnalyticsChart({ buckets }: { buckets: ChartBucket[] }) 
           <span className="inline-block h-3 w-3 rounded-sm bg-black" /> Human visitors
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-sm bg-stone-300 dark:bg-neutral-500" /> Bots
+          <span className="inline-block h-3 w-3 rounded-sm bg-line" /> Bots
         </span>
         <span className="ml-auto font-mono text-xs text-muted">
           {hovered

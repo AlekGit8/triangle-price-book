@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { siteConfig } from "@/lib/site-config";
-import { isComingSoonGateActive } from "@/lib/coming-soon-gate";
 import TipJarIcon from "@/components/TipJarIcon";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -13,14 +12,7 @@ const nav = [
   { href: "/submit", label: "Submit a Price" },
 ];
 
-export default async function SiteHeader() {
-  // While the coming-soon gate is live, every public URL rewrites to
-  // /coming-soon, so these nav links are dead — hide them and show only
-  // the wordmark. After launch (rewrite block removed from
-  // middleware.ts) the full nav returns automatically. See
-  // lib/coming-soon-gate.ts for how the gate is detected.
-  const gated = await isComingSoonGateActive();
-
+export default function SiteHeader() {
   return (
     <header className="border-b border-line bg-white/90 backdrop-blur sticky top-0 z-10">
       <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-4">
@@ -30,8 +22,7 @@ export default async function SiteHeader() {
           </span>
         </Link>
         <div className="flex items-center gap-1">
-          {!gated && (
-            <nav className="flex items-center gap-1 sm:gap-2 text-sm overflow-x-auto">
+          <nav className="flex items-center gap-1 sm:gap-2 text-sm overflow-x-auto">
               {nav.map((item) =>
               item.href === "/submit" ? (
                 <Link
@@ -61,7 +52,6 @@ export default async function SiteHeader() {
               )
             )}
           </nav>
-        )}
           <ThemeToggle />
         </div>
       </div>

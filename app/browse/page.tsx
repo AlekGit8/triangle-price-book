@@ -5,20 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase-client";
 import { siteConfig } from "@/lib/site-config";
 import { formatCents, formatMonthYear } from "@/lib/format";
+import { normalizeText as normalize, singularize } from "@/lib/search";
 import ReportCard, { publicNote } from "@/components/ReportCard";
 import type { Report } from "@/lib/data";
-
-function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function singularize(w: string): string {
-  return w.length > 3 && w.endsWith("s") ? w.slice(0, -1) : w;
-}
 
 function BrowseInner() {
   const searchParams = useSearchParams();
@@ -360,7 +349,7 @@ function BrowseInner() {
 
 export default function BrowsePage() {
   return (
-    <Suspense fallback={<p className="py-10 text-stone-500">Loading…</p>}>
+    <Suspense fallback={<p className="py-10 text-muted">Loading…</p>}>
       <BrowseInner />
     </Suspense>
   );

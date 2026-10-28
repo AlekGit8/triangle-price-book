@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase-server";
+import { requireAdmin } from "@/lib/admin-auth";
+import { pruneOldAnalyticsRows } from "@/lib/retention";
 import { activeSponsor, outreachLinks } from "@/lib/site-config";
 
-function authorized(req: Request): boolean {
-  const expected = process.env.ADMIN_KEY;
-  return !!expected && req.headers.get("x-admin-key") === expected;
-}
-
-const MAX_ROWS = 50000;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** UTC calendar date (YYYY-MM-DD) of an instant. */
@@ -38,8 +34,8 @@ function addDays(isoDate: string, n: number): string {
  * the end-of-flight email.
  */
 export async function GET(req: Request) {
-  if (!authorized(req))
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   try {
     const url = new URL(req.url);
 
@@ -48,32 +44,39 @@ export async function GET(req: Request) {
     // last click — so the Sponsors tab can show every link at once
     // instead of loading one slug at a time. Zero-click links are
     // included with zeros. No date filter: outreach links have no
-    // flight, and the table is small.
+    // flight, and the table is small. Aggregated in Postgres
+    // (migration 0019) — the old code pulled up to 50,000 rows and was
+    // silently capped at 1,000 by the API max-rows setting.
     if (url.searchParams.get("view") === "summary") {
       const sb = getServiceSupabase();
-      let clickRows: Array<{ sponsor_slug: string; is_bot: boolean; clicked_at: string }> = [];
-      let tableMissing = false;
-      const clicksRes = await sb
-        .from("sponsor_clicks")
-        .select("sponsor_slug, is_bot, clicked_at")
-        .order("clicked_at", { ascending: true })
-        .limit(MAX_ROWS);
-      if (clicksRes.error) {
-        tableMissing = true;
-      } else {
-        clickRows = (clicksRes.data ?? []) as typeof clickRows;
-      }
-      const bySlug = new Map<
+      // Prune rows older than the 180-day retention window (lib/retention).
+      await pruneOldAnalyticsRows(sb);
+      let bySlug = new Map<
         string,
         { total: number; human: number; bot: number; lastClicked: string | null }
       >();
-      for (const c of clickRows) {
-        const row = bySlug.get(c.sponsor_slug) ?? { total: 0, human: 0, bot: 0, lastClicked: null };
-        row.total += 1;
-        if (c.is_bot) row.bot += 1;
-        else row.human += 1;
-        row.lastClicked = c.clicked_at; // rows are ascending, so the last write is the latest
-        bySlug.set(c.sponsor_slug, row);
+      let tableMissing = false;
+      let totalClicks = 0;
+      const { data, error } = await sb.rpc("admin_sponsor_summary");
+      if (error) {
+        tableMissing = true;
+      } else {
+        const rows = (data ?? []) as Array<{
+          slug: string;
+          total: number;
+          human: number;
+          bot: number;
+          last_clicked: string | null;
+        }>;
+        for (const r of rows) {
+          bySlug.set(r.slug, {
+            total: r.total,
+            human: r.human,
+            bot: r.bot,
+            lastClicked: r.last_clicked,
+          });
+          totalClicks += r.total;
+        }
       }
       const rows = [
         ...(activeSponsor
@@ -94,9 +97,10 @@ export async function GET(req: Request) {
         ok: true,
         view: "summary",
         rows,
-        totalClicks: clickRows.length,
+        totalClicks,
         tableMissing,
-        truncated: clickRows.length >= MAX_ROWS,
+        // No row cap anymore — Postgres aggregates the whole table.
+        truncated: false,
       });
     }
 
@@ -149,65 +153,52 @@ export async function GET(req: Request) {
     const endIso = `${endParam}T00:00:00.000Z`;
 
     const sb = getServiceSupabase();
-    const viewsRes = await sb
-      .from("analytics_page_views")
-      .select("is_bot, entered_at")
-      .gte("entered_at", startIso)
-      .lt("entered_at", endIso)
-      .order("entered_at", { ascending: true })
-      .limit(MAX_ROWS);
-    if (viewsRes.error) throw viewsRes.error;
-    const views = (viewsRes.data ?? []) as Array<{ is_bot: boolean; entered_at: string }>;
-
-    let clickRows: Array<{ is_bot: boolean; clicked_at: string; referrer_path: string | null }> = [];
+    // Aggregated in Postgres (migration 0019, admin_sponsor_report) —
+    // the old code pulled up to 50,000 views + 50,000 clicks and
+    // aggregated in JS, silently capped at 1,000 rows by the API
+    // max-rows setting.
+    interface SponsorReport {
+      impressions: { total: number; human: number };
+      clicks: { total: number; human: number; bot: number };
+      daily: Array<{ date: string; human_views: number; total_views: number; human_clicks: number; total_clicks: number }>;
+      top_referrers: Array<{ path: string; clicks: number }>;
+    }
+    let report: SponsorReport | null = null;
     let tableMissing = false;
-    const clicksRes = await sb
-      .from("sponsor_clicks")
-      .select("is_bot, clicked_at, referrer_path")
-      .eq("sponsor_slug", slug)
-      .gte("clicked_at", startIso)
-      .lt("clicked_at", endIso)
-      .order("clicked_at", { ascending: true })
-      .limit(MAX_ROWS);
-    if (clicksRes.error) {
-      // The migration hasn't landed yet: report views, zero clicks,
-      // and flag it instead of failing the whole tab.
+    const { data, error } = await sb.rpc("admin_sponsor_report", {
+      p_slug: slug,
+      p_start: startIso,
+      p_end: endIso,
+    });
+    if (error) {
+      // The migration hasn't landed yet: report zero clicks and flag it
+      // instead of failing the whole tab.
       tableMissing = true;
     } else {
-      clickRows = (clicksRes.data ?? []) as typeof clickRows;
+      report = data as SponsorReport;
     }
-
-    const humanViews = views.filter((v) => !v.is_bot).length;
-    const humanClicks = clickRows.filter((c) => !c.is_bot).length;
-
-    // Daily buckets in UTC, covering [start, end).
+    const impressions = report?.impressions ?? { total: 0, human: 0 };
+    const clicks = report?.clicks ?? { total: 0, human: 0, bot: 0 };
+    // Outreach links have no banner flight, so site-wide page views are
+    // not their impressions — report clicks only (M12). Only the active
+    // sponsor's flight gets impressions/CTR. Daily view counts are
+    // zeroed for outreach slugs for the same reason.
+    const isActiveSponsor = !!activeSponsor && activeSponsor.slug === slug;
     const days: string[] = [];
     for (let d = startParam; d < endParam; d = addDays(d, 1)) days.push(d);
-    const dailyMap = new Map(
-      days.map((date) => [date, { date, humanViews: 0, totalViews: 0, clicks: 0, humanClicks: 0 }])
+    const byDate = new Map(
+      (report?.daily ?? []).map((d) => [d.date, d])
     );
-    for (const v of views) {
-      const row = dailyMap.get(utcDate(new Date(v.entered_at)));
-      if (!row) continue;
-      row.totalViews += 1;
-      if (!v.is_bot) row.humanViews += 1;
-    }
-    for (const c of clickRows) {
-      const row = dailyMap.get(utcDate(new Date(c.clicked_at)));
-      if (!row) continue;
-      row.clicks += 1;
-      if (!c.is_bot) row.humanClicks += 1;
-    }
-
-    const refMap = new Map<string, number>();
-    for (const c of clickRows) {
-      const key = c.referrer_path || "(direct / unknown)";
-      refMap.set(key, (refMap.get(key) ?? 0) + 1);
-    }
-    const topReferrers = [...refMap.entries()]
-      .map(([path, clicks]) => ({ path, clicks }))
-      .sort((a, b) => b.clicks - a.clicks)
-      .slice(0, 10);
+    const daily = days.map((date) => {
+      const d = byDate.get(date);
+      return {
+        date,
+        humanViews: isActiveSponsor ? d?.human_views ?? 0 : 0,
+        totalViews: isActiveSponsor ? d?.total_views ?? 0 : 0,
+        clicks: d?.total_clicks ?? 0,
+        humanClicks: d?.human_clicks ?? 0,
+      };
+    });
 
     const sponsor =
       activeSponsor && activeSponsor.slug === slug ? activeSponsor : null;
@@ -218,13 +209,20 @@ export async function GET(req: Request) {
       sponsor,
       start: startParam,
       end: endParam,
-      impressions: { total: views.length, human: humanViews },
-      clicks: { total: clickRows.length, human: humanClicks, bot: clickRows.length - humanClicks },
-      ctrHuman: humanViews > 0 ? humanClicks / humanViews : 0,
-      daily: [...dailyMap.values()],
-      topReferrers,
+      // null for outreach/past-sponsor slugs: site-wide views are not
+      // their impressions, and a CTR against them is meaningless.
+      impressions: isActiveSponsor ? impressions : null,
+      clicks,
+      ctrHuman: isActiveSponsor
+        ? impressions.human > 0
+          ? clicks.human / impressions.human
+          : 0
+        : null,
+      daily,
+      topReferrers: report?.top_referrers ?? [],
       tableMissing,
-      truncated: views.length >= MAX_ROWS || clickRows.length >= MAX_ROWS,
+      // No row cap anymore — Postgres aggregates the whole range.
+      truncated: false,
     });
   } catch (err) {
     console.error("admin sponsors error:", err);

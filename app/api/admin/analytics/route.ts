@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase-server";
-
-function authorized(req: Request): boolean {
-  const expected = process.env.ADMIN_KEY;
-  return !!expected && req.headers.get("x-admin-key") === expected;
-}
+import { requireAdmin } from "@/lib/admin-auth";
+import { pruneOldAnalyticsRows } from "@/lib/retention";
 
 const TZ = "America/New_York";
-const MAX_ROWS = 50000;
-const MAX_VIEW_SECONDS = 1800; // 30 min cap per page view
 
-type Range = "24h" | "7d" | "30d" | "90d" | "12m";
+type Range = "24h" | "7d" | "30d" | "90d" | "6m";
 type Granularity = "hour" | "day" | "week" | "month";
 
 const RANGES: Record<Range, { ms: number; label: string; defaultGranularity: Granularity }> = {
@@ -18,11 +13,13 @@ const RANGES: Record<Range, { ms: number; label: string; defaultGranularity: Gra
   "7d": { ms: 7 * 24 * 3600 * 1000, label: "Last 7 days", defaultGranularity: "day" },
   "30d": { ms: 30 * 24 * 3600 * 1000, label: "Last 30 days", defaultGranularity: "day" },
   "90d": { ms: 90 * 24 * 3600 * 1000, label: "Last 90 days", defaultGranularity: "week" },
-  "12m": { ms: 365 * 24 * 3600 * 1000, label: "Last 12 months", defaultGranularity: "month" },
+  // 6 months, not 12: retention (lib/retention.ts) prunes rows older
+  // than 180 days, so a 12-month range would show a half-empty chart.
+  "6m": { ms: 180 * 24 * 3600 * 1000, label: "Last 6 months", defaultGranularity: "month" },
 };
 
 function isRange(v: string | null): v is Range {
-  return v === "24h" || v === "7d" || v === "30d" || v === "90d" || v === "12m";
+  return v === "24h" || v === "7d" || v === "30d" || v === "90d" || v === "6m";
 }
 function isGranularity(v: string | null): v is Granularity {
   return v === "hour" || v === "day" || v === "week" || v === "month";
@@ -113,24 +110,22 @@ function bucketSequence(start: Date, end: Date, g: Granularity): string[] {
   return keys;
 }
 
-interface Row {
-  session_id: string;
-  path: string;
-  is_bot: boolean;
-  duration_seconds: number;
-  entered_at: string;
-}
-
 /**
  * GET /api/admin/analytics?range=7d&granularity=day — aggregated
  * first-party analytics for the admin dashboard, gated by ADMIN_KEY.
  * Visitors are sessions; a session counts in the bucket of its first
  * page view. Duration stats cover human sessions only. Pages are
  * ranked by total human time spent.
+ *
+ * Aggregation runs in Postgres (migration 0019, admin_analytics) — the
+ * route used to pull up to 50,000 raw rows and aggregate in JS, which
+ * was the heaviest query on the site and the likely source of the
+ * Oct 25 CPU-time (1102) errors. Buckets arrive keyed in
+ * America/New_York; this route only fills empty buckets and labels them.
  */
 export async function GET(req: Request) {
-  if (!authorized(req))
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   try {
     const url = new URL(req.url);
     const rangeParam = url.searchParams.get("range");
@@ -144,106 +139,68 @@ export async function GET(req: Request) {
     const start = new Date(end.getTime() - RANGES[range].ms);
 
     const sb = getServiceSupabase();
-    const { data, error } = await sb
-      .from("analytics_page_views")
-      .select("session_id, path, is_bot, duration_seconds, entered_at")
-      .gte("entered_at", start.toISOString())
-      .order("entered_at", { ascending: true })
-      .limit(MAX_ROWS);
+    // Prune rows older than the 180-day retention window before
+    // aggregating, so the longest range ("6 months") is complete.
+    await pruneOldAnalyticsRows(sb);
+    const { data, error } = await sb.rpc("admin_analytics", {
+      p_start: start.toISOString(),
+      p_end: end.toISOString(),
+      p_granularity: granularity,
+    });
     if (error) throw error;
-    const rows = (data ?? []) as Row[];
-    const truncated = rows.length >= MAX_ROWS;
+    const agg = (data ?? {}) as {
+      totals?: { sessions: number; human_sessions: number; bot_sessions: number; views: number; human_views: number; bot_views: number };
+      session_stats?: { sessions: number; avg_seconds: number; median_seconds: number };
+      buckets?: Array<{ key: string; views: number; human: number; bots: number }>;
+      pages?: Array<{ path: string; views: number; total_seconds: number; avg_seconds: number }>;
+    };
+    const totals = agg.totals ?? {
+      sessions: 0, human_sessions: 0, bot_sessions: 0,
+      views: 0, human_views: 0, bot_views: 0,
+    };
+    const sessionStats = agg.session_stats ?? { sessions: 0, avg_seconds: 0, median_seconds: 0 };
 
-    // Sessions: first view decides the bucket and the bot flag.
-    const sessions = new Map<string, { firstSeen: Date; bot: boolean; seconds: number }>();
-    for (const r of rows) {
-      const entered = new Date(r.entered_at);
-      const s = sessions.get(r.session_id);
-      const dur = Math.max(0, Math.min(MAX_VIEW_SECONDS, r.duration_seconds || 0));
-      if (!s) {
-        sessions.set(r.session_id, { firstSeen: entered, bot: r.is_bot, seconds: dur });
-      } else {
-        if (entered < s.firstSeen) s.firstSeen = entered;
-        if (!r.is_bot) s.bot = false;
-        s.seconds += dur;
-      }
-    }
-
+    // Fill empty buckets so the chart is continuous, then label them.
     const keys = bucketSequence(start, end, granularity);
-    const buckets = keys.map((k) => ({
-      key: k,
-      label: "",
-      human: 0,
-      bots: 0,
-      views: 0,
-    }));
-    const byKey = new Map(buckets.map((b) => [b.key, b]));
-    for (const r of rows) {
-      const b = byKey.get(bucketKey(new Date(r.entered_at), granularity));
-      if (b) {
-        b.views += 1;
-      }
-    }
-    for (const s of sessions.values()) {
-      const b = byKey.get(bucketKey(s.firstSeen, granularity));
-      if (b) {
-        if (s.bot) b.bots += 1;
-        else b.human += 1;
-      }
-    }
-    for (const b of buckets) {
-      b.label = bucketLabel(b.key, granularity);
-    }
-
-    const humanSessions = [...sessions.values()].filter((s) => !s.bot);
-    const durations = humanSessions.map((s) => s.seconds).sort((a, b) => a - b);
-    const avgSeconds =
-      durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
-    const medianSeconds =
-      durations.length > 0 ? durations[Math.floor(durations.length / 2)] : 0;
-
-    const pagesMap = new Map<string, { views: number; totalSeconds: number }>();
-    for (const r of rows) {
-      if (r.is_bot) continue;
-      const p = pagesMap.get(r.path) ?? { views: 0, totalSeconds: 0 };
-      p.views += 1;
-      p.totalSeconds += Math.max(0, Math.min(MAX_VIEW_SECONDS, r.duration_seconds || 0));
-      pagesMap.set(r.path, p);
-    }
-    const pages = [...pagesMap.entries()]
-      .map(([path, v]) => ({
-        path,
-        views: v.views,
-        totalSeconds: v.totalSeconds,
-        avgSeconds: v.views > 0 ? v.totalSeconds / v.views : 0,
-      }))
-      .sort((a, b) => b.totalSeconds - a.totalSeconds)
-      .slice(0, 25);
-
-    const botSessions = sessions.size - humanSessions.length;
-    const humanViews = rows.filter((r) => !r.is_bot).length;
+    const byKey = new Map((agg.buckets ?? []).map((b) => [b.key, b]));
+    const buckets = keys.map((k) => {
+      const b = byKey.get(k);
+      return {
+        key: k,
+        label: bucketLabel(k, granularity),
+        human: b?.human ?? 0,
+        bots: b?.bots ?? 0,
+        views: b?.views ?? 0,
+      };
+    });
 
     return NextResponse.json({
       ok: true,
       range,
       rangeLabel: RANGES[range].label,
       granularity,
-      truncated,
-      buckets: buckets.map(({ key, label, human, bots, views }) => ({ key, label, human, bots, views })),
+      // No row cap anymore — Postgres aggregates the whole range.
+      truncated: false,
+      buckets,
       totals: {
-        sessions: sessions.size,
-        humanSessions: humanSessions.length,
-        botSessions,
-        views: rows.length,
-        humanViews,
-        botViews: rows.length - humanViews,
+        sessions: totals.sessions,
+        humanSessions: totals.human_sessions,
+        botSessions: totals.bot_sessions,
+        views: totals.views,
+        humanViews: totals.human_views,
+        botViews: totals.bot_views,
       },
       sessionStats: {
-        sessions: humanSessions.length,
-        avgSeconds: Math.round(avgSeconds),
-        medianSeconds,
+        sessions: sessionStats.sessions,
+        avgSeconds: Math.round(sessionStats.avg_seconds),
+        medianSeconds: sessionStats.median_seconds,
       },
-      pages,
+      pages: (agg.pages ?? []).map((p) => ({
+        path: p.path,
+        views: p.views,
+        totalSeconds: p.total_seconds,
+        avgSeconds: p.avg_seconds,
+      })),
     });
   } catch (err) {
     console.error("admin analytics error:", err);

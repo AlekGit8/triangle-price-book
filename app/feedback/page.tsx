@@ -8,8 +8,7 @@ export const metadata = {
 
 /**
  * /feedback — the standalone feedback page (linked from the header and
- * footer nav after launch). While the coming-soon gate is live this page
- * rewrites to /coming-soon, which embeds the same form below the signup.
+ * footer nav).
  */
 export default function FeedbackPage() {
   return (

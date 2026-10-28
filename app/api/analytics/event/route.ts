@@ -60,7 +60,10 @@ export async function POST(req: Request) {
           session_id: sessionId,
           path,
           referrer_host: referrerHost,
-          user_agent: ua ? ua.slice(0, 512) : null,
+          // Raw user agents are NOT stored (P6): the bot classification
+          // below is all any report uses, and a 512-char UA string is
+          // a fingerprint. The column stays for old rows, which age out
+          // with the 180-day retention prune.
           is_bot: isBotUserAgent(ua, webdriver),
           country,
         })

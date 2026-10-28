@@ -5,6 +5,7 @@ import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import SponsorBanner from "@/components/SponsorBanner";
 import AnalyticsBeacon from "@/components/AnalyticsBeacon";
+import AdSense from "@/components/AdSense";
 import { siteConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
@@ -50,15 +51,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `(function(){try{var t=localStorage.getItem('tpb-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})();`,
           }}
         />
-        {/* Google AdSense — publisher ID pub-9935150237512512. The script
-            connects the site to the AdSense account; ads show only after
-            AdSense approves the site and Auto ads (or ad units) are
-            enabled in the AdSense dashboard. */}
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9935150237512512"
-          crossOrigin="anonymous"
-        />
+        {/* Google AdSense — see components/AdSense.tsx (next/script,
+            afterInteractive, skipped on /admin). */}
         {/* Google Analytics (GA4) — measurement ID G-MC0YJN4QZZ. The tag
             loads on every page via this root layout; do not add it
             anywhere else. */}
@@ -84,6 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="mx-auto max-w-6xl px-4">{children}</main>
         <SiteFooter />
         <AnalyticsBeacon />
+        <AdSense />
       </body>
     </html>
   );

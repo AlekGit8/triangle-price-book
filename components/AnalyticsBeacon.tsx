@@ -10,8 +10,8 @@ import { usePathname } from "next/navigation";
  * - Sends one "view" event per page, then a heartbeat every 30s while
  *   the tab is visible, reporting active seconds on the page. The
  *   final heartbeat goes out on pagehide / when the tab is hidden.
- * - Skips /admin and /coming-soon (the admin's own visits aren't
- *   public traffic), and honors Do Not Track.
+ * - Skips /admin (the admin's own visits aren't traffic), and honors
+ *   Do Not Track.
  */
 
 const HEARTBEAT_MS = 30_000;
@@ -65,7 +65,7 @@ export default function AnalyticsBeacon() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (navigator.doNotTrack === "1") return;
-    if (pathname.startsWith("/admin") || pathname.startsWith("/coming-soon")) return;
+    if (pathname.startsWith("/admin")) return;
 
     const sessionId = getSessionId();
     let referrerHost: string | null = null;
@@ -130,6 +130,12 @@ export default function AnalyticsBeacon() {
     activeSecondsRef.current = 0;
     viewIdRef.current = null;
     stopTimers();
+    // If the user navigates before this view's response lands, the old
+    // response must not overwrite the new page's view id (it would send
+    // heartbeats against the wrong row and the new view would never get
+    // a duration). The cleanup below flips `cancelled` for this effect
+    // run, and stale responses are ignored.
+    let cancelled = false;
     void send({
       type: "view",
       session_id: sessionId,
@@ -141,7 +147,7 @@ export default function AnalyticsBeacon() {
         const json = (await (res as unknown as Response)?.json?.()) as
           | { view_id?: string }
           | undefined;
-        if (json?.view_id) viewIdRef.current = json.view_id;
+        if (!cancelled && json?.view_id) viewIdRef.current = json.view_id;
       } catch {
         // View recorded without an id — heartbeats just no-op.
       }
@@ -160,6 +166,7 @@ export default function AnalyticsBeacon() {
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onHide);
     return () => {
+      cancelled = true;
       heartbeat(true); // final flush on SPA navigation / unmount
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", onHide);
