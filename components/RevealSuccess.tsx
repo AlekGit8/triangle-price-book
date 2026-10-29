@@ -4,15 +4,13 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-type Result =
-  | { ok: true; type: "single"; business_name: string | null; bookmark_url: string }
-  | { ok: true; type: "day"; bookmark_url: string; expires_at: string | null };
+type Result = { ok: true; type: "single" | "all"; list_url: string };
 
 /**
  * Post-Stripe landing page: confirms the session is paid, records the
- * purchase, and shows the buyer what they bought — the name itself for
- * a single reveal, the active pass for a day pass — plus the bookmark
- * link that re-opens it. No email is involved anywhere.
+ * purchase, and sends the buyer to their private list page. No email
+ * is involved anywhere; the list link is the access, so the page also
+ * shows it as a fallback in case the redirect stalls.
  */
 function RevealSuccessInner() {
   const params = useSearchParams();
@@ -43,11 +41,15 @@ function RevealSuccessInner() {
   useEffect(() => {
     if (sessionId) confirm();
     else {
-      setError("No payment found. If you just paid, please try your bookmark link.");
+      setError("No payment found.");
       setBusy(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  useEffect(() => {
+    if (result) window.location.assign(result.list_url);
+  }, [result]);
 
   if (busy) {
     return (
@@ -72,50 +74,19 @@ function RevealSuccessInner() {
     );
   }
 
-  if (result.type === "single") {
-    return (
-      <div className="py-16 max-w-3xl mx-auto">
-        <h1 className="font-serif text-3xl text-ink">This job was performed by</h1>
-        <p className="mt-4 rounded-2xl border border-line bg-white p-5 text-xl text-ink">
-          <span className="font-semibold">{result.business_name ?? "Name unavailable"}</span>
-        </p>
-        <p className="mt-4 text-muted">
-          Bookmark this link — it re-opens this reveal any time:{" "}
-          <Link href={result.bookmark_url} className="font-semibold text-ink underline underline-offset-4">
-            {result.bookmark_url}
-          </Link>
-        </p>
-        <p className="mt-2 text-sm text-muted">
-          If you lose the link and clear your cookies, the reveal is gone and
-          you&rsquo;d need to buy it again. The invoice behind this job is never shown.
-        </p>
-        <p className="mt-4">
-          <Link href="/browse" className="font-semibold text-ink underline underline-offset-4">
-            Browse more prices →
-          </Link>
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="py-16 max-w-3xl mx-auto">
-      <h1 className="font-serif text-3xl text-ink">Your day pass is active</h1>
-      <p className="mt-3 text-muted">
-        Business names now show on all verified listings in this browser
-        {result.expires_at && <> until {new Date(result.expires_at).toLocaleString()}</>}.
-      </p>
-      <p className="mt-3 text-muted">
-        Bookmark this link — it re-activates your pass in any browser until it
-        expires:{" "}
-        <Link href={result.bookmark_url} className="font-semibold text-ink underline underline-offset-4">
-          {result.bookmark_url}
-        </Link>
-      </p>
+      <h1 className="font-serif text-3xl text-ink">Payment confirmed</h1>
+      <p className="mt-3 text-muted">Opening your list…</p>
       <p className="mt-4">
-        <Link href="/browse" className="font-semibold text-ink underline underline-offset-4">
-          Browse prices →
+        <Link href={result.list_url} className="font-semibold text-ink underline underline-offset-4">
+          View your list →
         </Link>
+      </p>
+      <p className="mt-4 text-sm text-muted">
+        Bookmark that page — the link is your permanent access to{" "}
+        {result.type === "single" ? "this reveal" : "all revealed business names"}.
+        The invoice behind a job is never shown.
       </p>
     </div>
   );

@@ -8,20 +8,22 @@ import {
 
 /**
  * POST /api/reveal/checkout — start a Stripe Checkout session for a
- * business-name reveal. Body: { type: "single" | "day", report_id? }.
+ * business-name reveal. Body: { type: "single" | "all", report_id? }.
  * Single requires a verified report that actually has a name stored.
- * Returns { url } — the buyer is redirected to Stripe.
+ * "all" reveals every verified listing's stored name, one-time and
+ * permanent (no day pass, no expiry). Returns { url } — the buyer is
+ * redirected to Stripe.
  */
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as { type?: unknown; report_id?: unknown };
     const type = body.type as RevealType;
-    if (type !== "single" && type !== "day") {
+    if (type !== "single" && type !== "all") {
       return NextResponse.json({ ok: false, error: "Invalid reveal type." }, { status: 400 });
     }
     const reportId = typeof body.report_id === "string" ? body.report_id : null;
 
-    let reportLabel = "day pass";
+    let reportLabel = "all verified listings";
     let cancelUrl: string;
     const origin =
       req.headers.get("origin") ?? siteConfig.siteUrl;

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { findUnlock, getBusinessName, parseRevealTokens } from "@/lib/reveal";
+import { getBusinessName } from "@/lib/reveal";
 
 /**
- * GET /api/reveal/status?report_id=… — what should this browser see
- * for this report? `available` means an admin stored a business name
- * for it (so the button renders); the name itself is returned ONLY
- * when a token unlocks it. Before migration 0020 is applied the
- * tables don't exist, the lookups fail, and this safely answers
- * "nothing available" instead of erroring the page.
+ * GET /api/reveal/status?report_id=… — does this report have a stored
+ * business name, so the reveal button renders? The name itself is NEVER
+ * returned here — it only appears on the buyer's private list page
+ * after payment. Before migration 0020 is applied the tables don't
+ * exist, the lookup fails, and this safely answers "nothing available"
+ * instead of erroring the page.
  */
 export async function GET(req: Request) {
   const reportId = new URL(req.url).searchParams.get("report_id") ?? "";
@@ -16,12 +16,9 @@ export async function GET(req: Request) {
   }
   try {
     const name = await getBusinessName(reportId);
-    if (!name) return NextResponse.json({ ok: true, unlocked: false, available: false });
-    const unlock = await findUnlock(parseRevealTokens(req), reportId);
-    if (!unlock) return NextResponse.json({ ok: true, unlocked: false, available: true });
-    return NextResponse.json({ ok: true, unlocked: true, available: true, business_name: name });
+    return NextResponse.json({ ok: true, available: !!name });
   } catch (err) {
     console.error("reveal status error:", err);
-    return NextResponse.json({ ok: true, unlocked: false, available: false });
+    return NextResponse.json({ ok: true, available: false });
   }
 }

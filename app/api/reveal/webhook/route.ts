@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     const metadata = (obj.metadata ?? {}) as Record<string, string>;
     const type = metadata.reveal_type as RevealType;
     const amount = typeof obj.amount_total === "number" ? obj.amount_total : 0;
-    if ((type === "single" || type === "day") && amount > 0) {
+    if ((type === "single" || type === "all") && amount > 0) {
       try {
         await recordPurchase({
           type,

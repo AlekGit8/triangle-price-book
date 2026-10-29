@@ -103,15 +103,15 @@ export default function HowItWorksPage() {
             On a verified listing with a stored name, a{" "}
             <strong>&ldquo;See who did this work&rdquo;</strong> button offers
             two options: <strong>$1.99</strong> to reveal that job&rsquo;s
-            business, or a <strong>$4.99 day pass</strong> that reveals
-            business names on all verified listings for 24 hours.
+            business, or <strong>$4.99</strong> to reveal the businesses
+            behind all verified listings.
           </p>
           <p>
-            After payment, the name appears right on the listing — no email is
-            collected and no account is needed. You&rsquo;ll also get a private
-            link: bookmark it, and it re-opens your reveal or day pass in any
-            browser. If you lose that link and clear your cookies, the reveal
-            is gone and you&rsquo;d need to buy it again.
+            After payment, you get a private list page — no email is
+            collected and no account is needed. Bookmark the link: it opens
+            your list in any browser, any time. If you lose the link, the
+            list is gone and you&rsquo;d need to buy it again. Both options
+            are one-time purchases — no time limit, no subscription.
           </p>
           <p>
             Invoices and quotes are never shown — only the business name. A

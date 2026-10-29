@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import {
-  DAY_CENTS,
-  REVEAL_COOKIE,
+  ALL_CENTS,
   SINGLE_CENTS,
-  getBusinessName,
   getCheckoutSession,
-  parseRevealTokens,
   recordPurchase,
-  serializeRevealTokens,
   type RevealType,
 } from "@/lib/reveal";
 
@@ -15,9 +11,8 @@ import {
  * POST /api/reveal/activate — the success page calls this with the
  * Stripe session id from the redirect URL. Verifies the session is
  * actually paid (no trusting the URL alone), records the purchase
- * idempotently, and sets the tpb_reveals cookie so the name shows on
- * the listing. Returns the name for single reveals; day passes unlock
- * via the cookie + status endpoint instead.
+ * idempotently, and returns the buyer's private list-page URL. No
+ * cookies, no email: the list link is the access.
  */
 export async function POST(req: Request) {
   try {
@@ -31,36 +26,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Payment not complete yet." }, { status: 402 });
     }
     const type = session.metadata.reveal_type as RevealType;
-    if (type !== "single" && type !== "day") {
+    if (type !== "single" && type !== "all") {
       return NextResponse.json({ ok: false, error: "Unknown purchase." }, { status: 400 });
     }
     const purchase = await recordPurchase({
       type,
       reportId: session.metadata.report_id ?? null,
       sessionId: session.id,
-      amountCents: session.amount_total > 0 ? session.amount_total : type === "single" ? SINGLE_CENTS : DAY_CENTS,
+      amountCents: session.amount_total > 0 ? session.amount_total : type === "single" ? SINGLE_CENTS : ALL_CENTS,
     });
-    const tokens = parseRevealTokens(req);
-    if (!tokens.includes(purchase.token)) tokens.push(purchase.token);
-    const res = NextResponse.json({
+    return NextResponse.json({
       ok: true,
       type: purchase.type,
       report_id: purchase.report_id,
       token: purchase.token,
-      bookmark_url: `/reveal/${purchase.token}`,
-      expires_at: purchase.expires_at,
-      business_name:
-        purchase.type === "single" && purchase.report_id
-          ? await getBusinessName(purchase.report_id)
-          : null,
+      list_url: `/reveal/${purchase.token}`,
     });
-    res.cookies.set(REVEAL_COOKIE, serializeRevealTokens(tokens), {
-      path: "/",
-      maxAge: 365 * 24 * 60 * 60,
-      sameSite: "lax",
-      secure: true,
-    });
-    return res;
   } catch (err) {
     console.error("reveal activate error:", err);
     return NextResponse.json(

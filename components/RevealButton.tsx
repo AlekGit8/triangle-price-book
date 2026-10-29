@@ -7,15 +7,15 @@ import { createPortal } from "react-dom";
  * "See who did this work" — the paid business-name reveal for one
  * verified report. The button itself decides whether to appear: on
  * mount it asks /api/reveal/status, which reports whether an admin has
- * stored a name for this report (and whether this browser already holds
- * an unlocking token). No name stored → renders nothing, so the card
- * looks exactly like it did before reveals existed.
+ * stored a name for this report. No name stored → renders nothing, so
+ * the card looks exactly like it did before reveals existed.
  *
- * If this browser already holds an unlocking token (single for this
- * report, or an unexpired day pass), the name shows inline instead of
- * the button. Otherwise the button opens a dialog that explains the
- * purchase in full — price, no email, bookmark link, invoices never
- * shown — before sending the buyer to Stripe Checkout.
+ * The button opens a dialog that explains the purchase in full —
+ * price, no email, private list page, invoices never shown — before
+ * sending the buyer to Stripe Checkout. After payment the buyer gets a
+ * private list page (/reveal/<token>): one job for $1.99, all verified
+ * jobs for $4.99, both one-time and permanent. No cookies: the link is
+ * the access.
  */
 export default function RevealButton({
   reportId,
@@ -32,7 +32,6 @@ export default function RevealButton({
   // the tab order. Undefined = natural tab order.
   tabIndex?: number;
 }) {
-  const [unlockedName, setUnlockedName] = useState<string | null>(null);
   const [available, setAvailable] = useState(false);
   const [checked, setChecked] = useState(false);
   const [open, setOpen] = useState(false);
@@ -45,9 +44,6 @@ export default function RevealButton({
       .then((r) => r.json())
       .then((json) => {
         if (!cancelled) {
-          if (json.unlocked && json.business_name) {
-            setUnlockedName(json.business_name as string);
-          }
           if (json.available) setAvailable(true);
         }
       })
@@ -60,7 +56,7 @@ export default function RevealButton({
     };
   }, [reportId]);
 
-  async function buy(type: "single" | "day") {
+  async function buy(type: "single" | "all") {
     setBusy(true);
     setError("");
     try {
@@ -79,13 +75,6 @@ export default function RevealButton({
   }
 
   if (!checked) return null;
-  if (unlockedName) {
-    return (
-      <p className={`${className ?? "mt-3"} text-sm text-ink`}>
-        Performed by <span className="font-semibold">{unlockedName}</span>
-      </p>
-    );
-  }
   if (!available) return null;
 
   return (
@@ -140,21 +129,25 @@ export default function RevealButton({
               This is a <strong className="text-ink">verified</strong> job — the
               price was checked against paperwork — for{" "}
               <strong className="text-ink">{serviceName}</strong>. Paying reveals
-              the name of the business that performed it.
+              the name of the business that performed it, on your private
+              list page.
             </p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-relaxed text-muted">
               <li>
-                The name appears right here on this listing after payment (day
-                pass: names appear on all verified listings for 24 hours).
+                The name appears on your private list page after payment (all
+                verified jobs: every verified listing&rsquo;s business name, on
+                one page).
               </li>
               <li>
                 No email is collected and no account is needed. After paying
-                you&rsquo;ll get a private link — <strong className="text-ink">bookmark it</strong>.
-                It re-opens your reveal or day pass in any browser.
+                you&rsquo;ll get a private link to your list page —{" "}
+                <strong className="text-ink">bookmark it</strong>. It opens your
+                list in any browser.
               </li>
               <li>
-                If you lose that link and clear your cookies, the reveal is
-                gone and you&rsquo;d need to buy it again.
+                If you lose that link, the list is gone and you&rsquo;d need to
+                buy it again. Both options are one-time purchases — no time
+                limit, no subscription.
               </li>
               <li>
                 Invoices are never shown — only the business name. The
@@ -174,11 +167,11 @@ export default function RevealButton({
                 {busy ? "…" : "This job only — $1.99"}
               </button>
               <button
-                onClick={() => buy("day")}
+                onClick={() => buy("all")}
                 disabled={busy}
                 className="w-full rounded-[10px] border border-line bg-white px-4 py-2.5 font-semibold text-ink hover:border-black disabled:opacity-50"
               >
-                {busy ? "…" : "Day pass, all verified jobs — $4.99"}
+                {busy ? "…" : "All verified jobs — $4.99"}
               </button>
               <button
                 onClick={() => !busy && setOpen(false)}
