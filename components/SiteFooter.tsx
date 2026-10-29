@@ -17,6 +17,12 @@ export default function SiteFooter() {
             </p>
           </div>
           <nav className="flex flex-col gap-2 font-mono text-[13px]">
+              <Link href="/about" className="hover:text-ink">
+                About
+              </Link>
+              <Link href="/contact" className="hover:text-ink">
+                Contact
+              </Link>
               <Link href="/how-it-works" className="hover:text-ink">
                 How this works &amp; transparency
               </Link>

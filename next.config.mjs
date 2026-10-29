@@ -25,6 +25,8 @@ const nextConfig = {
       "/terms",
       "/privacy",
       "/how-it-works",
+      "/about",
+      "/contact",
       "/donate",
       "/feedback",
       "/hvac",
