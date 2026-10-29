@@ -131,22 +131,7 @@ export default function RevealButton({
               <strong className="text-ink">{serviceName}</strong>. Paying reveals
               the name of the business that performed it.
             </p>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              No email is collected and no account is needed. After paying
-              you&rsquo;ll get a private link to your list page.
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              If you lose that link, the list is gone and you&rsquo;d need to
-              buy it again. Both options are one-time purchases.
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              Invoices are never shown — only the business name. The
-              homeowner who posted stays anonymous.
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              Names appear only on verified jobs. A business that believes
-              a listing is inaccurate can contact us to dispute it.
-            </p>
+
             <div className="mt-5 space-y-2">
               <button
                 onClick={() => buy("single")}
