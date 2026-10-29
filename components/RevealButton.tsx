@@ -95,8 +95,12 @@ export default function RevealButton({
         onClick={(e) => {
           // The trigger can sit inside a clickable row (Browse table) or
           // card (marquee). Opening the dialog must not also open the
-          // row's/card's detail view.
+          // row's/card's detail view. stopPropagation alone is NOT
+          // enough when the card is a Link: the browser still runs the
+          // enclosing anchor's navigation as the click's default action,
+          // so the button must cancel that too.
           e.stopPropagation();
+          e.preventDefault();
           setOpen(true);
         }}
         className={`font-mono text-[13px] font-semibold text-ink underline decoration-dotted underline-offset-4 hover:decoration-solid ${className ?? "mt-1"}`}
