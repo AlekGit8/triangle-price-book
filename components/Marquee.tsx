@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { createContext, useEffect, useRef, type ReactNode } from "react";
+
+/** Which of the three tiled copies a child is rendered in (0 = the first,
+    screen-reader-visible copy). Cards read this to keep keyboard focus
+    out of the aria-hidden duplicate copies while staying clickable. */
+export const MarqueeCopyContext = createContext(0);
 
 interface MarqueeProps {
   /** Content of ONE copy; rendered three times for the seamless loop. */
@@ -205,6 +210,7 @@ export default function Marquee({
         // A drag that ends on a card must not open the card.
         if (draggedRef.current) {
           e.preventDefault();
+          e.stopPropagation();
           draggedRef.current = false;
         }
       }}
@@ -229,7 +235,9 @@ export default function Marquee({
             aria-hidden={half !== 0}
             className={copyClassName}
           >
-            {children}
+            <MarqueeCopyContext.Provider value={half}>
+              {children}
+            </MarqueeCopyContext.Provider>
           </div>
         ))}
       </div>

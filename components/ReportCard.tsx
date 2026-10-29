@@ -44,14 +44,20 @@ export function publicNote(notes: string | null): string | null {
  * name appears only on verified reports where an admin stored one, and
  * only after a paid reveal (see RevealButton).
  * `compact` (marquee mode) shows the note truncated to two lines and hides
- * the attribution line so ticker cards stay roughly uniform.
+ * the attribution line so ticker cards stay roughly uniform. Verified
+ * compact cards still show the reveal link next to the Verified badge.
  */
 export default function ReportCard({
   report,
   compact = false,
+  revealTabIndex,
 }: {
   report: Report;
   compact?: boolean;
+  // Tab order for the compact reveal trigger; lets a duplicated surface
+  // (marquee copies) keep triggers out of the tab order. Undefined =
+  // natural tab order.
+  revealTabIndex?: number;
 }) {
   const note = publicNote(report.notes);
   return (
@@ -71,6 +77,19 @@ export default function ReportCard({
           <Badge tone="green">Verified</Badge>
         ) : (
           <Badge tone="grey">Unverified report</Badge>
+        )}
+        {compact && report.verification_status === "verified" && (
+          <span
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <RevealButton
+              reportId={report.id}
+              serviceName={report.service_name}
+              className=""
+              tabIndex={revealTabIndex}
+            />
+          </span>
         )}
         <span className="font-mono text-xs text-muted">
           {report.town} · {formatMonthYear(report.service_date ?? report.created_at)}

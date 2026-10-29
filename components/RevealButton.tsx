@@ -20,12 +20,16 @@ export default function RevealButton({
   reportId,
   serviceName,
   className,
+  tabIndex,
 }: {
   reportId: string;
   serviceName: string;
   // Overrides the default top margin (card use) when the trigger sits
   // inline somewhere else, e.g. next to a badge in a Browse row.
   className?: string;
+  // Lets a duplicated surface (marquee copies) keep the trigger out of
+  // the tab order. Undefined = natural tab order.
+  tabIndex?: number;
 }) {
   const [unlockedName, setUnlockedName] = useState<string | null>(null);
   const [available, setAvailable] = useState(false);
@@ -86,9 +90,11 @@ export default function RevealButton({
   return (
     <>
       <button
+        tabIndex={tabIndex}
         onClick={(e) => {
-          // The trigger can sit inside a clickable row (Browse table).
-          // Opening the dialog must not also open the row's detail card.
+          // The trigger can sit inside a clickable row (Browse table) or
+          // card (marquee). Opening the dialog must not also open the
+          // row's/card's detail view.
           e.stopPropagation();
           setOpen(true);
         }}
