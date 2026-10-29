@@ -19,9 +19,13 @@ import { useEffect, useState } from "react";
 export default function RevealButton({
   reportId,
   serviceName,
+  className,
 }: {
   reportId: string;
   serviceName: string;
+  // Overrides the default top margin (card use) when the trigger sits
+  // inline somewhere else, e.g. next to a badge in a Browse row.
+  className?: string;
 }) {
   const [unlockedName, setUnlockedName] = useState<string | null>(null);
   const [available, setAvailable] = useState(false);
@@ -72,7 +76,7 @@ export default function RevealButton({
   if (!checked) return null;
   if (unlockedName) {
     return (
-      <p className="mt-3 text-sm text-ink">
+      <p className={`${className ?? "mt-3"} text-sm text-ink`}>
         Performed by <span className="font-semibold">{unlockedName}</span>
       </p>
     );
@@ -82,8 +86,13 @@ export default function RevealButton({
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
-        className="mt-1 font-mono text-[13px] font-semibold text-ink underline decoration-dotted underline-offset-4 hover:decoration-solid"
+        onClick={(e) => {
+          // The trigger can sit inside a clickable row (Browse table).
+          // Opening the dialog must not also open the row's detail card.
+          e.stopPropagation();
+          setOpen(true);
+        }}
+        className={`font-mono text-[13px] font-semibold text-ink underline decoration-dotted underline-offset-4 hover:decoration-solid ${className ?? "mt-1"}`}
       >
         See who did this work
       </button>
