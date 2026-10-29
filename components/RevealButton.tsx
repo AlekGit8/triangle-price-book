@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * "See who did this work" — the paid business-name reveal for one
@@ -103,11 +104,19 @@ export default function RevealButton({
         See who did this work
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 overflow-y-auto bg-black/50"
-          onClick={() => !busy && setOpen(false)}
-        >
+      {/* Portaled to <body>: the dialog must overlay the whole viewport.
+          Rendered inline it sits inside the marquee card, and the row's
+          edge-fade mask (.marquee-mask) makes the row the positioning
+          reference for fixed descendants — so the "full-screen" overlay
+          shrank to the row's box and the dialog rendered inside the row
+          instead of over the page. */}
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 overflow-y-auto bg-black/50"
+            onClick={() => !busy && setOpen(false)}
+          >
           <div className="flex min-h-full items-center justify-center p-4">
           <div
             className="w-full max-w-md rounded-2xl border border-line bg-white p-6 shadow-xl"
@@ -178,8 +187,9 @@ export default function RevealButton({
             {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
           </div>
           </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 }
