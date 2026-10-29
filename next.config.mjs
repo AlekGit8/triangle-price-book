@@ -28,7 +28,6 @@ const nextConfig = {
       "/about",
       "/contact",
       "/donate",
-      "/feedback",
       "/hvac",
       "/plumbing",
       "/electrical",

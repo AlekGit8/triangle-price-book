@@ -12,7 +12,6 @@ const nav = [
   { href: "/how-it-works", label: "How This Works" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
-  { href: "/feedback", label: "Feedback" },
   { href: "/donate", label: "Tip Jar" },
   { href: "/submit", label: "Submit a Price" },
 ];

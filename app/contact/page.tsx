@@ -13,7 +13,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export const metadata = {
   title: `Contact ${siteConfig.siteName}`,
   description:
-    "Contact Triangle Price Book by email — for corrections, questions, press, and sponsorship.",
+    "Contact Triangle Price Book by email — for corrections, questions, suggestions, press, and sponsorship.",
   alternates: { canonical: "/contact" },
 };
 
@@ -38,19 +38,8 @@ export default function ContactPage() {
           <p>
             Think an entry is wrong? Tell us which one and what should change
             and we&rsquo;ll review it. For anything else about the site — a
-            question, a press inquiry, or a sponsorship — this address reaches
-            us too.
-          </p>
-        </Section>
-
-        <Section title="Site suggestions">
-          <p>
-            Have an idea for the site itself — a feature, a category, or an
-            improvement? Use the{" "}
-            <Link href="/feedback" className="font-semibold text-ink hover:underline">
-              feedback form
-            </Link>{" "}
-            so suggestions stay in one place where we can track them.
+            question, a suggestion, a press inquiry, or a sponsorship — this
+            address reaches us too.
           </p>
         </Section>
 

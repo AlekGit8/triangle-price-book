@@ -29,9 +29,6 @@ export default function SiteFooter() {
               <Link href="/check-quote" className="hover:text-ink">
                 Check a quote
               </Link>
-              <Link href="/feedback" className="hover:text-ink">
-                Suggest a feature
-              </Link>
               <Link href="/terms" className="hover:text-ink">
                 Terms of Service
               </Link>
