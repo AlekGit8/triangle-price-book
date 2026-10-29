@@ -26,13 +26,6 @@ interface Signup {
   created_at: string;
 }
 
-interface Feedback {
-  id: string;
-  message: string;
-  email: string | null;
-  created_at: string;
-}
-
 type Action = "verify" | "publish_unverified" | "reject";
 
 export default function AdminPage() {
@@ -40,10 +33,9 @@ export default function AdminPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [reports, setReports] = useState<QueueReport[]>([]);
   const [published, setPublished] = useState<QueueReport[]>([]);
-  const [tab, setTab] = useState<"queue" | "published" | "signups" | "feedback" | "analytics" | "sponsors">("queue");
+  const [tab, setTab] = useState<"queue" | "published" | "signups" | "analytics" | "sponsors">("queue");
   const [signups, setSignups] = useState<Signup[]>([]);
   const [signupStats, setSignupStats] = useState({ total: 0, updatesOptIn: 0 });
-  const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [lastSeen, setLastSeen] = useState<string | null>(null);
@@ -105,22 +97,6 @@ export default function AdminPage() {
     }
   }
 
-  async function loadFeedback(k: string) {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/admin/feedback", { headers: { "x-admin-key": k } });
-      const json = await res.json();
-      if (!res.ok || !json.ok) throw new Error(json.error ?? "Failed to load");
-      setFeedback(json.feedback);
-      setUnlocked(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function load(k: string, scope: "queue" | "published" = "queue") {
     setLoading(true);
     setError("");
@@ -167,9 +143,8 @@ export default function AdminPage() {
   const newQueue = reports.filter((r) => isNew(r.created_at));
   const newPublished = published.filter((r) => isNew(r.created_at));
   const newSignups = signups.filter((s) => isNew(s.created_at));
-  const newFeedback = feedback.filter((f) => isNew(f.created_at));
   const newTotal =
-    newQueue.length + newPublished.length + newSignups.length + newFeedback.length;
+    newQueue.length + newPublished.length + newSignups.length;
 
   if (!unlocked) {
     return (
@@ -182,7 +157,6 @@ export default function AdminPage() {
             load(key, "queue");
             load(key, "published");
             loadSignups(key);
-            loadFeedback(key);
             loadSeen(key);
           }}
         >
@@ -210,7 +184,7 @@ export default function AdminPage() {
     <div className="py-10">
       <div className="flex items-baseline justify-between">
         <h1 className="font-serif text-3xl text-ink sm:text-4xl">Moderation</h1>
-        <button onClick={() => { load(key, "queue"); load(key, "published"); loadSignups(key); loadFeedback(key); loadSeen(key); }} className="font-mono text-[13px] font-semibold text-ink hover:underline">
+        <button onClick={() => { load(key, "queue"); load(key, "published"); loadSignups(key); loadSeen(key); }} className="font-mono text-[13px] font-semibold text-ink hover:underline">
           Refresh
         </button>
       </div>
@@ -304,34 +278,16 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
-              {newFeedback.length > 0 && (
-                <div>
-                  <p className="font-mono text-xs font-semibold uppercase tracking-wide text-muted">
-                    New feedback ({newFeedback.length})
-                  </p>
-                  <div className="mt-2 space-y-2">
-                    {newFeedback.map((f) => (
-                      <button
-                        key={f.id}
-                        onClick={() => setTab("feedback")}
-                        className="block w-full rounded-[10px] border border-line px-4 py-2.5 text-left hover:border-black"
-                      >
-                        <span className="text-sm text-ink">{f.message}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
       )}
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {(["queue", "published", "signups", "feedback", "analytics", "sponsors"] as const).map((t) => (
+        {(["queue", "published", "signups", "analytics", "sponsors"] as const).map((t) => (
           <button
             key={t}
-            onClick={() => { setTab(t); if (t === "signups") loadSignups(key); else if (t === "feedback") loadFeedback(key); else if (t === "queue" || t === "published") load(key, t); }}
+            onClick={() => { setTab(t); if (t === "signups") loadSignups(key); else if (t === "queue" || t === "published") load(key, t); }}
             className={`rounded-full px-4 py-2 text-sm font-semibold ${
               tab === t
                 ? "bg-black text-white"
@@ -344,9 +300,7 @@ export default function AdminPage() {
                 ? `Published (${published.length})${newPublished.length > 0 ? ` · ${newPublished.length} new` : ""}`
                 : t === "signups"
                   ? `Launch signups (${signupStats.total})${newSignups.length > 0 ? ` · ${newSignups.length} new` : ""}`
-                  : t === "feedback"
-                    ? `Feedback (${feedback.length})${newFeedback.length > 0 ? ` · ${newFeedback.length} new` : ""}`
-                    : t === "analytics"
+                  : t === "analytics"
                       ? "Analytics"
                       : "Sponsors"}
           </button>
@@ -389,28 +343,6 @@ export default function AdminPage() {
               <p className="text-muted">No signups yet.</p>
             )}
           </div>
-        </div>
-      ) : tab === "feedback" ? (
-        <div className="mt-6 space-y-2">
-          {feedback.map((f) => (
-            <div key={f.id} className="rounded-[10px] border border-line bg-white px-4 py-2.5">
-              <p className="text-sm text-ink">{f.message}</p>
-              <p className="mt-1 font-mono text-xs text-muted">
-                {new Date(f.created_at).toLocaleDateString()}
-                {f.email && (
-                  <>
-                    {" · "}
-                    <a href={`mailto:${f.email}`} className="text-ink hover:underline">
-                      {f.email}
-                    </a>
-                  </>
-                )}
-              </p>
-            </div>
-          ))}
-          {feedback.length === 0 && (
-            <p className="text-muted">No feedback yet.</p>
-          )}
         </div>
       ) : (
       <div className="mt-6 space-y-4">
