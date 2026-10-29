@@ -132,8 +132,8 @@ export default function RevealButton({
                 homeowner who posted stays anonymous.
               </li>
               <li>
-                Names appear only on verified jobs. A business can ask to have
-                its name removed via the contact page.
+                Names appear only on verified jobs. A business that believes
+                a listing is inaccurate can contact us to dispute it.
               </li>
             </ul>
             <div className="mt-5 space-y-2">

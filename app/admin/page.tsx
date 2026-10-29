@@ -33,7 +33,7 @@ type Action = "verify" | "publish_unverified" | "reject";
  * reports. The name comes from the invoice the moderator already
  * checked; saving it makes the "See who did this work" button appear
  * on the public listing. Removing it hides the button again (the
- * business dispute / opt-out path).
+ * business dispute path — used when a listing is found inaccurate).
  */
 function BusinessNameEditor({ reportId, adminKey }: { reportId: string; adminKey: string }) {
   const [value, setValue] = useState("");

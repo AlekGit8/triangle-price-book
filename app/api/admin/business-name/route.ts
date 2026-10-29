@@ -25,7 +25,7 @@ export async function GET(req: Request) {
  * report_business_names (service-role only, never publicly readable);
  * the reveal button renders exactly when a name row exists — there is
  * no flag column to keep in sync. An empty name clears the row (the
- * business dispute / opt-out path).
+ * business dispute path — used when a listing is found inaccurate).
  */
 export async function POST(req: Request) {
   const denied = await requireAdmin(req);

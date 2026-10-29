@@ -114,8 +114,9 @@ export default function HowItWorksPage() {
             is gone and you&rsquo;d need to buy it again.
           </p>
           <p>
-            Invoices and quotes are never shown — only the business name. And
-            a business can ask to have its name removed via the contact page.
+            Invoices and quotes are never shown — only the business name. A
+            business that believes a listing is inaccurate can contact us to
+            dispute it.
           </p>
         </PlainSection>
 
