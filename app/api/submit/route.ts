@@ -4,7 +4,7 @@ import { getServiceSupabase } from "@/lib/supabase-server";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { clientIp } from "@/lib/rate-limit";
 import { siteConfig } from "@/lib/site-config";
-import { isValidEmail } from "@/lib/validation";
+import { isValidEmail, parseAmountCents } from "@/lib/validation";
 
 
 const MAX_INVOICE_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -80,18 +80,6 @@ function validServiceDate(s: string): boolean {
     day: "2-digit",
   }).format(new Date());
   return s <= todayET;
-}
-
-/**
- * Parse an amount from its string form into integer cents — never via
- * Number() (which accepts "1e5" and has float rounding: 1.005 * 100 is
- * 100.4999…). Only the client pattern is accepted: digits, optionally
- * with up to two decimal places.
- */
-function parseAmountCents(raw: string): number | null {
-  if (!/^\d+(\.\d{1,2})?$/.test(raw)) return null;
-  const [dollars, cents = ""] = raw.split(".");
-  return Number(dollars) * 100 + Number(cents.padEnd(2, "0"));
 }
 
 /**

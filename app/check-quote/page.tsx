@@ -5,6 +5,7 @@ import Script from "next/script";
 import Link from "next/link";
 import { siteConfig } from "@/lib/site-config";
 import { formatCents, formatMonthYear } from "@/lib/format";
+import { parseAmountCents } from "@/lib/validation";
 import ReportCard from "@/components/ReportCard";
 import type { Report } from "@/lib/data";
 
@@ -264,8 +265,8 @@ export default function CheckQuotePage() {
     e.preventDefault();
     setError("");
     setResult(null);
-    const cents = Math.round(parseFloat(price) * 100);
-    if (!Number.isFinite(cents) || cents <= 0) {
+    const cents = parseAmountCents(price);
+    if (cents === null || cents <= 0) {
       setError("Please enter a valid price.");
       return;
     }
