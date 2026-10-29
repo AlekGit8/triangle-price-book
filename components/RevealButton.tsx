@@ -129,35 +129,24 @@ export default function RevealButton({
               This is a <strong className="text-ink">verified</strong> job — the
               price was checked against paperwork — for{" "}
               <strong className="text-ink">{serviceName}</strong>. Paying reveals
-              the name of the business that performed it, on your private
-              list page.
+              the name of the business that performed it.
             </p>
-            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-relaxed text-muted">
-              <li>
-                The name appears on your private list page after payment (all
-                verified jobs: every verified listing&rsquo;s business name, on
-                one page).
-              </li>
-              <li>
-                No email is collected and no account is needed. After paying
-                you&rsquo;ll get a private link to your list page —{" "}
-                <strong className="text-ink">bookmark it</strong>. It opens your
-                list in any browser.
-              </li>
-              <li>
-                If you lose that link, the list is gone and you&rsquo;d need to
-                buy it again. Both options are one-time purchases — no time
-                limit, no subscription.
-              </li>
-              <li>
-                Invoices are never shown — only the business name. The
-                homeowner who posted stays anonymous.
-              </li>
-              <li>
-                Names appear only on verified jobs. A business that believes
-                a listing is inaccurate can contact us to dispute it.
-              </li>
-            </ul>
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              No email is collected and no account is needed. After paying
+              you&rsquo;ll get a private link to your list page.
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              If you lose that link, the list is gone and you&rsquo;d need to
+              buy it again. Both options are one-time purchases.
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              Invoices are never shown — only the business name. The
+              homeowner who posted stays anonymous.
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              Names appear only on verified jobs. A business that believes
+              a listing is inaccurate can contact us to dispute it.
+            </p>
             <div className="mt-5 space-y-2">
               <button
                 onClick={() => buy("single")}
