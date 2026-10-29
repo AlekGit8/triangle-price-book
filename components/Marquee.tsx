@@ -177,7 +177,6 @@ export default function Marquee({
         if (e.pointerType === "mouse") {
           dragRef.current = { startX: e.clientX, lastX: e.clientX };
           draggedRef.current = false;
-          containerRef.current?.setPointerCapture(e.pointerId);
           containerRef.current?.classList.add("dragging");
         }
       }}
@@ -186,17 +185,23 @@ export default function Marquee({
         if (!drag || e.pointerType !== "mouse" || !containerRef.current) return;
         const dx = e.clientX - drag.lastX;
         drag.lastX = e.clientX;
-        if (Math.abs(e.clientX - drag.startX) > 6) draggedRef.current = true;
+        if (Math.abs(e.clientX - drag.startX) > 6) {
+          // Capture only once a real drag is underway. Capturing on
+          // press retargets the follow-up click to the container, so
+          // plain clicks on cards would never reach the card.
+          if (!draggedRef.current) {
+            containerRef.current.setPointerCapture(e.pointerId);
+          }
+          draggedRef.current = true;
+        }
         containerRef.current.scrollLeft -= dx;
       }}
       onPointerUp={(e) => {
         if (dragRef.current) {
           dragRef.current = null;
           containerRef.current?.classList.remove("dragging");
-          try {
-            containerRef.current?.releasePointerCapture(e.pointerId);
-          } catch {
-            // Pointer was never captured; ignore.
+          if (containerRef.current?.hasPointerCapture(e.pointerId)) {
+            containerRef.current.releasePointerCapture(e.pointerId);
           }
         }
         scheduleResume();
