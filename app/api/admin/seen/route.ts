@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase-server";
-
-function authorized(req: Request): boolean {
-  const expected = process.env.ADMIN_KEY;
-  return !!expected && req.headers.get("x-admin-key") === expected;
-}
+import { requireAdmin } from "@/lib/admin-auth";
 
 /**
  * GET /api/admin/seen — returns the last admin visit timestamp
@@ -15,8 +11,8 @@ function authorized(req: Request): boolean {
  * localStorage) so it works across his devices.
  */
 export async function GET(req: Request) {
-  if (!authorized(req))
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   try {
     const sb = getServiceSupabase();
     const { data, error } = await sb
@@ -33,8 +29,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  if (!authorized(req))
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
   try {
     const sb = getServiceSupabase();
     const now = new Date().toISOString();

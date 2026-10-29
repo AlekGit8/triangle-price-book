@@ -22,6 +22,37 @@ export function geminiModelName(): string {
   return process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
 }
 
+/**
+ * Strip surrounding markdown code fences (```json ... ``` or ``` ... ```)
+ * and trim. Gemini is asked for JSON only, but sometimes wraps it anyway.
+ */
+export function stripCodeFences(text: string): string {
+  let t = text.trim();
+  if (!t.startsWith("```")) return t;
+  const firstNewline = t.indexOf("\n");
+  if (firstNewline !== -1) {
+    t = t.slice(firstNewline + 1);
+  } else {
+    t = t.replace(/^```[a-zA-Z]*\s*/, "");
+  }
+  const lastFence = t.lastIndexOf("```");
+  if (lastFence !== -1) t = t.slice(0, lastFence);
+  return t.trim();
+}
+
+/** Parse Gemini text as a JSON object. Returns null for non-objects or junk. */
+export function parseGeminiJson(text: string): Record<string, unknown> | null {
+  try {
+    const parsed: unknown = JSON.parse(stripCodeFences(text));
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export interface GeminiResult {
   /** The model's text output, or null when the call failed. */
   text: string | null;

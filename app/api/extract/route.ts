@@ -4,7 +4,7 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { clientIp } from "@/lib/rate-limit";
 import { siteConfig } from "@/lib/site-config";
 import { getServiceSupabase } from "@/lib/supabase-server";
-import { callGemini } from "@/lib/gemini";
+import { callGemini, parseGeminiJson } from "@/lib/gemini";
 
 
 const MAX_DOC_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -198,10 +198,8 @@ export async function POST(req: Request) {
         { status: 502 }
       );
     }
-    let fields: Record<string, unknown>;
-    try {
-      fields = JSON.parse(raw);
-    } catch {
+    const fields = parseGeminiJson(raw);
+    if (!fields) {
       return NextResponse.json(
         { ok: false, error: "Could not read the document. Please fill in the form manually." },
         { status: 502 }

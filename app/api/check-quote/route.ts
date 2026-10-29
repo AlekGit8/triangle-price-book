@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase-server";
 import { siteConfig } from "@/lib/site-config";
 import { searchTokens, matchScore } from "@/lib/search";
-import { callGemini, geminiModelName } from "@/lib/gemini";
+import { callGemini, geminiModelName, parseGeminiJson } from "@/lib/gemini";
 
 
 // Guard against giant JSON bodies; a description is a sentence, not a novel.
@@ -32,24 +32,6 @@ const AI_TOTAL_TIMEOUT_MS = 15_000;
 // Deliberately NO retry on 429/503: under free-tier throttling a retry just
 // doubles call volume against an already-overloaded API and buys nothing.
 // One attempt per model, then fall through to the next model.
-
-/**
- * Strip surrounding markdown code fences (```json ... ``` or ``` ... ```)
- * and trim. Gemini is asked for JSON only, but sometimes wraps it anyway.
- */
-function stripCodeFences(text: string): string {
-  let t = text.trim();
-  if (!t.startsWith("```")) return t;
-  const firstNewline = t.indexOf("\n");
-  if (firstNewline !== -1) {
-    t = t.slice(firstNewline + 1);
-  } else {
-    t = t.replace(/^```[a-zA-Z]*\s*/, "");
-  }
-  const lastFence = t.lastIndexOf("```");
-  if (lastFence !== -1) t = t.slice(0, lastFence);
-  return t.trim();
-}
 
 function aiEstimatePrompt(description: string, category: string): string {
   return `What is a reasonable price range for a homeowner hiring this job in the Raleigh-Durham-Chapel Hill Triangle region of North Carolina? Job: "${description}" (category: ${category}). Reply with ONLY a JSON object with exactly these keys: "low", "median", and "high" (numbers, in US dollars) and "basis" (one short sentence saying what the range is based on). Base it on typical US market pricing for this service. Never invent a specific local business price; give a broad market range. If the job description is too vague to estimate, set "low", "median", and "high" to null.`;
@@ -112,10 +94,8 @@ async function fetchAiEstimate(
     timeoutMs: Math.max(1000, remaining),
   });
   if (!raw) return null;
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(stripCodeFences(raw));
-  } catch {
+  const parsed = parseGeminiJson(raw);
+  if (!parsed) {
     console.error(
       `check-quote: Gemini model ${model} unparsable JSON, raw: ${raw.slice(0, 300)}`
     );
