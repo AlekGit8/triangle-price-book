@@ -85,13 +85,11 @@ export default function ReportCard({
           homeowner in {report.town}
         </p>
       )}
-      {!compact &&
-        report.verification_status === "verified" &&
-        report.business_name_available && (
-          <div className="mt-2">
-            <RevealButton reportId={report.id} serviceName={report.service_name} />
-          </div>
-        )}
+      {!compact && report.verification_status === "verified" && (
+        <div className="mt-2">
+          <RevealButton reportId={report.id} serviceName={report.service_name} />
+        </div>
+      )}
     </article>
   );
 }

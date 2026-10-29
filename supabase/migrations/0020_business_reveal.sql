@@ -11,17 +11,16 @@
 --   public read) cannot see it even if a query asks for it — only the
 --   service-role client in the reveal API routes reads it, and only
 --   after proving a valid purchase token.
--- - reports.business_name_available is a public-safe boolean flag: it
---   tells the UI to render the "See who did this work" button. It
---   reveals nothing by itself.
+-- - The reveal button renders exactly when a name row exists (checked
+--   via /api/reveal/status). There is deliberately NO flag column on
+--   reports: a flag could drift out of sync with the names table, and
+--   the public report queries must keep working whether or not this
+--   migration has been applied yet (a missing column used to blank
+--   the whole site — see Oct 29, 2026 fix).
 -- - reveal_purchases records each sale: single reveals (report_id set,
 --   no expiry — the bookmark link works indefinitely) and day passes
 --   (report_id null, expires_at = purchase + 24h). The token is the
 --   only key: no accounts, no buyer email is stored anywhere.
-
--- Public-safe flag on reports (default false = no button rendered).
-alter table reports
-  add column if not exists business_name_available boolean not null default false;
 
 -- One name per report, set by an admin after checking the invoice.
 create table if not exists report_business_names (

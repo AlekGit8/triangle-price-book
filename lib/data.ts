@@ -12,8 +12,6 @@ export interface Report {
   notes: string | null;
   verification_status: "unverified" | "verified" | "rejected";
   created_at: string;
-  /** Public-safe flag: an admin stored a business name for this report. The name itself is never in public reads. */
-  business_name_available: boolean;
 }
 
 /**
@@ -64,7 +62,7 @@ export async function getApprovedReports(category?: string): Promise<Report[]> {
     let q = sb
       .from("reports")
       .select(
-        "id, service_name, category, amount_cents, report_type, town, service_date, notes, verification_status, created_at, business_name_available"
+        "id, service_name, category, amount_cents, report_type, town, service_date, notes, verification_status, created_at"
       )
       .neq("verification_status", "rejected")
       .order("created_at", { ascending: false })

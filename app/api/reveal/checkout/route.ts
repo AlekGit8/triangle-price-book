@@ -33,13 +33,27 @@ export async function POST(req: Request) {
       const sb = getServiceSupabase();
       const { data: report, error } = await sb
         .from("reports")
-        .select("id, service_name, category, verification_status, business_name_available")
+        .select("id, service_name, category, verification_status")
         .eq("id", reportId)
         .maybeSingle();
       if (error || !report) {
         return NextResponse.json({ ok: false, error: "Report not found." }, { status: 404 });
       }
-      if (report.verification_status !== "verified" || !report.business_name_available) {
+      if (report.verification_status !== "verified") {
+        return NextResponse.json(
+          { ok: false, error: "Business names are only revealed for verified reports." },
+          { status: 400 }
+        );
+      }
+      // The names table is the single source of truth — no flag column
+      // to drift out of sync. (Before migration 0020 this lookup fails
+      // and the buyer gets a clean "not available" instead of a charge.)
+      const { data: nameRow } = await sb
+        .from("report_business_names")
+        .select("report_id")
+        .eq("report_id", reportId)
+        .maybeSingle();
+      if (!nameRow) {
         return NextResponse.json(
           { ok: false, error: "This report has no business name available." },
           { status: 400 }

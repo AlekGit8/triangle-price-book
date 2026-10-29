@@ -23,9 +23,9 @@ export async function GET(req: Request) {
  * POST /api/admin/business-name — set or clear the contractor name for
  * a verified report (gated by ADMIN_KEY). The name is stored in
  * report_business_names (service-role only, never publicly readable);
- * reports.business_name_available is the public-safe flag that makes
- * the reveal button render. An empty name clears both (the business
- * dispute / opt-out path).
+ * the reveal button renders exactly when a name row exists — there is
+ * no flag column to keep in sync. An empty name clears the row (the
+ * business dispute / opt-out path).
  */
 export async function POST(req: Request) {
   const denied = await requireAdmin(req);
@@ -57,19 +57,13 @@ export async function POST(req: Request) {
     }
     if (name === "") {
       await sb.from("report_business_names").delete().eq("report_id", reportId);
-      await sb.from("reports").update({ business_name_available: false }).eq("id", reportId);
-      return NextResponse.json({ ok: true, business_name_available: false });
+      return NextResponse.json({ ok: true, business_name: null });
     }
     const { error: upsertErr } = await sb
       .from("report_business_names")
       .upsert({ report_id: reportId, business_name: name, updated_at: new Date().toISOString() });
     if (upsertErr) throw upsertErr;
-    const { error: flagErr } = await sb
-      .from("reports")
-      .update({ business_name_available: true })
-      .eq("id", reportId);
-    if (flagErr) throw flagErr;
-    return NextResponse.json({ ok: true, business_name_available: true, business_name: name });
+    return NextResponse.json({ ok: true, business_name: name });
   } catch (err) {
     console.error("admin business-name error:", err);
     return NextResponse.json({ ok: false, error: "Could not save the business name." }, { status: 500 });

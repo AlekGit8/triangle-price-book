@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 
 /**
  * "See who did this work" — the paid business-name reveal for one
- * verified report. Renders only when the report is verified AND an
- * admin has stored a business name for it (business_name_available).
+ * verified report. The button itself decides whether to appear: on
+ * mount it asks /api/reveal/status, which reports whether an admin has
+ * stored a name for this report (and whether this browser already holds
+ * an unlocking token). No name stored → renders nothing, so the card
+ * looks exactly like it did before reveals existed.
  *
  * If this browser already holds an unlocking token (single for this
  * report, or an unexpired day pass), the name shows inline instead of
@@ -21,6 +24,7 @@ export default function RevealButton({
   serviceName: string;
 }) {
   const [unlockedName, setUnlockedName] = useState<string | null>(null);
+  const [available, setAvailable] = useState(false);
   const [checked, setChecked] = useState(false);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -31,8 +35,11 @@ export default function RevealButton({
     fetch(`/api/reveal/status?report_id=${encodeURIComponent(reportId)}`)
       .then((r) => r.json())
       .then((json) => {
-        if (!cancelled && json.unlocked && json.business_name) {
-          setUnlockedName(json.business_name as string);
+        if (!cancelled) {
+          if (json.unlocked && json.business_name) {
+            setUnlockedName(json.business_name as string);
+          }
+          if (json.available) setAvailable(true);
         }
       })
       .catch(() => {})
@@ -70,6 +77,7 @@ export default function RevealButton({
       </p>
     );
   }
+  if (!available) return null;
 
   return (
     <>
