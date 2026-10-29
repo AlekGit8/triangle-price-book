@@ -10,7 +10,8 @@ const nav = [
   { href: "/browse", label: "Browse Prices" },
   { href: "/check-quote", label: "Check a Quote" },
   { href: "/how-it-works", label: "How This Works" },
-  { href: "/feedback", label: "Feedback" },
+  { href: "/about", label: "About" },
+  { href: "/contact", label: "Contact" },
   { href: "/donate", label: "Tip Jar" },
   { href: "/submit", label: "Submit a Price" },
 ];
@@ -27,8 +28,9 @@ export default function SiteHeader() {
           </span>
         </Link>
         <div className="flex items-center gap-1">
-          {/* Desktop nav: hidden on mobile, where the hamburger takes over */}
-          <nav className="hidden md:flex items-center gap-1 sm:gap-2 text-sm">
+          {/* Desktop nav: hidden below lg, where the hamburger takes over.
+              Eight links overflow at md widths, so the breakpoint is lg. */}
+          <nav className="hidden lg:flex items-center gap-1 sm:gap-2 text-sm">
             {nav.map((item) =>
               item.href === "/submit" ? (
                 <Link
@@ -62,7 +64,7 @@ export default function SiteHeader() {
           {/* Mobile hamburger: opens a stacked menu, so the header never scrolls sideways */}
           <button
             type="button"
-            className="md:hidden rounded-[10px] px-3 py-2 text-ink hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            className="lg:hidden rounded-[10px] px-3 py-2 text-ink hover:bg-neutral-100 dark:hover:bg-neutral-800"
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
@@ -87,7 +89,7 @@ export default function SiteHeader() {
       </div>
       {/* Mobile menu panel */}
       {open && (
-        <nav className="md:hidden border-t border-line bg-white dark:bg-neutral-900">
+        <nav className="lg:hidden border-t border-line bg-white dark:bg-neutral-900">
           <div className="mx-auto max-w-6xl px-4 py-2 flex flex-col text-sm">
             {nav.map((item) =>
               item.href === "/submit" ? (
