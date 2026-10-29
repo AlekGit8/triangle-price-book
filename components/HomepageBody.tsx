@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useMemo, useRef, useState } from "react";
 import { siteConfig, categorySlugs } from "@/lib/site-config";
 import { normalizeText as normalize, singularize } from "@/lib/search";
 import type { ServiceAggregate, Report } from "@/lib/data";
@@ -9,27 +9,23 @@ import StatsStrip from "@/components/StatsStrip";
 import ReportCard from "@/components/ReportCard";
 import Marquee, { MarqueeCopyContext } from "@/components/Marquee";
 
-/** One ticker card. Clicking opens the full detail card; dragging (or a
-    swipe) still scrolls instead — a click is ignored when the pointer
-    moved more than a few pixels between press and release, and the
-    marquee itself swallows drag-end clicks. Only the first tiled copy
-    is keyboard-focusable; the aria-hidden duplicates stay
-    pointer-clickable but out of the tab order. */
-function MarqueeCard({
-  report,
-  onOpen,
-}: {
-  report: Report;
-  onOpen: (report: Report) => void;
-}) {
+/** One ticker card, linked to its own full page. Dragging (or a swipe)
+    still scrolls instead of navigating — a click is suppressed when the
+    pointer moved more than a few pixels between press and release, and
+    the marquee itself swallows drag-end clicks. Clicking the reveal
+    link inside the card never navigates (the reveal trigger stops the
+    click). Only the first tiled copy is keyboard-focusable; the
+    aria-hidden duplicates stay pointer-clickable but out of the tab
+    order. */
+function MarqueeCard({ report }: { report: Report }) {
   const copy = useContext(MarqueeCopyContext);
   const firstCopy = copy === 0;
   const downPos = useRef<{ x: number; y: number } | null>(null);
   return (
-    <div
-      className="w-[300px] shrink-0 cursor-pointer sm:w-[340px]"
-      role="button"
-      tabIndex={firstCopy ? 0 : -1}
+    <Link
+      href={`/report/${report.id}`}
+      className="block w-[300px] shrink-0 sm:w-[340px]"
+      tabIndex={firstCopy ? undefined : -1}
       aria-label={`${report.service_name}, ${report.town}, details`}
       onPointerDown={(e) => {
         downPos.current = { x: e.clientX, y: e.clientY };
@@ -37,14 +33,7 @@ function MarqueeCard({
       onClick={(e) => {
         const down = downPos.current;
         if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) {
-          return;
-        }
-        onOpen(report);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onOpen(report);
         }
       }}
     >
@@ -53,7 +42,7 @@ function MarqueeCard({
         compact
         revealTabIndex={firstCopy ? undefined : -1}
       />
-    </div>
+    </Link>
   );
 }
 
@@ -78,18 +67,7 @@ export default function HomepageBody({
   allReports: Report[];
 }) {
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<Report | null>(null);
   const resultsRef = useRef<HTMLElement>(null);
-
-  // Close the detail card with Escape.
-  useEffect(() => {
-    if (!selected) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSelected(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [selected]);
 
   // Pills ordered by total published reports in each category, most to
   // least; ties keep the site-config order. Categories with no reports
@@ -244,7 +222,7 @@ export default function HomepageBody({
             durationMs={150_000}
           >
             {allReports.slice(0, 15).map((report) => (
-              <MarqueeCard key={report.id} report={report} onOpen={setSelected} />
+              <MarqueeCard key={report.id} report={report} />
             ))}
           </Marquee>
         )}
@@ -304,35 +282,6 @@ export default function HomepageBody({
           ))}
         </div>
       </section>
-
-      {/* Detail card: click a ticker card to see the full entry. The
-          overlay scrolls (instead of centering a possibly taller-than-
-          viewport card with no way to reach the cut-off top on phones). */}
-      {selected && (
-        <div
-          className="fixed inset-0 z-50 overflow-y-auto bg-[#000]/50"
-          onClick={() => setSelected(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${selected.service_name} details`}
-        >
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div
-              className="relative w-full max-w-lg"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ReportCard report={selected} />
-              <button
-                onClick={() => setSelected(null)}
-                aria-label="Close details"
-                className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-card text-lg leading-none text-ink hover:bg-line"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Final call to action */}
       <section className="mt-20 rounded-3xl bg-card p-8 text-center sm:p-12">
