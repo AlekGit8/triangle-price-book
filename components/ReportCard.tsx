@@ -1,5 +1,6 @@
 import { formatCents, formatMonthYear } from "@/lib/format";
 import type { Report } from "@/lib/data";
+import RevealButton from "./RevealButton";
 
 function Badge({
   children,
@@ -38,8 +39,10 @@ export function publicNote(notes: string | null): string | null {
 }
 
 /**
- * One anonymized price entry. Never renders a business name —
- * attribution is always "a verified homeowner in {town}".
+ * One anonymized price entry. The submitter is never named — attribution
+ * is always "a verified homeowner in {town}". A contractor/business
+ * name appears only on verified reports where an admin stored one, and
+ * only after a paid reveal (see RevealButton).
  * `compact` (marquee mode) shows the note truncated to two lines and hides
  * the attribution line so ticker cards stay roughly uniform.
  */
@@ -82,6 +85,13 @@ export default function ReportCard({
           homeowner in {report.town}
         </p>
       )}
+      {!compact &&
+        report.verification_status === "verified" &&
+        report.business_name_available && (
+          <div className="mt-2">
+            <RevealButton reportId={report.id} serviceName={report.service_name} />
+          </div>
+        )}
     </article>
   );
 }

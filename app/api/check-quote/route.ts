@@ -252,7 +252,7 @@ export async function POST(req: Request) {
     // the AI call is the slow one, so the DB rows are ready when it lands.
     const dbPromise = sb
       .from("reports")
-      .select("id, amount_cents, service_name, town, service_date, report_type, created_at")
+      .select("id, amount_cents, service_name, town, service_date, report_type, created_at, verification_status, business_name_available")
       .eq("category", category)
       .eq("verification_status", "verified")
       .not("moderated_at", "is", null)

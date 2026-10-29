@@ -34,7 +34,7 @@ function BrowseInner() {
       const { data, error } = await sb
         .from("reports")
         .select(
-          "id, service_name, category, amount_cents, report_type, town, service_date, notes, verification_status, created_at"
+          "id, service_name, category, amount_cents, report_type, town, service_date, notes, verification_status, created_at, business_name_available"
         )
         .neq("verification_status", "rejected")
         .order("created_at", { ascending: false })

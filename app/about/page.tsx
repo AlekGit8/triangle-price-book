@@ -47,8 +47,10 @@ export default function AboutPage() {
         <Section title="What we don't do">
           <p>
             Public entries show only the service, price, town, and date. We
-            never post names, addresses, or business names, and there are no
-            rankings and no sponsored estimates.
+            never post your name or address, and there are no
+            rankings and no sponsored estimates. One exception: on verified
+            entries, the business that did the work can be revealed to paying
+            viewers — see How this works for details.
           </p>
           <p>
             The site may show a single banner labelled &ldquo;Sponsored&rdquo; at

@@ -33,6 +33,12 @@ const API_LIMITS: ApiLimit[] = [
   { prefix: "/api/extract", limit: 10, windowMs: HOUR, dayLimit: 30 },
   // /api/submit writes to the DB (spam vector).
   { prefix: "/api/submit", limit: 30, windowMs: HOUR },
+  // Paid reveals: starting a Stripe Checkout session (abuse = session
+  // spam). The webhook is deliberately NOT limited — Stripe retries
+  // from a small set of IPs, and a limit there could drop fulfillments.
+  { prefix: "/api/reveal/checkout", limit: 30, windowMs: HOUR },
+  { prefix: "/api/reveal/activate", limit: 30, windowMs: HOUR },
+  { prefix: "/api/reveal/activate-token", limit: 30, windowMs: HOUR },
   // Public read API; generous, but not unlimited (full-table scans).
   // 120/hr let one IP burn 120 Gemini calls an hour — 30/hr with a
   // 60/day cap is plenty for a human checking quotes, and the estimate
