@@ -170,7 +170,7 @@ function DraftCard({
             <span className="ml-2 font-mono font-bold text-ink">${d.amount}</span>
           )}
         </p>
-        {d.status === "pending" && (
+        {(d.status === "pending" || d.status === "error") && (
           <button
             type="button"
             onClick={() => onRemove(d.key)}
@@ -334,6 +334,16 @@ export default function SubmitPage() {
   const turnstileTokenRef = useRef("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileUnavailable, setTurnstileUnavailable] = useState(false);
+
+  // Drafts-section Turnstile widget, parallel to the manual form's one:
+  // draft publishing used to depend on the manual form's widget, which
+  // sits below the fold — a draft Publish clicked before solving it
+  // failed closed with no widget in sight. Drafts get their own.
+  const draftsTurnstileContainerRef = useRef<HTMLDivElement>(null);
+  const draftsTurnstileWidgetIdRef = useRef<string | null>(null);
+  const draftsTurnstileTokenRef = useRef("");
+  const [draftsTurnstileToken, setDraftsTurnstileToken] = useState("");
+  const [draftsTurnstileUnavailable, setDraftsTurnstileUnavailable] = useState(false);
 
   // Restore once, after mount (see above). A check-my-quote carryover
   // wins over the persisted form: an uploaded check becomes a draft
@@ -506,6 +516,73 @@ export default function SubmitPage() {
     };
   }, []);
 
+  // Drafts-section widget: same explicit-render pattern as the manual
+  // form's widget, with its own refs so the two don't clobber each
+  // other. Re-runs only when the drafts box appears/disappears — NOT on
+  // every draft edit, which would re-render the widget and eat a solved
+  // token. (During publishing the box hides briefly; the token was
+  // already consumed by then, so the fresh widget on retry is correct.)
+  const draftsWidgetVisible = drafts.some(
+    (d) => d.status === "pending" || d.status === "error"
+  );
+  useEffect(() => {
+    if (!turnstileSiteKey || !draftsWidgetVisible) return;
+    let cancelled = false;
+    function tryRender() {
+      if (cancelled) return;
+      const t = window.turnstile;
+      const container = draftsTurnstileContainerRef.current;
+      if (!t || !container || draftsTurnstileWidgetIdRef.current) return;
+      try {
+        const id = t.render(container, {
+          sitekey: turnstileSiteKey,
+          action: "submit",
+          callback: (token: string) => {
+            draftsTurnstileTokenRef.current = token;
+            setDraftsTurnstileToken(token);
+          },
+          "expired-callback": () => {
+            draftsTurnstileTokenRef.current = "";
+            setDraftsTurnstileToken("");
+          },
+          "error-callback": () => {
+            draftsTurnstileTokenRef.current = "";
+            setDraftsTurnstileToken("");
+          },
+        });
+        draftsTurnstileWidgetIdRef.current = id;
+      } catch {
+        // Render failed (script still loading) — the load listener retries.
+      }
+    }
+    tryRender();
+    const unavailableTimer = window.setTimeout(() => {
+      if (!draftsTurnstileWidgetIdRef.current && !draftsTurnstileTokenRef.current) {
+        setDraftsTurnstileUnavailable(true);
+      }
+    }, 20000);
+    const script = document.querySelector<HTMLScriptElement>(
+      'script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]'
+    );
+    script?.addEventListener("load", tryRender);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(unavailableTimer);
+      script?.removeEventListener("load", tryRender);
+      const id = draftsTurnstileWidgetIdRef.current;
+      draftsTurnstileWidgetIdRef.current = null;
+      draftsTurnstileTokenRef.current = "";
+      setDraftsTurnstileToken("");
+      if (id) {
+        try {
+          window.turnstile?.remove(id);
+        } catch {
+          // Already gone.
+        }
+      }
+    };
+  }, [draftsWidgetVisible]);
+
   /** Wait briefly for a Turnstile token (widget still solving), then return it. */
   async function getTurnstileToken(): Promise<string> {
     if (!turnstileSiteKey) return "";
@@ -533,6 +610,48 @@ export default function SubmitPage() {
     }
     turnstileTokenRef.current = "";
     setTurnstileToken("");
+  }
+
+  /** Token for a draft publish: prefer the drafts-section widget, fall
+      back to the manual form's widget if that one was solved instead.
+      Returns which widget supplied it so only that one gets reset. */
+  async function getDraftsTurnstileToken(): Promise<{
+    token: string;
+    source: "drafts" | "manual" | null;
+  }> {
+    if (!turnstileSiteKey) return { token: "", source: null };
+    const started = Date.now();
+    while (Date.now() - started < 8000) {
+      if (draftsTurnstileTokenRef.current)
+        return { token: draftsTurnstileTokenRef.current, source: "drafts" };
+      if (turnstileTokenRef.current)
+        return { token: turnstileTokenRef.current, source: "manual" };
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    if (draftsTurnstileTokenRef.current)
+      return { token: draftsTurnstileTokenRef.current, source: "drafts" };
+    if (turnstileTokenRef.current)
+      return { token: turnstileTokenRef.current, source: "manual" };
+    return { token: "", source: null };
+  }
+
+  /** Reset one widget after its token was used (success or failure) so
+      a retry gets a fresh token. */
+  function clearDraftsTurnstileToken(source: "drafts" | "manual" | null) {
+    if (source === "drafts") {
+      const id = draftsTurnstileWidgetIdRef.current;
+      if (id) {
+        try {
+          window.turnstile?.reset(id);
+        } catch {
+          // Widget already gone.
+        }
+      }
+      draftsTurnstileTokenRef.current = "";
+      setDraftsTurnstileToken("");
+    } else if (source === "manual") {
+      clearTurnstileToken();
+    }
   }
 
   function set<K extends keyof FormFields>(key: K, value: FormFields[K]) {
@@ -659,7 +778,9 @@ export default function SubmitPage() {
     );
     form.set("submitterEmail", draftEmail.trim());
     if (docFile) form.set("invoice", docFile);
-    form.set("turnstileToken", await getTurnstileToken());
+    const { token: draftsToken, source: draftsTokenSource } =
+      await getDraftsTurnstileToken();
+    form.set("turnstileToken", draftsToken);
     let res: Response;
     let json: { ok?: boolean; error?: string; results?: Array<{ id: string; verified: boolean }> };
     try {
@@ -670,7 +791,7 @@ export default function SubmitPage() {
       // worked or not. Reset now so a retry gets a fresh token instead of
       // re-sending this dead one — including when fetch()/res.json()
       // throws after the server consumed it.
-      clearTurnstileToken();
+      clearDraftsTurnstileToken(draftsTokenSource);
     }
     if (!res.ok || !json.ok) throw new Error(json.error ?? "Submission failed");
     return json.results ?? [];
@@ -686,7 +807,10 @@ export default function SubmitPage() {
 
   async function publishOne(key: string) {
     const d = drafts.find((x) => x.key === key);
-    if (!d || d.status !== "pending") return;
+    // "error" drafts are retryable: a failed publish (e.g. an unsolved
+    // spam check) used to brick the card, because this only ran for
+    // "pending" and the button silently did nothing afterwards.
+    if (!d || (d.status !== "pending" && d.status !== "error")) return;
     const invalid = draftValid(d);
     if (invalid) {
       updateDraft(key, { status: "error", errorMsg: invalid });
@@ -705,7 +829,9 @@ export default function SubmitPage() {
   }
 
   async function publishAll() {
-    const pending = drafts.filter((d) => d.status === "pending");
+    const pending = drafts.filter(
+      (d) => d.status === "pending" || d.status === "error"
+    );
     if (pending.length === 0) return;
     for (const d of pending) {
       const invalid = draftValid(d);
@@ -716,7 +842,11 @@ export default function SubmitPage() {
     }
     setPublishingAll(true);
     setDrafts((ds) =>
-      ds.map((d) => (d.status === "pending" ? { ...d, status: "publishing" as const, errorMsg: "" } : d))
+      ds.map((d) =>
+        d.status === "pending" || d.status === "error"
+          ? { ...d, status: "publishing" as const, errorMsg: "" }
+          : d
+      )
     );
     try {
       const results = await publishDraftBatch(pending);
@@ -812,7 +942,12 @@ export default function SubmitPage() {
     );
   }
 
-  const pendingCount = drafts.filter((d) => d.status === "pending").length;
+  // Publishable drafts: pending plus errored (retryable) ones. The
+  // publish section below must stay visible after a failed publish,
+  // or the user has no way back to the retry button.
+  const publishableCount = drafts.filter(
+    (d) => d.status === "pending" || d.status === "error"
+  ).length;
   const doneCount = drafts.filter((d) => d.status === "done").length;
 
   return (
@@ -951,8 +1086,30 @@ export default function SubmitPage() {
             ))}
           </div>
 
-          {pendingCount > 0 && (
+          {publishableCount > 0 && (
             <div className="mt-4 rounded-2xl border border-line bg-white p-4 sm:p-5">
+              {/* Drafts-section spam check (see the effect above): the
+                  drafts Publish buttons use this widget's token, so it
+                  sits where the publish action is instead of depending
+                  on the manual form's widget below. */}
+              {turnstileSiteKey && (
+                <>
+                  <Script
+                    src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+                    async
+                    defer
+                  />
+                  <div ref={draftsTurnstileContainerRef} />
+                  {!draftsTurnstileToken && !draftsTurnstileUnavailable && (
+                    <p className="mt-1 text-xs text-muted">Complete the check above to publish your quotes.</p>
+                  )}
+                  {draftsTurnstileUnavailable && (
+                    <p className="mt-1 text-xs text-muted">
+                      The spam check didn&rsquo;t load — you can still try publishing below.
+                    </p>
+                  )}
+                </>
+              )}
               <div>
                 <label className={labelCls} htmlFor="draftEmail">
                   Email (optional, private)
@@ -985,13 +1142,13 @@ export default function SubmitPage() {
               </label>
               <button
                 type="button"
-                disabled={!draftsAgreed || publishingAll || pendingCount === 0}
+                disabled={!draftsAgreed || publishingAll || publishableCount === 0}
                 onClick={publishAll}
                 className="mt-4 w-full rounded-[10px] bg-black px-6 py-3 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200 disabled:opacity-50"
               >
                 {publishingAll
                   ? "Publishing…"
-                  : `Publish all ${pendingCount} quote${pendingCount === 1 ? "" : "s"}`}
+                  : `Publish all ${publishableCount} quote${publishableCount === 1 ? "" : "s"}`}
               </button>
               {!draftsAgreed && (
                 <p className="mt-2 text-xs text-muted text-center">
