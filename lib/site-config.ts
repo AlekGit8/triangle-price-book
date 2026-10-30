@@ -226,7 +226,7 @@ export const activeSponsor: Sponsor | null = null;
  */
 export const outreachLinks: Record<
   string,
-  { company: string; destinationUrl: string; group: "contractors" | "news" | "plumbing" }
+  { company: string; destinationUrl: string; group: "contractors" | "news" | "plumbing" | "realtor" }
 > = {
   "outreach-blaze": {
     company: "Blaze Heating, Cooling, Electrical & Plumbing",
@@ -369,6 +369,39 @@ export const outreachLinks: Record<
     company: "Peak Durham Plumbers",
     destinationUrl: siteConfig.siteUrl,
     group: "plumbing",
+  },
+  // Realtors (Oct 30, 2026) — one tracked link per realtor in the
+  // realtor-outreach drafts. Slugs prefixed "realtor-" so they show
+  // as their own group in the admin Sponsors list.
+  "realtor-jami-amidon": {
+    company: "Jami Amidon Real Estate",
+    destinationUrl: siteConfig.siteUrl,
+    group: "realtor",
+  },
+  "realtor-debbie-vanhorn": {
+    company: "Debbie VanHorn & Co.",
+    destinationUrl: siteConfig.siteUrl,
+    group: "realtor",
+  },
+  "realtor-abshure": {
+    company: "Abshure Realty Group",
+    destinationUrl: siteConfig.siteUrl,
+    group: "realtor",
+  },
+  "realtor-front-porch": {
+    company: "Front Porch Realty",
+    destinationUrl: siteConfig.siteUrl,
+    group: "realtor",
+  },
+  "realtor-nexthome-rare": {
+    company: "NextHome RARE Properties",
+    destinationUrl: siteConfig.siteUrl,
+    group: "realtor",
+  },
+  "realtor-hillman": {
+    company: "Hillman Real Estate Group",
+    destinationUrl: siteConfig.siteUrl,
+    group: "realtor",
   },
 };
 
