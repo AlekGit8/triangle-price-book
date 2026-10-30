@@ -21,7 +21,7 @@ export default function HowItWorksPage() {
     <div className="py-10 max-w-3xl mx-auto">
       <h1 className="font-serif text-4xl text-ink sm:text-5xl">How {siteConfig.siteName} works</h1>
       <p className="mt-3 text-lg text-muted">
-        Real prices from real neighbors. Free, no accounts, no catch.
+        Real prices from real neighbors. Free to submit and browse, no accounts, no catch.
       </p>
 
       <div className="mt-8 space-y-5">
