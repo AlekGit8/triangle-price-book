@@ -120,26 +120,6 @@ export default function HowItWorksPage() {
           </p>
         </PlainSection>
 
-        <PlainSection title="Quick answers">
-          <dl className="space-y-3">
-            <div>
-              <dt className="font-semibold text-ink">Do I need an account?</dt>
-              <dd>No.</dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-ink">Is it really free?</dt>
-              <dd>Yes. Browsing and submitting are free; tips, ads, and optional paid reveals keep the lights on.</dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-ink">Can a business pay to change or remove prices?</dt>
-              <dd>No. There are no business profiles, rankings, or paid placements in listings — just one clearly labeled sponsor banner at the top of the site.</dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-ink">Think an entry is wrong?</dt>
-              <dd>Contact us and we&rsquo;ll review it.</dd>
-            </div>
-          </dl>
-        </PlainSection>
       </div>
     </div>
   );
