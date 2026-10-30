@@ -1,13 +1,50 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useContext, useMemo, useRef, useState } from "react";
 import { siteConfig, categorySlugs } from "@/lib/site-config";
 import { normalizeText as normalize, singularize } from "@/lib/search";
 import type { ServiceAggregate, Report } from "@/lib/data";
 import StatsStrip from "@/components/StatsStrip";
 import ReportCard from "@/components/ReportCard";
-import Marquee from "@/components/Marquee";
+import Marquee, { MarqueeCopyContext } from "@/components/Marquee";
+
+/** One ticker card, linked to its own full page. Dragging (or a swipe)
+    still scrolls instead of navigating — a click is suppressed when the
+    pointer moved more than a few pixels between press and release, and
+    the marquee itself swallows drag-end clicks. Clicking the reveal
+    link inside the card never navigates (the reveal trigger stops the
+    click). Only the first tiled copy is keyboard-focusable; the
+    aria-hidden duplicates stay pointer-clickable but out of the tab
+    order. */
+function MarqueeCard({ report }: { report: Report }) {
+  const copy = useContext(MarqueeCopyContext);
+  const firstCopy = copy === 0;
+  const downPos = useRef<{ x: number; y: number } | null>(null);
+  return (
+    <Link
+      href={`/report/${report.id}`}
+      className="block w-[300px] shrink-0 sm:w-[340px]"
+      tabIndex={firstCopy ? undefined : -1}
+      aria-label={`${report.service_name}, ${report.town}, details`}
+      onPointerDown={(e) => {
+        downPos.current = { x: e.clientX, y: e.clientY };
+      }}
+      onClick={(e) => {
+        const down = downPos.current;
+        if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) {
+          e.preventDefault();
+        }
+      }}
+    >
+      <ReportCard
+        report={report}
+        compact
+        revealTabIndex={firstCopy ? undefined : -1}
+      />
+    </Link>
+  );
+}
 
 /** Every word in the query (plural-insensitive) must appear in the service name, category, or town. */
 function matchesReport(
@@ -185,9 +222,7 @@ export default function HomepageBody({
             durationMs={150_000}
           >
             {allReports.slice(0, 15).map((report) => (
-              <div key={report.id} className="w-[300px] shrink-0 sm:w-[340px]">
-                <ReportCard report={report} compact />
-              </div>
+              <MarqueeCard key={report.id} report={report} />
             ))}
           </Marquee>
         )}

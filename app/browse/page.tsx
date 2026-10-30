@@ -7,6 +7,7 @@ import { siteConfig } from "@/lib/site-config";
 import { formatCents, formatMonthYear } from "@/lib/format";
 import { normalizeText as normalize, singularize } from "@/lib/search";
 import ReportCard, { publicNote } from "@/components/ReportCard";
+import RevealButton from "@/components/RevealButton";
 import type { Report } from "@/lib/data";
 
 function BrowseInner() {
@@ -282,8 +283,24 @@ function BrowseInner() {
                         <p className="mt-1 text-xs text-muted">{note}</p>
                       )}
                       {r.verification_status === "verified" ? (
-                        <span className="mt-1 inline-block rounded bg-green-100 dark:bg-green-950 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-green-800 dark:text-green-300">
-                          Verified
+                        <span className="mt-1 flex flex-wrap items-center gap-2">
+                          <span className="inline-block rounded bg-green-100 dark:bg-green-950 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-green-800 dark:text-green-300">
+                            Verified
+                          </span>
+                          {/* Reveal link right in the row, so visitors don't
+                              have to open the detail card to find it. The
+                              wrapper swallows clicks/keys so the row itself
+                              doesn't also open the detail card. */}
+                          <span
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          >
+                            <RevealButton
+                              reportId={r.id}
+                              serviceName={r.service_name}
+                              className=""
+                            />
+                          </span>
                         </span>
                       ) : (
                         <span className="mt-1 inline-block rounded bg-card px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-muted">
@@ -319,27 +336,31 @@ function BrowseInner() {
         )}
       </div>
 
-      {/* Detail card: click a row to see the full entry. */}
+      {/* Detail card: click a row to see the full entry. The overlay
+          scrolls (instead of centering a possibly taller-than-viewport
+          card with no way to reach the cut-off top on phones). */}
       {selected && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#000]/50 p-4"
+          className="fixed inset-0 z-50 overflow-y-auto bg-[#000]/50"
           onClick={() => setSelected(null)}
           role="dialog"
           aria-modal="true"
           aria-label={`${selected.service_name} details`}
         >
-          <div
-            className="relative w-full max-w-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ReportCard report={selected} />
-            <button
-              onClick={() => setSelected(null)}
-              aria-label="Close details"
-              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-card text-lg leading-none text-ink hover:bg-line"
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div
+              className="relative w-full max-w-lg"
+              onClick={(e) => e.stopPropagation()}
             >
-              ×
-            </button>
+              <ReportCard report={selected} />
+              <button
+                onClick={() => setSelected(null)}
+                aria-label="Close details"
+                className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-card text-lg leading-none text-ink hover:bg-line"
+              >
+                ×
+              </button>
+            </div>
           </div>
         </div>
       )}

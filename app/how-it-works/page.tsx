@@ -88,10 +88,37 @@ export default function HowItWorksPage() {
         <Section n="3" title="Your privacy is protected">
           <p>
             Public entries show only the <strong>service, price, town, and date</strong>.
-            We never post names, addresses, or business names, so you can share
-            freely and nobody gets called out.
+            Your name and address are never posted, so you can share freely
+            and nobody gets called out. One exception: on verified entries,
+            the name of the business that did the work can be revealed to
+            paying viewers (see below) — the homeowner stays anonymous either way.
           </p>
         </Section>
+
+        <PlainSection title="Who did the work? (paid reveal)">
+          <p>
+            Business and contractor names are collected <strong>only for
+            verified submissions</strong> — taken from the document used to
+            verify the price — and are available to view for a small fee.
+            On a verified listing with a stored name, a{" "}
+            <strong>&ldquo;See who did this work&rdquo;</strong> button offers
+            two options: <strong>$1.99</strong> to reveal that job&rsquo;s
+            business, or <strong>$4.99</strong> to reveal the businesses
+            behind all verified listings.
+          </p>
+          <p>
+            After payment, you get a private list page — no email is
+            collected and no account is needed. Bookmark the link: it opens
+            your list in any browser, any time. If you lose the link, the
+            list is gone and you&rsquo;d need to buy it again. Both options
+            are one-time purchases — no time limit, no subscription.
+          </p>
+          <p>
+            Invoices and quotes are never shown — only the business name. A
+            business that believes a listing is inaccurate can contact us to
+            dispute it.
+          </p>
+        </PlainSection>
 
         <PlainSection title="Why it's free">
           <p>
@@ -102,7 +129,8 @@ export default function HowItWorksPage() {
             what gets posted. The site may also show a single banner labelled
             &ldquo;Sponsored&rdquo; at the top of the page; sponsors pay for the
             banner only and get no influence over listings, prices, or
-            moderation.
+            moderation. Paid business-name reveals on verified listings also
+            help keep the site going.
           </p>
         </PlainSection>
 
@@ -114,7 +142,7 @@ export default function HowItWorksPage() {
             </div>
             <div>
               <dt className="font-semibold text-ink">Is it really free?</dt>
-              <dd>Yes. Tips and Ads keep the lights on.</dd>
+              <dd>Yes. Browsing and submitting are free; tips, ads, and optional paid reveals keep the lights on.</dd>
             </div>
             <div>
               <dt className="font-semibold text-ink">Can a business pay to change or remove prices?</dt>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatCents, formatMonthYear } from "@/lib/format";
 import AdminAnalytics from "@/components/AdminAnalytics";
 import AdminSponsors from "@/components/AdminSponsors";
@@ -27,6 +27,95 @@ interface Signup {
 }
 
 type Action = "verify" | "publish_unverified" | "reject";
+
+/**
+ * Business-name editor for paid reveals, shown on verified published
+ * reports. The name comes from the invoice the moderator already
+ * checked; saving it makes the "See who did this work" button appear
+ * on the public listing. Removing it hides the button again (the
+ * business dispute path — used when a listing is found inaccurate).
+ */
+function BusinessNameEditor({ reportId, adminKey }: { reportId: string; adminKey: string }) {
+  const [value, setValue] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [saved, setSaved] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch(`/api/admin/business-name?report_id=${encodeURIComponent(reportId)}`, {
+      headers: { "x-admin-key": adminKey },
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.ok && j.business_name) {
+          setValue(j.business_name as string);
+          setSaved(j.business_name as string);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, [reportId, adminKey]);
+
+  async function post(name: string) {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/business-name", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-admin-key": adminKey },
+        body: JSON.stringify({ report_id: reportId, business_name: name }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "Save failed");
+      setSaved(name === "" ? null : name);
+      if (name === "") setValue("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!loaded) return null;
+  return (
+    <div className="mt-3 rounded-[10px] border border-dashed border-line bg-neutral-50 p-3 dark:bg-neutral-900">
+      <p className="text-xs font-semibold text-muted">
+        Business name for paid reveals — copy it from the verified invoice
+      </p>
+      <div className="mt-2 flex gap-2">
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="e.g. Acme Plumbing"
+          className="flex-1 rounded-[10px] border border-line px-3 py-2 text-sm text-ink"
+        />
+        <button
+          onClick={() => post(value)}
+          disabled={busy || !value.trim()}
+          className="rounded-[10px] bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+        >
+          Save
+        </button>
+        {saved && (
+          <button
+            onClick={() => post("")}
+            disabled={busy}
+            className="rounded-[10px] border border-red-300 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      {saved && (
+        <p className="mt-1 text-xs text-muted">
+          Saved — the reveal button now shows on this listing.
+        </p>
+      )}
+      {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
+    </div>
+  );
+}
 
 export default function AdminPage() {
   const [key, setKey] = useState("");
@@ -435,6 +524,9 @@ export default function AdminPage() {
                 </button>
               )}
             </div>
+            {tab === "published" && r.verification_status === "verified" && (
+              <BusinessNameEditor reportId={r.id} adminKey={key} />
+            )}
           </article>
         ))}
         {(tab === "queue" ? reports : published).length === 0 && (

@@ -28,7 +28,8 @@ export default function TermsPage() {
             Raleigh-Durham Triangle of North Carolina share what they paid or were
             quoted for home services. You don&rsquo;t need an account to browse or
             submit. Entries are published anonymously and are never tied to a customer
-            or business name or address.
+            name or address. The contractor&rsquo;s business name may be stored for
+            verified entries and shown to paying viewers (see How It Works).
           </p>
         </section>
 

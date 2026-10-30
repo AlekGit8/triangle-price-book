@@ -21,7 +21,7 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-bold text-ink">The short version</h2>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li>No account or login is needed to browse or submit.</li>
-            <li>Public entries show only the <strong>service, price, town, and date</strong>, never names, addresses, or business names.</li>
+            <li>Public entries show only the <strong>service, price, town, and date</strong> — never your name or address. Contractor names appear only on verified entries, and only to paying viewers (see Section 2).</li>
             <li>Quotes and invoices stay private. Only moderators see them, and only to verify an entry — except that a document you ask us to read is also sent to Google&rsquo;s Gemini AI to extract the service details and price from it (see Section 2).</li>
             <li>We never sell or share your submission, uploaded documents, or email with advertisers.</li>
             <li>The Site runs ads, and the ad provider may use cookies (see Section 6).</li>
@@ -34,6 +34,9 @@ export default function PrivacyPage() {
             Browsing {siteConfig.siteName} requires no account and no login. Public price
             entries are attributed only as &ldquo;reported by a homeowner in {`{town}`},&rdquo;
             never by name, address, phone number, or any other identifier.
+            The one exception is the contractor&rsquo;s business name on verified
+            entries, which paying viewers can reveal (Section 2) — the homeowner
+            is never identified.
           </p>
         </section>
 
@@ -41,6 +44,7 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-bold text-ink">2. Information we collect</h2>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li><strong>Price report details:</strong> service, category, amount, whether it was paid or quoted, town, date, and optional notes. These are published anonymously. Please don&rsquo;t put names, addresses, phone numbers, or business names in notes; we remove them when we find them.</li>
+            <li><strong>Business names (verified entries only):</strong> when a document verifies an entry, we may store the business name from it, separately from the public listing. It is shown only to a visitor who pays for the reveal ($1.99 for one job, $4.99 for all verified listings — both one-time purchases). A business that believes a listing is inaccurate can contact us to dispute it.</li>
             <li><strong>Quote or invoice uploads (optional):</strong> these documents may contain names, addresses, and business details. They are stored privately, visible only to moderators, and used only to verify the entry. They are never published. If you use the upload-and-auto-fill option, the document is also sent to Google&rsquo;s Gemini AI service to read the service details and price from it; Google processes it only to return that extraction to us.</li>
             <li><strong>Email address (optional):</strong> used only to follow up about your submission if needed.</li>
             <li><strong>Technical information:</strong> such as IP address, browser and device type, and pages visited, collected automatically by our hosting, analytics, and security tools.</li>
@@ -51,6 +55,7 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-bold text-ink">3. How we use information</h2>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li>To publish price reports and verify entries.</li>
+            <li>To operate paid business-name reveals on verified entries.</li>
             <li>To prevent spam, fraud, and abuse.</li>
             <li>To follow up about a submission, if you gave an email.</li>
             <li>To understand how the Site is used and keep it running and improving.</li>

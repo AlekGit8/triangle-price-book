@@ -79,6 +79,26 @@ export async function getApprovedReports(category?: string): Promise<Report[]> {
   }
 }
 
+/** One public report by id, or null when missing, rejected, or unreachable.
+    Used by the per-report page that marquee cards link to. */
+export async function getReportById(id: string): Promise<Report | null> {
+  try {
+    const sb = getAnonSupabase();
+    const { data, error } = await sb
+      .from("reports")
+      .select(
+        "id, service_name, category, amount_cents, report_type, town, service_date, notes, verification_status, created_at"
+      )
+      .eq("id", id)
+      .neq("verification_status", "rejected")
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as Report;
+  } catch {
+    return null;
+  }
+}
+
 export async function getServiceAggregates(
   category?: string
 ): Promise<ServiceAggregate[]> {
