@@ -47,6 +47,41 @@ export async function getBusinessName(reportId: string): Promise<string | null> 
   return data.business_name as string;
 }
 
+/**
+ * Contractor-unknown marker (Oct 30, 2026): when a verified report's
+ * documentation does not list a contractor, the admin stores "NA" —
+ * the column is NOT NULL, so there is no null state, and an empty
+ * name deletes the row (the "not yet processed" state). "NA" (and
+ * "N/A") therefore means "verified, processed, contractor not on the
+ * document" — NEVER a business name, and NEVER something to charge
+ * for. Every surface that touches a stored name must check this
+ * first: the button shows an informational message instead of the pay
+ * dialog, checkout refuses a single reveal, and list pages show the
+ * note below instead of "Performed by NA".
+ */
+export const UNKNOWN_CONTRACTOR_MESSAGE =
+  "The portion of the document that was submitted via screenshot did not have the contractor listed.";
+
+export function isUnknownBusinessName(name: string | null | undefined): boolean {
+  if (!name) return false;
+  const v = name.trim().toUpperCase();
+  return v === "NA" || v === "N/A";
+}
+
+/** Reveal states for one verified report: a real name, an explicitly
+ *  unknown contractor, or no name row yet (not yet processed). */
+export type RevealNameState = "name" | "unknown" | "none";
+
+export async function getRevealNameState(reportId: string): Promise<{
+  state: RevealNameState;
+  name: string | null;
+}> {
+  const name = await getBusinessName(reportId);
+  if (!name) return { state: "none", name: null };
+  if (isUnknownBusinessName(name)) return { state: "unknown", name: null };
+  return { state: "name", name };
+}
+
 export async function getPurchaseByToken(token: string): Promise<RevealPurchase | null> {
   const sb = getServiceSupabase();
   const { data, error } = await sb

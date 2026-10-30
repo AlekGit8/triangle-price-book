@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { formatCents, formatMonthYear } from "@/lib/format";
 import { getServiceSupabase } from "@/lib/supabase-server";
-import { getBusinessName, getPurchaseByToken } from "@/lib/reveal";
+import { getBusinessName, getPurchaseByToken, isUnknownBusinessName, UNKNOWN_CONTRACTOR_MESSAGE } from "@/lib/reveal";
 import { sortReportsByEffectiveDate, type Report } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +58,8 @@ export default async function RevealPage({
       .eq("id", purchase.report_id ?? "")
       .maybeSingle();
     const name = purchase.report_id ? await getBusinessName(purchase.report_id) : null;
-    if (!report || !name) {
+    const unknown = isUnknownBusinessName(name);
+    if (!report || (!name && !unknown)) {
       return (
         <div className="py-16 max-w-3xl mx-auto">
           <h1 className="font-serif text-3xl text-ink">This reveal is no longer available</h1>
@@ -83,8 +84,14 @@ export default async function RevealPage({
           {report.town} · {formatMonthYear(report.service_date)}
         </p>
         <p className="mt-6 rounded-2xl border border-line bg-white p-5 text-ink">
-          {report.report_type === "quote" ? "Quoted by" : "Performed by"}{" "}
-          <span className="font-semibold">{name}</span>
+          {unknown ? (
+            UNKNOWN_CONTRACTOR_MESSAGE
+          ) : (
+            <>
+              {report.report_type === "quote" ? "Quoted by" : "Performed by"}{" "}
+              <span className="font-semibold">{name}</span>
+            </>
+          )}
         </p>
         <p className="mt-4">
           <Link href={`/report/${purchase.report_id}`} className="font-semibold text-ink underline underline-offset-4">
@@ -110,8 +117,11 @@ export default async function RevealPage({
     .select("id, service_name, category, amount_cents, report_type, town, service_date, notes, verification_status, created_at")
     .in("id", [...names.keys()])
     .eq("verification_status", "verified");
+  // Unknown-contractor rows stay in the list with the note instead of
+  // a name — the buyer paid for all verified listings, and silently
+  // dropping one (or showing "Performed by NA") would be dishonest.
   const rows = sortReportsByEffectiveDate((reports ?? []) as Report[])
-    .map((r) => ({ report: r, name: names.get(r.id) ?? "" }))
+    .map((r) => ({ report: r, name: names.get(r.id) ?? "", unknown: isUnknownBusinessName(names.get(r.id)) }))
     .filter((row) => row.name);
 
   if (rows.length === 0) {
@@ -131,10 +141,10 @@ export default async function RevealPage({
     <div className="py-16 max-w-3xl mx-auto">
       <h1 className="font-serif text-3xl text-ink">Who did the work</h1>
       <p className="mt-3 text-muted">
-        {rows.length} verified {rows.length === 1 ? "listing" : "listings"} — the business behind each one.
+        {rows.length} verified {rows.length === 1 ? "listing" : "listings"} — the business behind each one, where the submitted documentation listed one.
       </p>
       <ul className="mt-6 space-y-3">
-        {rows.map(({ report, name }) => (
+        {rows.map(({ report, name, unknown }) => (
           <li key={report.id} className="rounded-2xl border border-line bg-white p-5">
             <Link href={`/report/${report.id}`} className="font-semibold text-ink hover:underline">
               {report.service_name}
@@ -143,8 +153,14 @@ export default async function RevealPage({
               {report.town} · {formatMonthYear(report.service_date)} · {formatCents(report.amount_cents)}
             </p>
             <p className="mt-2 text-ink">
-              {report.report_type === "quote" ? "Quoted by" : "Performed by"}{" "}
-              <span className="font-semibold">{name}</span>
+              {unknown ? (
+                UNKNOWN_CONTRACTOR_MESSAGE
+              ) : (
+                <>
+                  {report.report_type === "quote" ? "Quoted by" : "Performed by"}{" "}
+                  <span className="font-semibold">{name}</span>
+                </>
+              )}
             </p>
           </li>
         ))}

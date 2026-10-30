@@ -6,17 +6,24 @@ import { createPortal } from "react-dom";
 /**
  * "See who did this work" — the paid business-name reveal for one
  * verified report. The button itself decides whether to appear: on
- * mount it asks /api/reveal/status, which reports whether an admin has
- * stored a name for this report. No name stored → renders nothing, so
- * the card looks exactly like it did before reveals existed.
- *
- * The button opens a dialog that explains the purchase in full —
- * price, no email, private list page, invoices never shown — before
- * sending the buyer to Stripe Checkout. After payment the buyer gets a
- * private list page (/reveal/<token>): one job for $1.99, all verified
- * jobs for $4.99, both one-time and permanent. No cookies: the link is
- * the access.
+ * mount it asks /api/reveal/status, which reports one of three states.
+ * - Real name stored → button opens the pay dialog ($1.99 single /
+ *   $4.99 all) and Stripe Checkout. After payment the buyer gets a
+ *   private list page (/reveal/<token>). No cookies: the link is the
+ *   access.
+ * - Contractor unknown ("NA": the documentation did not list one) →
+ *   the button STILL renders, but its dialog shows only an
+ *   informational message — never a payment. Nobody pays for a name
+ *   that isn't there.
+ * - No name row yet (not yet processed) → renders nothing, so the
+ *   card looks exactly like it did before reveals existed.
  */
+
+// Client component: cannot import the server-only lib/reveal.ts, so
+// this literal duplicates UNKNOWN_CONTRACTOR_MESSAGE there. Keep the
+// two in sync.
+const UNKNOWN_CONTRACTOR_MESSAGE =
+  "The portion of the document that was submitted via screenshot did not have the contractor listed.";
 export default function RevealButton({
   reportId,
   serviceName,
@@ -33,6 +40,7 @@ export default function RevealButton({
   tabIndex?: number;
 }) {
   const [available, setAvailable] = useState(false);
+  const [unknown, setUnknown] = useState(false);
   const [checked, setChecked] = useState(false);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -45,6 +53,7 @@ export default function RevealButton({
       .then((json) => {
         if (!cancelled) {
           if (json.available) setAvailable(true);
+          if (json.unknown) setUnknown(true);
         }
       })
       .catch(() => {})
@@ -75,7 +84,7 @@ export default function RevealButton({
   }
 
   if (!checked) return null;
-  if (!available) return null;
+  if (!available && !unknown) return null;
 
   return (
     <>
@@ -125,37 +134,55 @@ export default function RevealButton({
                 ✕
               </button>
             </div>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              This is a <strong className="text-ink">verified</strong> job — the
-              price was checked against paperwork — for{" "}
-              <strong className="text-ink">{serviceName}</strong>. Paying reveals
-              the name of the business that performed it.
-            </p>
+            {unknown ? (
+              <>
+                <p className="mt-3 text-sm leading-relaxed text-muted">
+                  {UNKNOWN_CONTRACTOR_MESSAGE}
+                </p>
+                <div className="mt-5">
+                  <button
+                    onClick={() => setOpen(false)}
+                    className="w-full rounded-[10px] bg-black px-4 py-2.5 font-semibold text-white hover:bg-neutral-800"
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 text-sm leading-relaxed text-muted">
+                  This is a <strong className="text-ink">verified</strong> job — the
+                  price was checked against paperwork — for{" "}
+                  <strong className="text-ink">{serviceName}</strong>. Paying reveals
+                  the name of the business that performed it.
+                </p>
 
-            <div className="mt-5 space-y-2">
-              <button
-                onClick={() => buy("single")}
-                disabled={busy}
-                className="w-full rounded-[10px] bg-black px-4 py-2.5 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
-              >
-                {busy ? "…" : "This job only — $1.99"}
-              </button>
-              <button
-                onClick={() => buy("all")}
-                disabled={busy}
-                className="w-full rounded-[10px] border border-line bg-white px-4 py-2.5 font-semibold text-ink hover:border-black disabled:opacity-50"
-              >
-                {busy ? "…" : "All verified jobs — $4.99"}
-              </button>
-              <button
-                onClick={() => !busy && setOpen(false)}
-                disabled={busy}
-                className="w-full px-4 py-2 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
-            {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
+                <div className="mt-5 space-y-2">
+                  <button
+                    onClick={() => buy("single")}
+                    disabled={busy}
+                    className="w-full rounded-[10px] bg-black px-4 py-2.5 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+                  >
+                    {busy ? "…" : "This job only — $1.99"}
+                  </button>
+                  <button
+                    onClick={() => buy("all")}
+                    disabled={busy}
+                    className="w-full rounded-[10px] border border-line bg-white px-4 py-2.5 font-semibold text-ink hover:border-black disabled:opacity-50"
+                  >
+                    {busy ? "…" : "All verified jobs — $4.99"}
+                  </button>
+                  <button
+                    onClick={() => !busy && setOpen(false)}
+                    disabled={busy}
+                    className="w-full px-4 py-2 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
+              </>
+            )}
           </div>
           </div>
           </div>,
