@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import Link from "next/link";
 import { siteConfig } from "@/lib/site-config";
+import { CHECK_QUOTE_CARRYOVER_KEY } from "@/lib/check-quote-carryover";
 import { formatCents, formatMonthYear } from "@/lib/format";
-import { parseAmountCents } from "@/lib/validation";
 import ReportCard from "@/components/ReportCard";
 import type { Report } from "@/lib/data";
 
@@ -83,6 +83,9 @@ export default function CheckQuotePage() {
   const [category, setCategory] = useState<string>(siteConfig.categories[0]);
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  // Town is required on /submit but the check itself doesn't need it —
+  // collected here (optional) so it carries over to the share step.
+  const [town, setTown] = useState("");
   const [result, setResult] = useState<CheckResult | null>(null);
   const [submittedPrice, setSubmittedPrice] = useState(0);
   const [submittedDescription, setSubmittedDescription] = useState("");
@@ -99,6 +102,21 @@ export default function CheckQuotePage() {
     "idle" | "reading" | "done" | "error" | "rejected" | "unavailable"
   >("idle");
   const [extractMsg, setExtractMsg] = useState("");
+  // First quote read from the uploaded document (if any): its document
+  // truth rides along to /submit, and its stored copy lets the entry
+  // verify without a re-upload. Cleared whenever a new upload starts.
+  const [extractedQuote, setExtractedQuote] = useState<{
+    reportType: "paid" | "quote";
+    town: string;
+    serviceDate: string;
+    notes: string;
+  } | null>(null);
+  const [carriedInvoice, setCarriedInvoice] = useState<{
+    receiptId: string;
+    invoiceHash: string;
+    invoiceExt: string;
+    fileName: string;
+  } | null>(null);
 
   // Cloudflare Turnstile, rendered explicitly (same pattern as /submit).
   // The extract call is the only one that needs a token here — the manual
@@ -203,6 +221,8 @@ export default function CheckQuotePage() {
     setExtractState("reading");
     setExtractMsg("");
     setResult(null);
+    setExtractedQuote(null);
+    setCarriedInvoice(null);
     try {
       const form = new FormData();
       form.set("document", file);
@@ -242,6 +262,20 @@ export default function CheckQuotePage() {
       if (typeof q.amount === "number" && Number.isFinite(q.amount) && q.amount > 0) {
         setPrice(String(q.amount));
       }
+      setExtractedQuote({
+        reportType: q.reportType === "paid" ? "paid" : "quote",
+        town: typeof q.town === "string" ? q.town : "",
+        serviceDate: typeof q.serviceDate === "string" ? q.serviceDate : "",
+        notes: typeof q.notes === "string" ? q.notes : "",
+      });
+      const receiptId = typeof q.receiptId === "string" ? q.receiptId : null;
+      const invoiceHash = typeof json.invoiceHash === "string" ? json.invoiceHash : null;
+      const invoiceExt = typeof json.invoiceExt === "string" ? json.invoiceExt : null;
+      setCarriedInvoice(
+        receiptId && invoiceHash && invoiceExt
+          ? { receiptId, invoiceHash, invoiceExt, fileName: file.name }
+          : null
+      );
       setExtractState("done");
       setExtractMsg(
         quotes.length > 1
@@ -265,8 +299,8 @@ export default function CheckQuotePage() {
     e.preventDefault();
     setError("");
     setResult(null);
-    const cents = parseAmountCents(price);
-    if (cents === null || cents <= 0) {
+    const cents = Math.round(parseFloat(price) * 100);
+    if (!Number.isFinite(cents) || cents <= 0) {
       setError("Please enter a valid price.");
       return;
     }
@@ -318,6 +352,33 @@ export default function CheckQuotePage() {
       : result?.ai_estimate && submittedPrice > result.ai_estimate.high_cents
         ? "above"
         : "within";
+
+  /** Carry this check over to /submit: the form opens prefilled, and an
+      uploaded document rides along so the entry can verify without a
+      re-upload. A manual check carries no document and publishes as
+      unverified. SessionStorage only (same tab), consumed once. */
+  function saveCarryover() {
+    try {
+      window.sessionStorage.setItem(
+        CHECK_QUOTE_CARRYOVER_KEY,
+        JSON.stringify({
+          category,
+          serviceName: description.trim(),
+          amount: price.trim(),
+          reportType: extractedQuote?.reportType ?? "quote",
+          town: town.trim() || extractedQuote?.town || "",
+          serviceDate: extractedQuote?.serviceDate ?? "",
+          notes: extractedQuote?.notes ?? "",
+          receiptId: carriedInvoice?.receiptId ?? null,
+          invoiceHash: carriedInvoice?.invoiceHash ?? null,
+          invoiceExt: carriedInvoice?.invoiceExt ?? null,
+          fileName: carriedInvoice?.fileName ?? null,
+        })
+      );
+    } catch {
+      // Storage unavailable — /submit just opens blank, as today.
+    }
+  }
 
   return (
     <div className="py-10 max-w-2xl mx-auto px-4">
@@ -462,6 +523,19 @@ export default function CheckQuotePage() {
             className="mt-1 w-full rounded-[10px] border border-line px-3 py-2.5 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10"
           />
         </div>
+        <div>
+          <label htmlFor="cq-town" className="block font-mono text-xs font-semibold uppercase tracking-wide text-muted">
+            Town (optional)
+          </label>
+          <input
+            id="cq-town"
+            type="text"
+            value={town}
+            onChange={(e) => setTown(e.target.value)}
+            placeholder="e.g. Fuquay-Varina — carries over if you share this quote"
+            className="mt-1 w-full rounded-[10px] border border-line px-3 py-2.5 text-ink placeholder:text-neutral-400 focus:border-black focus:outline-none focus:ring-2 focus:ring-black/10"
+          />
+        </div>
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <button
           type="submit"
@@ -505,7 +579,7 @@ export default function CheckQuotePage() {
             to judge your quote fairly.
           </p>
           <p className="mt-3 text-muted">
-            <Link href="/submit" className="font-semibold text-ink hover:underline">
+            <Link href="/submit" onClick={saveCarryover} className="font-semibold text-ink hover:underline">
               Share your quote anonymously
             </Link>{" "}
             and help build the data your neighbors need.
@@ -580,7 +654,7 @@ export default function CheckQuotePage() {
           <div className="mt-4 rounded-lg bg-card p-4">
             <p className="text-sm text-ink">
               <span className="font-semibold">Help your neighbors:</span>{" "}
-              <Link href="/submit" className="font-semibold text-ink hover:underline">
+              <Link href="/submit" onClick={saveCarryover} className="font-semibold text-ink hover:underline">
                 anonymously share this quote
               </Link>{" "}
               so the next homeowner gets a better answer.

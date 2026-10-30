@@ -4,7 +4,7 @@ import { getServiceSupabase } from "@/lib/supabase-server";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { clientIp } from "@/lib/rate-limit";
 import { siteConfig } from "@/lib/site-config";
-import { isValidEmail, parseAmountCents } from "@/lib/validation";
+import { isValidEmail } from "@/lib/validation";
 
 
 const MAX_INVOICE_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -80,6 +80,18 @@ function validServiceDate(s: string): boolean {
     day: "2-digit",
   }).format(new Date());
   return s <= todayET;
+}
+
+/**
+ * Parse an amount from its string form into integer cents — never via
+ * Number() (which accepts "1e5" and has float rounding: 1.005 * 100 is
+ * 100.4999…). Only the client pattern is accepted: digits, optionally
+ * with up to two decimal places.
+ */
+function parseAmountCents(raw: string): number | null {
+  if (!/^\d+(\.\d{1,2})?$/.test(raw)) return null;
+  const [dollars, cents = ""] = raw.split(".");
+  return Number(dollars) * 100 + Number(cents.padEnd(2, "0"));
 }
 
 /**
@@ -341,6 +353,23 @@ export async function POST(req: Request) {
       invoiceHash = createHash("sha256").update(invoiceBuf).digest("hex");
     }
 
+    // Carried document from a check-my-quote upload: /api/extract stored
+    // the file under its content hash, so the submit can verify against
+    // it without the user re-uploading. The hash is format-checked here
+    // and cross-checked against the extract receipt below; the storage
+    // path is derived from the hash, never trusted from the client.
+    const carriedHashRaw = form.get("carriedInvoiceHash");
+    const carriedExtRaw = form.get("carriedInvoiceExt");
+    const carriedInvoiceHash =
+      typeof carriedHashRaw === "string" && /^[a-f0-9]{64}$/.test(carriedHashRaw)
+        ? carriedHashRaw
+        : null;
+    const carriedInvoiceExt =
+      typeof carriedExtRaw === "string" && /^[a-z0-9]{3,4}$/.test(carriedExtRaw)
+        ? carriedExtRaw
+        : null;
+    const hasCarriedInvoice = carriedInvoiceHash !== null && carriedInvoiceExt !== null;
+
     // ---- Batch mode: N reports, one shared invoice ----
     const reportsRaw = form.get("reports");
     if (typeof reportsRaw === "string") {
@@ -353,6 +382,9 @@ export async function POST(req: Request) {
       if (!Array.isArray(items) || items.length === 0 || items.length > MAX_BATCH) {
         return bad(`Expected between 1 and ${MAX_BATCH} reports.`);
       }
+      if (hasCarriedInvoice && items.length !== 1) {
+        return bad("A carried document can only verify one report at a time.");
+      }
 
       // Validate everything before writing anything — no partial batches.
       const rows: Record<string, unknown>[] = [];
@@ -363,15 +395,21 @@ export async function POST(req: Request) {
         if ("error" in v) return bad(v.error);
         const amountCents = v.row.amount_cents as number;
         let verified = false;
+        const receiptId =
+          typeof (item as Record<string, unknown>).receiptId === "string"
+            ? ((item as Record<string, unknown>).receiptId as string)
+            : null;
         if (hasInvoice && invoiceHash) {
           if (await duplicateExists(sb, invoiceHash, amountCents)) {
             return bad("This document was already submitted for this amount.");
           }
-          const receiptId =
-            typeof (item as Record<string, unknown>).receiptId === "string"
-              ? ((item as Record<string, unknown>).receiptId as string)
-              : null;
           verified = await receiptVerifies(sb, receiptId, invoiceHash, amountCents);
+          if (verified && receiptId) usedReceiptIds.push(receiptId);
+        } else if (hasCarriedInvoice) {
+          if (await duplicateExists(sb, carriedInvoiceHash as string, amountCents)) {
+            return bad("This document was already submitted for this amount.");
+          }
+          verified = await receiptVerifies(sb, receiptId, carriedInvoiceHash as string, amountCents);
           if (verified && receiptId) usedReceiptIds.push(receiptId);
         }
         rows.push({
@@ -401,7 +439,7 @@ export async function POST(req: Request) {
         }
       }
 
-      if (!hasInvoice) {
+      if (!hasInvoice && !hasCarriedInvoice) {
         return NextResponse.json({
           ok: true,
           ids,
@@ -409,11 +447,29 @@ export async function POST(req: Request) {
         });
       }
 
-      // Upload the document once (reuse the stored path if this file was
-      // already uploaded for an earlier quote from the same document),
-      // then link every report to it.
-      let path = await existingInvoicePath(sb, invoiceHash as string);
+      // Link every report to its backing document. A carried document was
+      // already stored by /api/extract under its content hash — link that
+      // path directly (after confirming the object is really there) instead
+      // of asking for the file again. Otherwise upload the document once
+      // (reuse the stored path if this file was already uploaded for an
+      // earlier quote from the same document).
+      let path: string | null = null;
       let uploadedNew = false;
+      if (hasCarriedInvoice) {
+        path = `shared/${carriedInvoiceHash as string}.${carriedInvoiceExt as string}`;
+        const { data: listed, error: listErr } = await sb.storage
+          .from("invoices")
+          .list("shared", { search: carriedInvoiceHash as string });
+        if (
+          listErr ||
+          !listed?.some((o) => o.name === `${carriedInvoiceHash as string}.${carriedInvoiceExt as string}`)
+        ) {
+          await sb.from("reports").delete().in("id", ids);
+          return bad("The document from your quote check is no longer available. Please re-attach it on the submit form.");
+        }
+      } else {
+        path = await existingInvoicePath(sb, invoiceHash as string);
+      }
       if (!path) {
         path = `shared/${crypto.randomUUID()}/${Date.now()}.${invoiceExt}`;
         const { error: upErr } = await sb.storage

@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { siteConfig } from "@/lib/site-config";
+import {
+  CHECK_QUOTE_CARRYOVER_KEY,
+  type CheckQuoteCarryover,
+} from "@/lib/check-quote-carryover";
 
 const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
@@ -109,6 +113,14 @@ interface DraftQuote {
    *  uploaded document — the server only badges Verified when the
    *  receipt matches. Editing the amount after extraction voids it. */
   receiptId: string | null;
+  /** Carried document from a check-my-quote upload: the file /api/extract
+   *  already stored, so publishing verifies without a re-upload. Absent
+   *  for manual checks and ordinary /submit uploads (those use docFile). */
+  carriedInvoice?: {
+    hash: string;
+    ext: string;
+    fileName: string | null;
+  } | null;
   /** Set on publish: whether the server badged this entry Verified. */
   verified?: boolean;
 }
@@ -172,6 +184,12 @@ function DraftCard({
           </button>
         )}
       </div>
+
+      {d.carriedInvoice && d.status !== "done" && (
+        <p className="mt-2 text-sm text-muted">
+          📄 {d.carriedInvoice.fileName ?? "Document"} attached from your quote check — no need to re-upload.
+        </p>
+      )}
 
       {d.status === "done" ? (
         <p className="mt-3 rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-800 dark:text-green-300 dark:bg-green-950 dark:border-green-800 dark:text-green-200">
@@ -320,8 +338,78 @@ export default function SubmitPage() {
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileUnavailable, setTurnstileUnavailable] = useState(false);
 
-  // Restore the persisted manual form once, after mount (see above).
+  // Restore once, after mount (see above). A check-my-quote carryover
+  // wins over the persisted form: an uploaded check becomes a draft
+  // (verified path — its document is already stored), a manual check
+  // prefills the manual form (unverified path). Single-use — the key is
+  // removed on read so a later fresh visit doesn't resurrect it.
   useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(CHECK_QUOTE_CARRYOVER_KEY);
+      if (raw) {
+        window.sessionStorage.removeItem(CHECK_QUOTE_CARRYOVER_KEY);
+        const c = JSON.parse(raw) as Partial<CheckQuoteCarryover>;
+        const str = (v: unknown): string => (typeof v === "string" ? v : "");
+        const categories = siteConfig.categories as readonly string[];
+        const carriedFields: FormFields = {
+          category: categories.includes(str(c.category))
+            ? str(c.category)
+            : "HVAC",
+          serviceName: str(c.serviceName),
+          amount: str(c.amount),
+          reportType: c.reportType === "paid" ? "paid" : "quote",
+          town: str(c.town),
+          serviceDate: str(c.serviceDate).slice(0, 7),
+          notes: str(c.notes),
+          submitterEmail: "",
+        };
+        setFields(carriedFields);
+        if (
+          typeof c.invoiceHash === "string" &&
+          typeof c.invoiceExt === "string" &&
+          typeof c.receiptId === "string"
+        ) {
+          setDrafts([
+            {
+              key: "carried",
+              category: carriedFields.category,
+              serviceName: carriedFields.serviceName,
+              amount: carriedFields.amount,
+              reportType: carriedFields.reportType,
+              town: carriedFields.town,
+              serviceDate: carriedFields.serviceDate,
+              notes: carriedFields.notes,
+              status: "pending",
+              errorMsg: "",
+              receiptId: c.receiptId,
+              carriedInvoice: {
+                hash: c.invoiceHash,
+                ext: c.invoiceExt,
+                fileName: typeof c.fileName === "string" ? c.fileName : null,
+              },
+            },
+          ]);
+          window.setTimeout(
+            () =>
+              document
+                .getElementById("submit-drafts")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+            150
+          );
+        } else {
+          window.setTimeout(
+            () =>
+              document
+                .getElementById("submit-manual-form")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+            150
+          );
+        }
+        return;
+      }
+    } catch {
+      // Bad payload or no storage — fall through to the persisted form.
+    }
     setFields(loadPersistedFields());
   }, []);
 
@@ -556,6 +644,12 @@ export default function SubmitPage() {
     );
     form.set("submitterEmail", draftEmail.trim());
     if (docFile) form.set("invoice", docFile);
+    else if (items.length === 1 && items[0].carriedInvoice) {
+      // Carried document from a quote check: the file is already stored,
+      // so the server verifies against its hash instead of an upload.
+      form.set("carriedInvoiceHash", items[0].carriedInvoice.hash);
+      form.set("carriedInvoiceExt", items[0].carriedInvoice.ext);
+    }
     form.set("turnstileToken", await getTurnstileToken());
     let res: Response;
     let json: { ok?: boolean; error?: string; results?: Array<{ id: string; verified: boolean }> };
@@ -803,7 +897,7 @@ export default function SubmitPage() {
 
       {/* Detected quotes: review & publish each */}
       {drafts.length > 0 && (
-        <div className="mt-6">
+        <div id="submit-drafts" className="mt-6">
           <p className="font-mono text-xs font-bold uppercase tracking-wide text-muted">
             Review & publish
           </p>
@@ -909,7 +1003,7 @@ export default function SubmitPage() {
         <span className="h-px flex-1 bg-line" />
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-5">
+      <form id="submit-manual-form" onSubmit={onSubmit} className="space-y-5">
         <div>
           <label className={labelCls} htmlFor="category">Category *</label>
           <select
