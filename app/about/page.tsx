@@ -31,7 +31,7 @@ export default function AboutPage() {
           </p>
           <p>
             It launched in October 2026, built by a local Triangle homeowner, and
-            it is free. No accounts, no catch.
+            it is free to submit and browse. No accounts, no catch.
           </p>
         </Section>
 
