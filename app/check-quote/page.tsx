@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { siteConfig } from "@/lib/site-config";
 import { CHECK_QUOTE_CARRYOVER_KEY } from "@/lib/check-quote-carryover";
+import { putCarriedDoc } from "@/lib/carried-doc";
 import { formatCents, formatMonthYear } from "@/lib/format";
 import ReportCard from "@/components/ReportCard";
 import type { Report } from "@/lib/data";
@@ -80,6 +81,7 @@ function verdictFor(priceCents: number, r: CheckResult): { headline: string; det
 }
 
 export default function CheckQuotePage() {
+  const router = useRouter();
   const [category, setCategory] = useState<string>(siteConfig.categories[0]);
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -103,19 +105,15 @@ export default function CheckQuotePage() {
   >("idle");
   const [extractMsg, setExtractMsg] = useState("");
   // First quote read from the uploaded document (if any): its document
-  // truth rides along to /submit, and its stored copy lets the entry
-  // verify without a re-upload. Cleared whenever a new upload starts.
+  // truth rides along to /submit, and its receipt lets the entry verify
+  // once the file itself rides along in browser storage. Cleared
+  // whenever a new upload starts.
   const [extractedQuote, setExtractedQuote] = useState<{
     reportType: "paid" | "quote";
     town: string;
     serviceDate: string;
     notes: string;
-  } | null>(null);
-  const [carriedInvoice, setCarriedInvoice] = useState<{
-    receiptId: string;
-    invoiceHash: string;
-    invoiceExt: string;
-    fileName: string;
+    receiptId: string | null;
   } | null>(null);
 
   // Cloudflare Turnstile, rendered explicitly (same pattern as /submit).
@@ -222,7 +220,6 @@ export default function CheckQuotePage() {
     setExtractMsg("");
     setResult(null);
     setExtractedQuote(null);
-    setCarriedInvoice(null);
     try {
       const form = new FormData();
       form.set("document", file);
@@ -267,15 +264,8 @@ export default function CheckQuotePage() {
         town: typeof q.town === "string" ? q.town : "",
         serviceDate: typeof q.serviceDate === "string" ? q.serviceDate : "",
         notes: typeof q.notes === "string" ? q.notes : "",
+        receiptId: typeof q.receiptId === "string" ? q.receiptId : null,
       });
-      const receiptId = typeof q.receiptId === "string" ? q.receiptId : null;
-      const invoiceHash = typeof json.invoiceHash === "string" ? json.invoiceHash : null;
-      const invoiceExt = typeof json.invoiceExt === "string" ? json.invoiceExt : null;
-      setCarriedInvoice(
-        receiptId && invoiceHash && invoiceExt
-          ? { receiptId, invoiceHash, invoiceExt, fileName: file.name }
-          : null
-      );
       setExtractState("done");
       setExtractMsg(
         quotes.length > 1
@@ -354,10 +344,17 @@ export default function CheckQuotePage() {
         : "within";
 
   /** Carry this check over to /submit: the form opens prefilled, and an
-      uploaded document rides along so the entry can verify without a
-      re-upload. A manual check carries no document and publishes as
-      unverified. SessionStorage only (same tab), consumed once. */
-  function saveCarryover() {
+      uploaded document rides along in browser storage so the entry can
+      verify without a re-upload — it never reaches our servers unless
+      published. A manual check carries no document and publishes as
+      unverified. Always navigates, even if browser storage fails (then
+      /submit just opens prefilled and the user can re-attach). */
+  async function shareToSubmit(e: React.MouseEvent) {
+    e.preventDefault();
+    let docKey: string | null = null;
+    if (docFile && extractState === "done") {
+      docKey = await putCarriedDoc(docFile);
+    }
     try {
       window.sessionStorage.setItem(
         CHECK_QUOTE_CARRYOVER_KEY,
@@ -369,15 +366,15 @@ export default function CheckQuotePage() {
           town: town.trim() || extractedQuote?.town || "",
           serviceDate: extractedQuote?.serviceDate ?? "",
           notes: extractedQuote?.notes ?? "",
-          receiptId: carriedInvoice?.receiptId ?? null,
-          invoiceHash: carriedInvoice?.invoiceHash ?? null,
-          invoiceExt: carriedInvoice?.invoiceExt ?? null,
-          fileName: carriedInvoice?.fileName ?? null,
+          receiptId: extractedQuote?.receiptId ?? null,
+          docKey,
+          fileName: docFile && extractState === "done" ? docFile.name : null,
         })
       );
     } catch {
       // Storage unavailable — /submit just opens blank, as today.
     }
+    router.push("/submit");
   }
 
   return (
@@ -579,9 +576,9 @@ export default function CheckQuotePage() {
             to judge your quote fairly.
           </p>
           <p className="mt-3 text-muted">
-            <Link href="/submit" onClick={saveCarryover} className="font-semibold text-ink hover:underline">
+            <button type="button" onClick={shareToSubmit} className="font-semibold text-ink hover:underline cursor-pointer">
               Share your quote anonymously
-            </Link>{" "}
+            </button>{" "}
             and help build the data your neighbors need.
           </p>
         </div>
@@ -654,9 +651,9 @@ export default function CheckQuotePage() {
           <div className="mt-4 rounded-lg bg-card p-4">
             <p className="text-sm text-ink">
               <span className="font-semibold">Help your neighbors:</span>{" "}
-              <Link href="/submit" onClick={saveCarryover} className="font-semibold text-ink hover:underline">
+              <button type="button" onClick={shareToSubmit} className="font-semibold text-ink hover:underline cursor-pointer">
                 anonymously share this quote
-              </Link>{" "}
+              </button>{" "}
               so the next homeowner gets a better answer.
             </p>
           </div>

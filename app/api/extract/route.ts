@@ -172,18 +172,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Content hash + extension for the stored copy (see below): the
-    // document is kept once, keyed by hash, so a later submit can verify
-    // against it without the user re-uploading.
-    const fileSha256 = createHash("sha256").update(bytes).digest("hex");
-    const invoiceExt =
-      mime === "application/pdf" ? "pdf"
-      : mime === "image/jpeg" ? "jpg"
-      : mime === "image/png" ? "png"
-      : mime === "image/webp" ? "webp"
-      : mime === "image/heic" ? "heic"
-      : mime === "image/heif" ? "heif"
-      : "bin";
+
 
     const base64 = bytes.toString("base64");
 
@@ -300,6 +289,7 @@ export async function POST(req: Request) {
     const receiptIds = new Map<number, string>();
     try {
       const sb = getServiceSupabase();
+      const fileSha256 = createHash("sha256").update(bytes).digest("hex");
       // Prune receipts older than 24h while we're here (cheap, indexed).
       await sb
         .from("extract_receipts")
@@ -340,38 +330,12 @@ export async function POST(req: Request) {
       console.error("extract: receipt error", err);
     }
 
-    // Store the document once, keyed by content hash, in the same private
-    // invoices bucket the submit flow uses. A check-my-quote upload can
-    // then carry over to /submit and verify without a re-upload: the
-    // submit route derives this path from the hash and checks the
-    // extract receipt against it. Best-effort — if storage fails, the
-    // quotes still return and a later submit simply publishes unverified.
-    let storedInvoiceHash: string | null = null;
-    let storedInvoiceExt: string | null = null;
-    try {
-      const sb = getServiceSupabase();
-      const path = `shared/${fileSha256}.${invoiceExt}`;
-      const { error: upErr } = await sb.storage
-        .from("invoices")
-        .upload(path, bytes, { contentType: mime, upsert: false });
-      if (!upErr || /already exists/i.test(upErr.message)) {
-        storedInvoiceHash = fileSha256;
-        storedInvoiceExt = invoiceExt;
-      } else {
-        console.error("extract: invoice store failed", upErr);
-      }
-    } catch (err) {
-      console.error("extract: invoice store error", err);
-    }
-
     return NextResponse.json({
       ok: true,
       quotes: quotes.map((q, i) => ({
         ...q,
         receiptId: receiptIds.get(i) ?? null,
       })),
-      invoiceHash: storedInvoiceHash,
-      invoiceExt: storedInvoiceExt,
     });
   } catch (err) {
     console.error("extract error:", err);
