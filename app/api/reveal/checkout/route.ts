@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/supabase-server";
 import { siteConfig, categorySlugs } from "@/lib/site-config";
 import {
   createRevealCheckout,
+  isUnknownBusinessName,
   type RevealType,
 } from "@/lib/reveal";
 
@@ -52,12 +53,21 @@ export async function POST(req: Request) {
       // and the buyer gets a clean "not available" instead of a charge.)
       const { data: nameRow } = await sb
         .from("report_business_names")
-        .select("report_id")
+        .select("report_id, business_name")
         .eq("report_id", reportId)
         .maybeSingle();
       if (!nameRow) {
         return NextResponse.json(
           { ok: false, error: "This report has no business name available." },
+          { status: 400 }
+        );
+      }
+      // Defense in depth: the button never offers payment for an
+      // unknown contractor, but a direct API call must not be able to
+      // buy one either — nobody pays for a name that isn't there.
+      if (isUnknownBusinessName(nameRow.business_name as string)) {
+        return NextResponse.json(
+          { ok: false, error: "This report's documentation did not list a contractor, so there is no business name to reveal." },
           { status: 400 }
         );
       }

@@ -26,6 +26,10 @@ export async function GET(req: Request) {
  * the reveal button renders exactly when a name row exists — there is
  * no flag column to keep in sync. An empty name clears the row (the
  * business dispute path — used when a listing is found inaccurate).
+ * Storing "NA" marks the contractor as unknown (the documentation did
+ * not list one): the button then shows an informational message
+ * instead of a payment, and checkout refuses a single reveal for it.
+ * See isUnknownBusinessName in lib/reveal.ts.
  */
 export async function POST(req: Request) {
   const denied = await requireAdmin(req);
