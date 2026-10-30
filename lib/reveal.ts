@@ -5,8 +5,9 @@
  * Never import this file into client components.
  *
  * Requires worker env: STRIPE_SECRET_KEY (checkout sessions) and
- * STRIPE_WEBHOOK_SECRET (webhook signature verification). Test values
- * under Previews Base for beta; live values under Production.
+ * STRIPE_WEBHOOK_SECRET (webhook signature verification). Env vars are
+ * per-environment: the beta scope uses test keys, Production uses live
+ * keys. (Previews Base values do not reach the beta preview.)
  */
 import { getServiceSupabase } from "./supabase-server";
 
