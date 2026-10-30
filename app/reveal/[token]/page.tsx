@@ -54,7 +54,7 @@ export default async function RevealPage({
     const sb = getServiceSupabase();
     const { data: report } = await sb
       .from("reports")
-      .select("service_name, category, amount_cents, town, service_date")
+      .select("service_name, category, amount_cents, report_type, town, service_date")
       .eq("id", purchase.report_id ?? "")
       .maybeSingle();
     const name = purchase.report_id ? await getBusinessName(purchase.report_id) : null;
@@ -83,7 +83,8 @@ export default async function RevealPage({
           {report.town} · {formatMonthYear(report.service_date)}
         </p>
         <p className="mt-6 rounded-2xl border border-line bg-white p-5 text-ink">
-          Performed by <span className="font-semibold">{name}</span>
+          {report.report_type === "quote" ? "Quoted by" : "Performed by"}{" "}
+          <span className="font-semibold">{name}</span>
         </p>
         <p className="mt-4">
           <Link href={`/report/${purchase.report_id}`} className="font-semibold text-ink underline underline-offset-4">
@@ -142,7 +143,8 @@ export default async function RevealPage({
               {report.town} · {formatMonthYear(report.service_date)} · {formatCents(report.amount_cents)}
             </p>
             <p className="mt-2 text-ink">
-              Performed by <span className="font-semibold">{name}</span>
+              {report.report_type === "quote" ? "Quoted by" : "Performed by"}{" "}
+              <span className="font-semibold">{name}</span>
             </p>
           </li>
         ))}
