@@ -93,8 +93,8 @@ export default function HowItWorksPage() {
             behind all verified listings.
           </p>
           <p>
-            After payment, you get a private list page — no email is
-            collected and no account is needed. Bookmark the link: it opens
+            After payment, you get a private list page — no account is
+            needed. Bookmark the link: it opens
             your list in any browser, any time. If you lose the link, the
             list is gone and you&rsquo;d need to buy it again. Both options
             are one-time purchases — no time limit, no subscription.
