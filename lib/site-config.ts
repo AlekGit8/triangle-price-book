@@ -31,7 +31,7 @@ export const siteConfig = {
   regionLongName: "Raleigh-Durham Triangle, North Carolina",
 
   /** Report categories. Keep in sync with the DB check constraint in 0001_init.sql. */
-  categories: ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Pools", "Septic Systems", "Garage Doors", "Crawl Spaces", "Gutter Guards", "Chimneys", "Garage Floors", "Concrete", "Handyman/Other"] as const,
+  categories: ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Pools", "Septic Systems", "Garage Doors", "Crawl Spaces", "Gutter Guards", "Chimneys", "Garage Floors", "Concrete", "Cleaning", "Nanny", "Lawn Care", "Handyman/Other"] as const,
 
   /**
    * Per-category intro copy for the category pages (Oct 28, 2026 SEO).
@@ -148,6 +148,24 @@ export const siteConfig = {
         "Driveways, patios, walkways, slabs, and concrete repair.",
       drivers:
         "Square footage, thickness, finish, and site prep or demolition drive the price.",
+    },
+    Cleaning: {
+      about:
+        "House cleaning, deep cleans, move-out cleans, and recurring maid service.",
+      drivers:
+        "Home size, bedroom and bathroom count, clean type (standard vs deep), and frequency drive the price.",
+    },
+    Nanny: {
+      about:
+        "In-home childcare — full-time, part-time, and occasional nanny care.",
+      drivers:
+        "Hours per week, number and ages of children, and whether household tasks are included set the rate.",
+    },
+    "Lawn Care": {
+      about:
+        "Mowing, edging, fertilization, weed control, and seasonal yard maintenance.",
+      drivers:
+        "Yard size, service frequency, terrain and slope, and whether treatments or leaf cleanup are included drive the price.",
     },
     "Handyman/Other": {
       about:
@@ -427,6 +445,9 @@ export const categorySlugs = {
   "Chimneys": "chimneys",
   "Garage Floors": "garage-floors",
   "Concrete": "concrete",
+  "Cleaning": "cleaning",
+  "Nanny": "nanny",
+  "Lawn Care": "lawn-care",
   "Handyman/Other": "handyman",
 } as const satisfies Record<Category, string>;
 
