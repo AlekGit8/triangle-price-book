@@ -3,6 +3,10 @@
  * SERVER ONLY: uses the service-role client (it reads the
  * report_business_names table, which RLS hides from the public).
  * Never import this file into client components.
+ *
+ * Requires worker env: STRIPE_SECRET_KEY (checkout sessions) and
+ * STRIPE_WEBHOOK_SECRET (webhook signature verification). Test values
+ * under Previews Base for beta; live values under Production.
  */
 import { getServiceSupabase } from "./supabase-server";
 
