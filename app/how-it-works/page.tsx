@@ -1,19 +1,5 @@
 import { siteConfig } from "@/lib/site-config";
 
-function Section({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-2xl border border-line bg-white p-6">
-      <h2 className="text-xl font-bold text-ink">
-        <span className="mr-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black text-sm text-white">
-          {n}
-        </span>
-        {title}
-      </h2>
-      <div className="mt-3 space-y-3 text-muted text-[15px] leading-relaxed">{children}</div>
-    </section>
-  );
-}
-
 function PlainSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="rounded-2xl border border-line bg-white p-6">
@@ -39,15 +25,15 @@ export default function HowItWorksPage() {
       </p>
 
       <div className="mt-8 space-y-5">
-        <Section n="1" title="Homeowners share what they paid">
+        <PlainSection title="Homeowners share what they paid">
           <p>
             Anyone in the Triangle can post what they paid or were quoted for a
             home project: HVAC, plumbing, roofing, fencing, whatever. It takes
             about a minute, and you don&rsquo;t need an account.
           </p>
-        </Section>
+        </PlainSection>
 
-        <Section n="2" title="Verified or not, it goes up">
+        <PlainSection title="Verified or not, it goes up">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[15px]">
               <thead>
@@ -83,9 +69,9 @@ export default function HowItWorksPage() {
             Your document is only used to check the price is real. It&rsquo;s
             never shown publicly.
           </p>
-        </Section>
+        </PlainSection>
 
-        <Section n="3" title="Your privacy is protected">
+        <PlainSection title="Your privacy is protected">
           <p>
             Public entries show only the <strong>service, price, town, and date</strong>.
             Your name and address are never posted, so you can share freely
@@ -93,7 +79,7 @@ export default function HowItWorksPage() {
             the name of the business that did the work can be revealed to
             paying viewers (see below) — the homeowner stays anonymous either way.
           </p>
-        </Section>
+        </PlainSection>
 
         <PlainSection title="Who did the work? (paid reveal)">
           <p>
