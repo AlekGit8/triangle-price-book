@@ -114,6 +114,7 @@ export default function CheckQuotePage() {
     serviceDate: string;
     notes: string;
     receiptId: string | null;
+    businessName: string;
   } | null>(null);
 
   // Cloudflare Turnstile, rendered explicitly (same pattern as /submit).
@@ -265,6 +266,7 @@ export default function CheckQuotePage() {
         serviceDate: typeof q.serviceDate === "string" ? q.serviceDate : "",
         notes: typeof q.notes === "string" ? q.notes : "",
         receiptId: typeof q.receiptId === "string" ? q.receiptId : null,
+        businessName: typeof q.businessName === "string" ? q.businessName : "",
       });
       setExtractState("done");
       setExtractMsg(
@@ -367,6 +369,7 @@ export default function CheckQuotePage() {
           serviceDate: extractedQuote?.serviceDate ?? "",
           notes: extractedQuote?.notes ?? "",
           receiptId: extractedQuote?.receiptId ?? null,
+          businessName: extractedQuote?.businessName || null,
           docKey,
           fileName: docFile && extractState === "done" ? docFile.name : null,
         })

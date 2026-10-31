@@ -33,7 +33,8 @@ Return ONLY a JSON object with these exact keys:
       "town": town where the work was performed (the customer's town, not the business's), or null if unclear,
       "serviceDate": date of service or quote as YYYY-MM-DD, or null if unclear,
       "reportType": "paid" if this is an invoice/receipt for completed paid work, "quote" if it is an estimate/quote,
-      "notes": one-line summary of the scope of work, or null
+      "notes": one-line summary of the scope of work, or null,
+      "businessName": the company/contractor name as it appears on the document, e.g. 'Acme Plumbing', or null if the document does not clearly name one — never guess, and never infer one from a logo fragment, phone number, or website alone
     }
   ]
 }
@@ -260,6 +261,13 @@ export async function POST(req: Request) {
             : null,
         reportType: q.reportType === "quote" ? "quote" : "paid",
         notes: typeof q.notes === "string" ? q.notes.slice(0, 500) : null,
+        // Company/contractor name for the admin queue's editable field
+        // (never shown to visitors — the reveal reads only admin-saved
+        // names). Null when the document names none: never guessed.
+        businessName:
+          typeof q.businessName === "string"
+            ? q.businessName.trim().slice(0, 200) || null
+            : null,
       };
     };
 

@@ -116,6 +116,19 @@ interface ReportInput {
   serviceDate: unknown;
   notes: unknown;
   receiptId?: unknown;
+  /** Company/contractor name read from the uploaded document, if any
+   *  (batch mode only — the manual form never reads the document). */
+  businessName?: unknown;
+}
+
+/** Sanitize an extracted business name: trimmed, capped like the admin
+ *  business-name endpoint (200 chars); empty or non-string becomes
+ *  null (no name extracted). This is only an admin suggestion — the
+ *  admin reviews it before it ever reaches the paid reveal. */
+function cleanBusinessName(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const t = v.trim().slice(0, 200);
+  return t ? t : null;
 }
 
 function bad(error: string, status = 400) {
@@ -370,9 +383,13 @@ export async function POST(req: Request) {
       const rows: Record<string, unknown>[] = [];
       const verifiedFlags: boolean[] = [];
       const usedReceiptIds: string[] = [];
+      const businessNames: (string | null)[] = [];
       for (const item of items) {
         const v = validateReport((item ?? {}) as ReportInput);
         if ("error" in v) return bad(v.error);
+        businessNames.push(
+          cleanBusinessName((item as Record<string, unknown>).businessName)
+        );
         const amountCents = v.row.amount_cents as number;
         let verified = false;
         if (hasInvoice && invoiceHash) {
@@ -445,6 +462,10 @@ export async function POST(req: Request) {
           invoice_path: path as string,
           file_sha256: invoiceHash as string,
           amount_cents: rows[i].amount_cents as number,
+          // Auto-extracted company name for the admin queue's editable
+          // field (null when extraction named none). The paid reveal
+          // never reads this column — only admin-saved names surface.
+          extracted_business_name: businessNames[i],
         }))
       );
       if (verErr) {

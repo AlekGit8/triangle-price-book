@@ -118,6 +118,11 @@ interface DraftQuote {
    *  file itself rides in docFile). Shown on the draft card so the user
    *  sees the document came along. Absent for ordinary uploads. */
   carriedFileName?: string | null;
+  /** Company/contractor name read from the uploaded document, if any —
+   *  sent to the server so the admin queue can show it as an editable
+   *  suggestion. Never shown to visitors. Absent when extraction named
+   *  none (or for carried drafts without one). */
+  extractedBusinessName?: string | null;
   /** Set on publish: whether the server badged this entry Verified. */
   verified?: boolean;
 }
@@ -136,6 +141,7 @@ function draftFromAI(key: string, q: Record<string, unknown>): DraftQuote {
     status: "pending",
     errorMsg: "",
     receiptId: typeof q.receiptId === "string" ? q.receiptId : null,
+    extractedBusinessName: typeof q.businessName === "string" ? q.businessName : null,
   };
 }
 
@@ -412,6 +418,10 @@ export default function SubmitPage() {
               receiptId: carried.receiptId,
               carriedFileName:
                 typeof carried.fileName === "string" ? carried.fileName : file.name,
+              extractedBusinessName:
+                typeof carried.businessName === "string" && carried.businessName
+                  ? carried.businessName
+                  : null,
             },
           ]);
           window.setTimeout(
@@ -773,6 +783,7 @@ export default function SubmitPage() {
           serviceDate: monthToDate(d.serviceDate),
           notes: d.notes.trim(),
           receiptId: d.receiptId,
+          businessName: d.extractedBusinessName ?? null,
         }))
       )
     );

@@ -19,7 +19,7 @@ export async function GET(req: Request) {
       .select(
         `id, service_name, category, amount_cents, report_type, town,
          service_date, notes, verification_status, created_at,
-         verifications ( id, invoice_path, created_at ),
+         verifications ( id, invoice_path, created_at, extracted_business_name ),
          report_contacts ( email )`
       )
       // Newest submission first (created_at desc): a quote submitted today
@@ -37,14 +37,32 @@ export async function GET(req: Request) {
     const { data, error } = await q;
     if (error) throw error;
     interface AdminReportRow {
-      verifications: Array<{ id: string; invoice_path: string; created_at: string }>;
+      verifications: Array<{
+        id: string;
+        invoice_path: string;
+        created_at: string;
+        extracted_business_name: string | null;
+      }>;
       report_contacts: { email?: string } | null;
       [key: string]: unknown;
     }
     // Flatten the private contact email onto the shape the admin UI expects.
     const reports = ((data ?? []) as unknown as AdminReportRow[]).map((r) => {
       const { report_contacts, ...rest } = r;
-      return { ...rest, submitter_email: report_contacts?.email ?? null };
+      // Auto-extracted company name for the admin queue's editable
+      // field: first non-empty value across the report's documents
+      // (batch reports share one document, so they agree). Null when
+      // no extraction named one — the UI shows a blank field, never a
+      // guess.
+      const extracted =
+        (r.verifications ?? [])
+          .map((v) => v.extracted_business_name)
+          .find((v) => typeof v === "string" && v.trim()) ?? null;
+      return {
+        ...rest,
+        submitter_email: report_contacts?.email ?? null,
+        extracted_business_name: extracted,
+      };
     });
     // Attach a short-lived signed URL per invoice so moderators can open
     // it in-app (M11). The queue card used to tell them to look under
@@ -56,6 +74,7 @@ export async function GET(req: Request) {
           id: string;
           invoice_path: string;
           created_at: string;
+          extracted_business_name: string | null;
         }>;
         const withUrls = await Promise.all(
           vers.map(async (v) => {
