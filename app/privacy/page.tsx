@@ -10,7 +10,7 @@ export default function PrivacyPage() {
   return (
     <div className="py-10 max-w-3xl mx-auto">
       <h1 className="text-3xl font-extrabold text-ink">Privacy Policy</h1>
-      <p className="mt-2 text-sm text-muted">Last updated: October 27, 2026</p>
+      <p className="mt-2 text-sm text-muted">Last updated: October 30, 2026</p>
       <p className="mt-4 text-[15px] leading-relaxed text-ink">
         {siteConfig.siteName} is operated by {siteConfig.operatorName} (&ldquo;we&rdquo;,
         &ldquo;us&rdquo;).
@@ -67,7 +67,7 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-bold text-ink">4. What we never do</h2>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li>We never sell or share your submission, uploaded documents, or email address with advertisers or anyone else.</li>
-            <li>We never publish submitter names, addresses, phone numbers, emails, or business names.</li>
+            <li>We never publish submitter names, addresses, phone numbers, or emails.</li>
             <li>We never share uploaded documents with anyone except site moderators, the secure service providers that store them, and Google&rsquo;s Gemini AI service when you ask us to read a document (see Section 2), unless the law requires it.</li>
           </ul>
         </section>
