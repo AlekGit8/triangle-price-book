@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-type Result = { ok: true; type: "single" | "all"; list_url: string };
+type Result = { ok: true; type: "single" | "all" | "pack3" | "pack5"; list_url: string };
 
 /**
  * Post-Stripe landing page: confirms the session is paid, records the
@@ -85,7 +85,11 @@ function RevealSuccessInner() {
       </p>
       <p className="mt-4 text-sm text-muted">
         Bookmark that page — the link is your permanent access to{" "}
-        {result.type === "single" ? "this reveal" : "all revealed business names"}.
+        {result.type === "single"
+          ? "this reveal"
+          : result.type === "all"
+            ? "all revealed business names"
+            : "your selected reveals"}.
         The invoice behind a job is never shown.
       </p>
     </div>
