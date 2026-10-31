@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import {
-  ALL_CENTS,
   PACK3_CENTS,
   PACK5_CENTS,
   SINGLE_CENTS,
@@ -29,7 +28,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Payment not complete yet." }, { status: 402 });
     }
     const type = session.metadata.reveal_type as RevealType;
-    if (type !== "single" && type !== "all" && !isPackType(type)) {
+    if (type !== "single" && !isPackType(type)) {
       return NextResponse.json({ ok: false, error: "Unknown purchase." }, { status: 400 });
     }
     // Pack selections come back on the session our checkout route
@@ -44,11 +43,9 @@ export async function POST(req: Request) {
     const fallbackCents =
       type === "single"
         ? SINGLE_CENTS
-        : type === "all"
-          ? ALL_CENTS
-          : type === "pack3"
-            ? PACK3_CENTS
-            : PACK5_CENTS;
+        : type === "pack3"
+          ? PACK3_CENTS
+          : PACK5_CENTS;
     const purchase = await recordPurchase({
       type,
       reportId: isPackType(type) ? null : (session.metadata.report_id ?? null),

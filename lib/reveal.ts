@@ -12,17 +12,15 @@
 import { getServiceSupabase } from "./supabase-server";
 
 /** 3-tier pricing (Oct 30, 2026): $2 for 1, $5 for any 3, $8 for any 5.
- *  ALL_CENTS stays only as the legacy fallback for all-verified
- *  purchases made before the tier change — the menu no longer offers
- *  "all", but already-paid all tokens keep working. */
+ *  The old $4.99 all-verified option is gone entirely — no sale ever
+ *  occurred under it, so nothing carries over. */
 export const SINGLE_CENTS = 200;
-export const ALL_CENTS = 499;
 export const PACK3_CENTS = 500;
 export const PACK5_CENTS = 800;
 
-export type RevealType = "single" | "all" | "pack3" | "pack5";
+export type RevealType = "single" | "pack3" | "pack5";
 
-/** How many entries a pack type buys. Single/all are not packs. */
+/** How many entries a pack type buys. */
 export const PACK_SIZES: Record<"pack3" | "pack5", number> = {
   pack3: 3,
   pack5: 5,
@@ -230,17 +228,13 @@ export async function createRevealCheckout(args: {
   const amount =
     args.type === "single"
       ? SINGLE_CENTS
-      : args.type === "all"
-        ? ALL_CENTS
-        : args.type === "pack3"
-          ? PACK3_CENTS
-          : PACK5_CENTS;
+      : args.type === "pack3"
+        ? PACK3_CENTS
+        : PACK5_CENTS;
   const name =
     args.type === "single"
       ? `See who did this work — ${args.reportLabel}`
-      : args.type === "all"
-        ? "See who did the work — all verified listings (one-time)"
-        : `See who did the work — ${PACK_SIZES[args.type]} verified listings (one-time)`;
+      : `See who did the work — ${PACK_SIZES[args.type]} verified listings (one-time)`;
   const params = new URLSearchParams();
   params.set("mode", "payment");
   params.set("success_url", `${args.origin}/reveal/success?session_id={CHECKOUT_SESSION_ID}`);

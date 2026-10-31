@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       typeof metadata.selected_report_ids === "string"
         ? metadata.selected_report_ids.split(",").map((s) => s.trim()).filter(Boolean)
         : [];
-    if ((type === "single" || type === "all" || isPackType(type)) && amount > 0) {
+    if ((type === "single" || isPackType(type)) && amount > 0) {
       try {
         await recordPurchase({
           type,

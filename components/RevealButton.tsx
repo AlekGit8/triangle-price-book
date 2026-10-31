@@ -12,8 +12,8 @@ import { createPortal } from "react-dom";
  *   3 / $8 for any 5 verified listings (to /reveal/select first, where
  *   the buyer picks their entries, then pays). After payment the buyer
  *   gets a private list page (/reveal/<token>). No cookies: the link
- *   is the access. The old $4.99 all-verified option is retired from
- *   this dialog, but already-paid all tokens keep working.
+ *   is the access. The old $4.99 all-verified option is gone
+ *   entirely — no sale ever occurred under it, so nothing carries over.
  * - Contractor unknown ("NA": the documentation did not list one) →
  *   the button STILL renders, but its dialog shows only an
  *   informational message — never a payment. Nobody pays for a name

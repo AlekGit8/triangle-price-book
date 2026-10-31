@@ -14,10 +14,6 @@ import {
  * business-name reveal. Body: { type, report_id?, report_ids?,
  * from_report_id? }.
  * Single requires a verified report that actually has a name stored.
- * "all" reveals every verified listing's stored name, one-time and
- * permanent (no day pass, no expiry) — retired from the menu in the
- * Oct 30, 2026 tier change, but still accepted here so sessions
- * created before the change keep fulfilling.
  * Packs (pack3/pack5) require report_ids of exactly 3/5 verified
  * listings with real stored names — the selection the buyer confirmed
  * on /reveal/select. Returns { url } — the buyer is redirected to
@@ -32,13 +28,13 @@ export async function POST(req: Request) {
       from_report_id?: unknown;
     };
     const type = body.type as RevealType;
-    if (type !== "single" && type !== "all" && !isPackType(type)) {
+    if (type !== "single" && !isPackType(type)) {
       return NextResponse.json({ ok: false, error: "Invalid reveal type." }, { status: 400 });
     }
     const reportId = typeof body.report_id === "string" ? body.report_id : null;
     const fromReportId = typeof body.from_report_id === "string" ? body.from_report_id : null;
 
-    let reportLabel = "all verified listings";
+    let reportLabel = "";
     let cancelUrl: string;
     let selectedReportIds: string[] | undefined;
     const origin =
@@ -131,7 +127,9 @@ export async function POST(req: Request) {
       const slug = (categorySlugs as Record<string, string>)[report.category] ?? "browse";
       cancelUrl = `${origin}/${slug}`;
     } else {
-      cancelUrl = `${origin}/browse`;
+      // Unreachable after the type check above, but fail closed rather
+      // than sending a buyer to Stripe with no cancel target.
+      return NextResponse.json({ ok: false, error: "Invalid reveal type." }, { status: 400 });
     }
 
     const session = await createRevealCheckout({
