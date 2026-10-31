@@ -417,6 +417,12 @@ export default function CheckQuotePage() {
           </span>
         </label>
 
+        <p className="mt-1 text-sm text-muted text-center">
+          Please try to make sure the document shows the business or
+          contractor name. Feel free to crop out your own personal
+          information first.
+        </p>
+
         {/* Mobile only: open the phone camera directly to photograph the
             quote. Hidden on desktop (sm and up). */}
         <input
