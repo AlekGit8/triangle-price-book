@@ -40,6 +40,7 @@ type ExtractState = "idle" | "reading" | "done" | "error" | "rejected" | "unavai
 interface FormFields {
   category: string;
   serviceName: string;
+  businessName: string;
   amount: string;
   reportType: "paid" | "quote";
   town: string;
@@ -56,6 +57,7 @@ const alphabeticalCategories = [...siteConfig.categories].sort((a, b) =>
 const emptyFields: FormFields = {
   category: "HVAC",
   serviceName: "",
+  businessName: "",
   amount: "",
   reportType: "paid",
   town: "",
@@ -118,10 +120,11 @@ interface DraftQuote {
    *  file itself rides in docFile). Shown on the draft card so the user
    *  sees the document came along. Absent for ordinary uploads. */
   carriedFileName?: string | null;
-  /** Company/contractor name read from the uploaded document, if any —
-   *  sent to the server so the admin queue can show it as an editable
-   *  suggestion. Never shown to visitors. Absent when extraction named
-   *  none (or for carried drafts without one). */
+  /** Company/contractor name for this quote — read from the uploaded
+   *  document when present, editable on the card. Sent to the server
+   *  so the admin queue can show it as an editable suggestion. Never
+   *  shown to visitors. Absent when extraction named none (or for
+   *  carried drafts without one). */
   extractedBusinessName?: string | null;
   /** Set on publish: whether the server badged this entry Verified. */
   verified?: boolean;
@@ -279,6 +282,16 @@ function DraftCard({
               onChange={(e) => set({ notes: e.target.value })}
             />
           </div>
+          <div>
+            <label className={labelCls} htmlFor={id("business")}>Business name (optional)</label>
+            <input
+              id={id("business")} className={inputCls} maxLength={200}
+              placeholder="Company that did the work, if listed"
+              disabled={locked}
+              value={d.extractedBusinessName ?? ""}
+              onChange={(e) => set({ extractedBusinessName: e.target.value || null })}
+            />
+          </div>
 
           {d.status === "error" && (
             <p className="rounded-lg bg-red-50 border border-red-200 px-4 py-2 text-sm text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-200">
@@ -382,6 +395,7 @@ export default function SubmitPage() {
           ? str(carried.category)
           : "HVAC",
         serviceName: str(carried.serviceName),
+        businessName: "",
         amount: str(carried.amount),
         reportType: carried.reportType === "paid" ? "paid" : "quote",
         town: str(carried.town),
@@ -895,6 +909,7 @@ export default function SubmitPage() {
       form.set("town", fields.town.trim());
       form.set("serviceDate", monthToDate(fields.serviceDate));
       form.set("notes", fields.notes.trim());
+      form.set("businessName", fields.businessName.trim());
       form.set("submitterEmail", fields.submitterEmail.trim());
       // Option 2's own attachment wins; otherwise fall back to the Option 1
       // upload (its presence already means "verified" server-side).
@@ -1261,6 +1276,18 @@ export default function SubmitPage() {
             placeholder="Anything useful: scope of work, same-day service, quote declined…" maxLength={500}
             value={fields.notes} onChange={(e) => set("notes", e.target.value)}
           />
+        </div>
+
+        <div>
+          <label className={labelCls} htmlFor="businessName">Business name (optional)</label>
+          <input
+            id="businessName" className={inputCls}
+            placeholder="Company that did the work, if listed" maxLength={200}
+            value={fields.businessName} onChange={(e) => set("businessName", e.target.value)}
+          />
+          {fields.businessName.trim() && !manualFile && !docFile && (
+            <p className="mt-1 text-xs text-muted">Attach a document for this name to be saved for the moderator&apos;s review — without one, it can&apos;t be verified or shared.</p>
+          )}
         </div>
 
         <div>

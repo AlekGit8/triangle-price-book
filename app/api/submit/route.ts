@@ -335,6 +335,12 @@ export async function POST(req: Request) {
     // email. It is stored in the private report_contacts table (service
     // role only) — never on the publicly-readable reports table.
     const rawEmail = String(form.get("submitterEmail") ?? "").trim();
+    // Optional company/contractor name the submitter typed (manual form)
+    // or the draft card carried (AI-extracted or edited). Saved only as
+    // an admin suggestion on the verifications row when a document is
+    // attached — the paid reveal only ever reads admin-saved names on
+    // verified reports, so a typed name can never surface unverified.
+    const businessName = cleanBusinessName(form.get("businessName"));
     let submitterEmail: string | null = null;
     if (rawEmail) {
       if (!isValidEmail(rawEmail)) {
@@ -559,6 +565,10 @@ export async function POST(req: Request) {
       invoice_path: path,
       file_sha256: invoiceHash as string,
       amount_cents: v.row.amount_cents as number,
+      // Submitter-typed company name as the admin queue's suggestion
+      // (null when none was typed). Admin-reviewed before it can ever
+      // reach the paid reveal, and only on verified reports.
+      extracted_business_name: businessName,
     });
     if (verErr) {
       // Never leave a row with no backing invoice — see the batch-mode
