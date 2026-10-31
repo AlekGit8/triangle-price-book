@@ -119,10 +119,12 @@ export default async function RevealPage({
         </div>
       );
     }
+    // Key column is report_id, not id (same wrong-column bug as the
+    // checkout validation, fixed Oct 30, 2026).
     const { data: nameRows } = await sb
       .from("report_business_names")
       .select("report_id, business_name")
-      .in("id", selectedIds);
+      .in("report_id", selectedIds);
     const names = new Map<string, string>(
       (nameRows ?? []).map((r) => [r.report_id as string, r.business_name as string])
     );

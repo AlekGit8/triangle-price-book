@@ -54,14 +54,24 @@ export async function POST(req: Request) {
         );
       }
       const sb = getServiceSupabase();
-      const { data: reports } = await sb
+      const { data: reports, error: reportsErr } = await sb
         .from("reports")
         .select("id, verification_status")
         .in("id", ids);
-      const { data: nameRows } = await sb
+      // NOTE: this table's key column is report_id, not id — filtering
+      // on "id" errors and returns no rows, which used to surface as
+      // the misleading "no longer has a business name" error for every
+      // selection (fixed Oct 30, 2026).
+      const { data: nameRows, error: namesErr } = await sb
         .from("report_business_names")
         .select("report_id, business_name")
-        .in("id", ids);
+        .in("report_id", ids);
+      if (reportsErr || namesErr) {
+        return NextResponse.json(
+          { ok: false, error: "Could not verify the selected listings. Please try again." },
+          { status: 500 }
+        );
+      }
       const allVerified =
         reports?.length === ids.length &&
         reports.every((r) => r.verification_status === "verified");
