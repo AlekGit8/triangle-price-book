@@ -22,9 +22,27 @@ export async function POST(req: Request) {
     if (contentLength > 8 * 1024) {
       return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 413 });
     }
-    const { id, action } = (await req.json()) as { id?: string; action?: Action };
+    const body = (await req.json()) as {
+      id?: string;
+      action?: Action;
+      business_name?: unknown;
+    };
+    const { id, action } = body;
     if (!id || !["verify", "publish_unverified", "reject"].includes(action ?? ""))
       return NextResponse.json({ ok: false, error: "Invalid request." }, { status: 400 });
+
+    // Validate the optional company name before touching anything:
+    // the queue field's value becomes the paid reveal's source of
+    // truth on verify. Blank (or absent) means "not yet reviewed" —
+    // no name row is created. "NA" is stored as-is (unknown contractor).
+    const businessName =
+      typeof body.business_name === "string" ? body.business_name.trim() : null;
+    if (businessName !== null && businessName.length > 200) {
+      return NextResponse.json(
+        { ok: false, error: "Business name is too long." },
+        { status: 400 }
+      );
+    }
 
     const sb = getServiceSupabase();
 
@@ -61,6 +79,26 @@ export async function POST(req: Request) {
     const { error } = await sb.from("reports").update(patch).eq("id", id);
     if (error) throw error;
 
+    // Verify with an admin-reviewed company name: save it as the paid
+    // reveal's source of truth. A failed name save must not fail the
+    // verification itself (the admin can still set the name on the
+    // published tab), so it is reported back instead of thrown.
+    let nameError: string | null = null;
+    if (action === "verify" && businessName) {
+      const { error: nameErr } = await sb
+        .from("report_business_names")
+        .upsert({
+          report_id: id,
+          business_name: businessName,
+          updated_at: new Date().toISOString(),
+        });
+      if (nameErr) {
+        console.error("moderate business-name error:", nameErr);
+        nameError =
+          "Verified, but the company name could not be saved — set it on the published tab.";
+      }
+    }
+
     // Reject also deletes the evidence (M4): the Privacy Policy says
     // documents are kept only as long as the entry remains posted, and
     // a rejected entry is never posted. Delete the report's verification
@@ -93,7 +131,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, ...(nameError ? { nameError } : {}) });
   } catch (err) {
     console.error("admin moderate error:", err);
     return NextResponse.json({ ok: false, error: "Moderation failed." }, { status: 500 });

@@ -35,6 +35,10 @@ export interface CheckQuoteCarryover {
   serviceDate: string;
   notes: string;
   receiptId: string | null;
+  /** Company/contractor name read from the document (quotes[0]), if any
+   *  — rides along so the /submit draft can store it for the admin
+   *  queue's editable field. Null when extraction named none. */
+  businessName: string | null;
   /** IndexedDB key for the uploaded file (lib/carried-doc.ts), if any. */
   docKey: string | null;
   fileName: string | null;

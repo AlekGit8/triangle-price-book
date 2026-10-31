@@ -16,6 +16,9 @@ interface QueueReport {
   notes: string | null;
   verification_status: string;
   submitter_email: string | null;
+  /** Auto-extracted company/contractor name from the document, if any
+   *  (null when extraction named none). Admin suggestion only. */
+  extracted_business_name: string | null;
   created_at: string;
   verifications: Array<{ id: string; invoice_path: string; created_at: string; signed_url?: string | null }>;
 }
@@ -35,7 +38,17 @@ type Action = "verify" | "publish_unverified" | "reject";
  * on the public listing. Removing it hides the button again (the
  * business dispute path — used when a listing is found inaccurate).
  */
-function BusinessNameEditor({ reportId, adminKey }: { reportId: string; adminKey: string }) {
+function BusinessNameEditor({
+  reportId,
+  adminKey,
+  initialExtracted,
+}: {
+  reportId: string;
+  adminKey: string;
+  /** Auto-extracted name, used only as an unsaved suggestion when no
+   *  name has been saved yet. */
+  initialExtracted?: string | null;
+}) {
   const [value, setValue] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
@@ -51,6 +64,11 @@ function BusinessNameEditor({ reportId, adminKey }: { reportId: string; adminKey
         if (j.ok && j.business_name) {
           setValue(j.business_name as string);
           setSaved(j.business_name as string);
+        } else if (initialExtracted) {
+          // No saved name yet: suggest the auto-extracted one. It stays
+          // unsaved until the admin clicks Save — the reveal only reads
+          // saved names, so a suggestion here can never leak.
+          setValue(initialExtracted);
         }
       })
       .catch(() => {})
@@ -107,6 +125,11 @@ function BusinessNameEditor({ reportId, adminKey }: { reportId: string; adminKey
           </button>
         )}
       </div>
+      {!saved && initialExtracted && value === initialExtracted && (
+        <p className="mt-1 text-xs text-muted">
+          Suggested from the document — edit and save to use it for the paid reveal.
+        </p>
+      )}
       {saved && (
         <p className="mt-1 text-xs text-muted">
           Saved — the reveal button now shows on this listing.
@@ -122,6 +145,11 @@ export default function AdminPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [reports, setReports] = useState<QueueReport[]>([]);
   const [published, setPublished] = useState<QueueReport[]>([]);
+  // Queue company-name field edits, keyed by report id. The displayed
+  // value falls back to the auto-extracted name until the admin types
+  // (so a reports refetch never clobbers an in-progress edit); the
+  // Verify button sends the current value along.
+  const [queueNames, setQueueNames] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<"queue" | "published" | "signups" | "analytics" | "sponsors">("queue");
   const [signups, setSignups] = useState<Signup[]>([]);
   const [signupStats, setSignupStats] = useState({ total: 0, updatesOptIn: 0 });
@@ -206,15 +234,25 @@ export default function AdminPage() {
     }
   }
 
-  async function moderate(id: string, action: Action, from: "queue" | "published" = "queue") {
+  async function moderate(
+    id: string,
+    action: Action,
+    from: "queue" | "published" = "queue",
+    businessName?: string
+  ) {
     try {
       const res = await fetch("/api/admin/moderate", {
         method: "POST",
         headers: { "content-type": "application/json", "x-admin-key": key },
-        body: JSON.stringify({ id, action }),
+        body: JSON.stringify({
+          id,
+          action,
+          ...(businessName !== undefined ? { business_name: businessName } : {}),
+        }),
       });
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error ?? "Failed");
+      if (json.nameError) alert(json.nameError);
       if (from === "published") {
         setPublished((rs) => rs.filter((r) => r.id !== id));
       } else {
@@ -483,11 +521,43 @@ export default function AdminPage() {
                 {formatCents(r.amount_cents)}
               </p>
             </div>
+            {tab === "queue" && r.verifications.length > 0 && (
+              <div className="mt-4">
+                <label
+                  className="text-xs font-semibold text-muted"
+                  htmlFor={`company-${r.id}`}
+                >
+                  Company / contractor (from document)
+                </label>
+                <input
+                  id={`company-${r.id}`}
+                  value={queueNames[r.id] ?? r.extracted_business_name ?? ""}
+                  onChange={(e) =>
+                    setQueueNames((m) => ({ ...m, [r.id]: e.target.value }))
+                  }
+                  placeholder="No company listed on the document"
+                  maxLength={200}
+                  className="mt-1 w-full rounded-[10px] border border-line px-3 py-2 text-sm text-ink"
+                />
+                <p className="mt-1 text-xs text-muted">
+                  {r.extracted_business_name
+                    ? "Pulled from the document — edit as needed. Saved to the paid reveal when you verify."
+                    : "No company was pulled from the document — type one, or enter NA if none is listed. Leave blank to set it later. Saved to the paid reveal when you verify."}
+                </p>
+              </div>
+            )}
             <div className="mt-4 flex flex-wrap gap-2">
               {tab === "queue" ? (
                 <>
                   <button
-                    onClick={() => moderate(r.id, "verify", "queue")}
+                    onClick={() =>
+                      moderate(
+                        r.id,
+                        "verify",
+                        "queue",
+                        queueNames[r.id] ?? r.extracted_business_name ?? ""
+                      )
+                    }
                     disabled={r.verifications.length === 0}
                     title={
                       r.verifications.length === 0
@@ -525,7 +595,11 @@ export default function AdminPage() {
               )}
             </div>
             {tab === "published" && r.verification_status === "verified" && (
-              <BusinessNameEditor reportId={r.id} adminKey={key} />
+              <BusinessNameEditor
+                reportId={r.id}
+                adminKey={key}
+                initialExtracted={r.extracted_business_name}
+              />
             )}
           </article>
         ))}
