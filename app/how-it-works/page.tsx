@@ -88,15 +88,18 @@ export default function HowItWorksPage() {
             verify the price — and are available to view for a small fee.
             On a verified listing with a stored name, a{" "}
             <strong>&ldquo;See who did this work&rdquo;</strong> button offers
-            two options: <strong>$1.99</strong> to reveal that job&rsquo;s
-            business, or <strong>$4.99</strong> to reveal the businesses
-            behind all verified listings.
+            three options: <strong>$2</strong> to reveal that job&rsquo;s
+            business, <strong>$5</strong> to reveal the businesses behind
+            any 3 verified listings, or <strong>$8</strong> for any 5.
+            For the 3- and 5-packs, you pick your listings first on a
+            selection screen, then pay — and after payment you get a
+            private page with exactly the businesses you picked.
           </p>
           <p>
             After payment, you get a private list page — no account is
             needed. Bookmark the link: it opens
             your list in any browser, any time. If you lose the link, the
-            list is gone and you&rsquo;d need to buy it again. Both options
+            list is gone and you&rsquo;d need to buy it again. All three options
             are one-time purchases — no time limit, no subscription.
           </p>
           <p>

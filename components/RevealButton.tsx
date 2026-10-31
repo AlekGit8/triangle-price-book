@@ -7,10 +7,13 @@ import { createPortal } from "react-dom";
  * "See who did this work" — the paid business-name reveal for one
  * verified report. The button itself decides whether to appear: on
  * mount it asks /api/reveal/status, which reports one of three states.
- * - Real name stored → button opens the pay dialog ($1.99 single /
- *   $4.99 all) and Stripe Checkout. After payment the buyer gets a
- *   private list page (/reveal/<token>). No cookies: the link is the
- *   access.
+ * - Real name stored → button opens the pay dialog with three cards:
+ *   $2 for this job only (straight to Stripe Checkout), or $5 for any
+ *   3 / $8 for any 5 verified listings (to /reveal/select first, where
+ *   the buyer picks their entries, then pays). After payment the buyer
+ *   gets a private list page (/reveal/<token>). No cookies: the link
+ *   is the access. The old $4.99 all-verified option is gone
+ *   entirely — no sale ever occurred under it, so nothing carries over.
  * - Contractor unknown ("NA": the documentation did not list one) →
  *   the button STILL renders, but its dialog shows only an
  *   informational message — never a payment. Nobody pays for a name
@@ -65,14 +68,14 @@ export default function RevealButton({
     };
   }, [reportId]);
 
-  async function buy(type: "single" | "all") {
+  async function buySingle() {
     setBusy(true);
     setError("");
     try {
       const res = await fetch("/api/reveal/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ type, report_id: reportId }),
+        body: JSON.stringify({ type: "single", report_id: reportId }),
       });
       const json = await res.json();
       if (!res.ok || !json.url) throw new Error(json.error ?? "Checkout failed");
@@ -81,6 +84,12 @@ export default function RevealButton({
       setError(err instanceof Error ? err.message : "Checkout failed. Please try again.");
       setBusy(false);
     }
+  }
+
+  function pickPack(pack: "pack3" | "pack5") {
+    // Packs are select-then-pay: the buyer picks their entries on the
+    // selection screen before any money moves.
+    window.location.href = `/reveal/select?pack=${pack}&from=${encodeURIComponent(reportId)}`;
   }
 
   if (!checked) return null;
@@ -121,7 +130,7 @@ export default function RevealButton({
           >
           <div className="flex min-h-full items-center justify-center p-4">
           <div
-            className="w-full max-w-md rounded-2xl border border-line bg-white p-6 shadow-xl"
+            className="w-full max-w-2xl rounded-2xl border border-line bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
@@ -157,29 +166,51 @@ export default function RevealButton({
                   the name of the business that performed it.
                 </p>
 
-                <div className="mt-5 space-y-2">
-                  <button
-                    onClick={() => buy("single")}
-                    disabled={busy}
-                    className="w-full rounded-[10px] bg-black px-4 py-2.5 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
-                  >
-                    {busy ? "…" : "This job only — $1.99"}
-                  </button>
-                  <button
-                    onClick={() => buy("all")}
-                    disabled={busy}
-                    className="w-full rounded-[10px] border border-line bg-white px-4 py-2.5 font-semibold text-ink hover:border-black disabled:opacity-50"
-                  >
-                    {busy ? "…" : "All verified jobs — $4.99"}
-                  </button>
-                  <button
-                    onClick={() => !busy && setOpen(false)}
-                    disabled={busy}
-                    className="w-full px-4 py-2 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="flex flex-col rounded-2xl border border-line p-4">
+                    <p className="font-mono text-3xl font-bold text-ink">$2</p>
+                    <p className="mt-1 text-sm font-semibold text-ink">1 verified entry</p>
+                    <p className="mt-1 flex-1 text-sm text-muted">The business behind this job.</p>
+                    <button
+                      onClick={buySingle}
+                      disabled={busy}
+                      className="mt-4 w-full rounded-[10px] bg-black px-4 py-2.5 font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                      {busy ? "…" : "Reveal this job"}
+                    </button>
+                  </div>
+                  <div className="flex flex-col rounded-2xl border border-line p-4">
+                    <p className="font-mono text-3xl font-bold text-ink">$5</p>
+                    <p className="mt-1 text-sm font-semibold text-ink">3 verified entries</p>
+                    <p className="mt-1 flex-1 text-sm text-muted">Choose any 3 verified jobs first, then pay.</p>
+                    <button
+                      onClick={() => pickPack("pack3")}
+                      disabled={busy}
+                      className="mt-4 w-full rounded-[10px] border border-line bg-white px-4 py-2.5 font-semibold text-ink hover:border-black disabled:opacity-50"
+                    >
+                      Pick 3 jobs
+                    </button>
+                  </div>
+                  <div className="flex flex-col rounded-2xl border border-line p-4">
+                    <p className="font-mono text-3xl font-bold text-ink">$8</p>
+                    <p className="mt-1 text-sm font-semibold text-ink">5 verified entries</p>
+                    <p className="mt-1 flex-1 text-sm text-muted">Choose any 5 verified jobs first, then pay.</p>
+                    <button
+                      onClick={() => pickPack("pack5")}
+                      disabled={busy}
+                      className="mt-4 w-full rounded-[10px] border border-line bg-white px-4 py-2.5 font-semibold text-ink hover:border-black disabled:opacity-50"
+                    >
+                      Pick 5 jobs
+                    </button>
+                  </div>
                 </div>
+                <button
+                  onClick={() => !busy && setOpen(false)}
+                  disabled={busy}
+                  className="mt-3 w-full px-4 py-2 text-sm font-semibold text-muted hover:text-ink disabled:opacity-50"
+                >
+                  Cancel
+                </button>
                 {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
               </>
             )}

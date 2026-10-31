@@ -11,10 +11,24 @@
  */
 import { getServiceSupabase } from "./supabase-server";
 
-export const SINGLE_CENTS = 199;
-export const ALL_CENTS = 499;
+/** 3-tier pricing (Oct 30, 2026): $2 for 1, $5 for any 3, $8 for any 5.
+ *  The old $4.99 all-verified option is gone entirely — no sale ever
+ *  occurred under it, so nothing carries over. */
+export const SINGLE_CENTS = 200;
+export const PACK3_CENTS = 500;
+export const PACK5_CENTS = 800;
 
-export type RevealType = "single" | "all";
+export type RevealType = "single" | "pack3" | "pack5";
+
+/** How many entries a pack type buys. */
+export const PACK_SIZES: Record<"pack3" | "pack5", number> = {
+  pack3: 3,
+  pack5: 5,
+};
+
+export function isPackType(type: string): type is "pack3" | "pack5" {
+  return type === "pack3" || type === "pack5";
+}
 
 export interface RevealPurchase {
   id: string;
@@ -114,10 +128,18 @@ export async function recordPurchase(args: {
   reportId: string | null;
   sessionId: string;
   amountCents: number;
+  selectedReportIds?: string[];
 }): Promise<RevealPurchase> {
   const sb = getServiceSupabase();
   const existing = await getPurchaseBySession(args.sessionId);
-  if (existing) return existing;
+  if (existing) {
+    // Activation retry after a partial first attempt: the purchase row
+    // exists but its selections may not. Fill them in, idempotently.
+    if (args.selectedReportIds?.length) {
+      await insertPackSelections(existing.id, args.selectedReportIds);
+    }
+    return existing;
+  }
   const { data, error } = await sb
     .from("reveal_purchases")
     .insert({
@@ -132,10 +154,51 @@ export async function recordPurchase(args: {
   if (error || !data) {
     // Lost race with the other fulfiller — re-read instead of failing.
     const retry = await getPurchaseBySession(args.sessionId);
-    if (retry) return retry;
+    if (retry) {
+      if (args.selectedReportIds?.length) {
+        await insertPackSelections(retry.id, args.selectedReportIds);
+      }
+      return retry;
+    }
     throw new Error(`Failed to record reveal purchase: ${error?.message ?? "unknown"}`);
   }
+  if (args.selectedReportIds?.length) {
+    await insertPackSelections(data.id, args.selectedReportIds);
+  }
   return data as RevealPurchase;
+}
+
+/**
+ * Record a pack's chosen entries. Idempotent: a retried fulfillment
+ * re-inserts the same (purchase_id, report_id) pairs and hits the PK
+ * (23505), which means another fulfiller already wrote them — the
+ * desired end state, so it is ignored, not an error.
+ */
+async function insertPackSelections(
+  purchaseId: string,
+  reportIds: string[]
+): Promise<void> {
+  const rows = [...new Set(reportIds)].map((report_id) => ({
+    purchase_id: purchaseId,
+    report_id,
+  }));
+  if (rows.length === 0) return;
+  const sb = getServiceSupabase();
+  const { error } = await sb.from("reveal_pack_selections").insert(rows);
+  if (error && error.code !== "23505") {
+    throw new Error(`Failed to record pack selections: ${error.message}`);
+  }
+}
+
+/** The entries a pack purchase covers, in no particular order. */
+export async function getPackSelections(purchaseId: string): Promise<string[]> {
+  const sb = getServiceSupabase();
+  const { data, error } = await sb
+    .from("reveal_pack_selections")
+    .select("report_id")
+    .eq("purchase_id", purchaseId);
+  if (error || !data) return [];
+  return (data as { report_id: string }[]).map((r) => r.report_id);
 }
 
 /* ---------------- Stripe via plain fetch (no SDK dependency) ---------------- */
@@ -160,12 +223,18 @@ export async function createRevealCheckout(args: {
   reportId: string | null;
   reportLabel: string;
   cancelUrl: string;
+  selectedReportIds?: string[];
 }): Promise<CheckoutSession> {
-  const amount = args.type === "single" ? SINGLE_CENTS : ALL_CENTS;
+  const amount =
+    args.type === "single"
+      ? SINGLE_CENTS
+      : args.type === "pack3"
+        ? PACK3_CENTS
+        : PACK5_CENTS;
   const name =
     args.type === "single"
       ? `See who did this work — ${args.reportLabel}`
-      : "See who did the work — all verified listings (one-time)";
+      : `See who did the work — ${PACK_SIZES[args.type]} verified listings (one-time)`;
   const params = new URLSearchParams();
   params.set("mode", "payment");
   params.set("success_url", `${args.origin}/reveal/success?session_id={CHECKOUT_SESSION_ID}`);
@@ -176,6 +245,12 @@ export async function createRevealCheckout(args: {
   params.set("line_items[0][price_data][product_data][name]", name);
   params.set("metadata[reveal_type]", args.type);
   if (args.reportId) params.set("metadata[report_id]", args.reportId);
+  // Pack selections ride the session: 5 UUIDs join to 184 chars, well
+  // under Stripe's 500-char metadata value limit. Activation reads
+  // them back to record the purchase's frozen selection.
+  if (args.selectedReportIds?.length) {
+    params.set("metadata[selected_report_ids]", args.selectedReportIds.join(","));
+  }
   const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
     headers: {

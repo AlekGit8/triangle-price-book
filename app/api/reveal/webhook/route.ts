@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  isPackType,
   recordPurchase,
   verifyStripeWebhook,
   type RevealType,
@@ -29,13 +30,18 @@ export async function POST(req: Request) {
     const metadata = (obj.metadata ?? {}) as Record<string, string>;
     const type = metadata.reveal_type as RevealType;
     const amount = typeof obj.amount_total === "number" ? obj.amount_total : 0;
-    if ((type === "single" || type === "all") && amount > 0) {
+    const selected =
+      typeof metadata.selected_report_ids === "string"
+        ? metadata.selected_report_ids.split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
+    if ((type === "single" || isPackType(type)) && amount > 0) {
       try {
         await recordPurchase({
           type,
-          reportId: metadata.report_id ?? null,
+          reportId: isPackType(type) ? null : (metadata.report_id ?? null),
           sessionId: String(obj.id ?? ""),
           amountCents: amount,
+          selectedReportIds: isPackType(type) ? selected : undefined,
         });
       } catch (err) {
         console.error("reveal webhook fulfill error:", err);

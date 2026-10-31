@@ -3,33 +3,95 @@ import { getServiceSupabase } from "@/lib/supabase-server";
 import { siteConfig, categorySlugs } from "@/lib/site-config";
 import {
   createRevealCheckout,
+  isPackType,
   isUnknownBusinessName,
+  PACK_SIZES,
   type RevealType,
 } from "@/lib/reveal";
 
 /**
  * POST /api/reveal/checkout — start a Stripe Checkout session for a
- * business-name reveal. Body: { type: "single" | "all", report_id? }.
+ * business-name reveal. Body: { type, report_id?, report_ids?,
+ * from_report_id? }.
  * Single requires a verified report that actually has a name stored.
- * "all" reveals every verified listing's stored name, one-time and
- * permanent (no day pass, no expiry). Returns { url } — the buyer is
- * redirected to Stripe.
+ * Packs (pack3/pack5) require report_ids of exactly 3/5 verified
+ * listings with real stored names — the selection the buyer confirmed
+ * on /reveal/select. Returns { url } — the buyer is redirected to
+ * Stripe.
  */
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as { type?: unknown; report_id?: unknown };
+    const body = (await req.json()) as {
+      type?: unknown;
+      report_id?: unknown;
+      report_ids?: unknown;
+      from_report_id?: unknown;
+    };
     const type = body.type as RevealType;
-    if (type !== "single" && type !== "all") {
+    if (type !== "single" && !isPackType(type)) {
       return NextResponse.json({ ok: false, error: "Invalid reveal type." }, { status: 400 });
     }
     const reportId = typeof body.report_id === "string" ? body.report_id : null;
+    const fromReportId = typeof body.from_report_id === "string" ? body.from_report_id : null;
 
-    let reportLabel = "all verified listings";
+    let reportLabel = "";
     let cancelUrl: string;
+    let selectedReportIds: string[] | undefined;
     const origin =
       req.headers.get("origin") ?? siteConfig.siteUrl;
 
-    if (type === "single") {
+    if (isPackType(type)) {
+      // Packs are select-then-pay: the buyer confirmed exactly N
+      // entries on /reveal/select. Validate the selection here, at
+      // checkout creation — activation trusts Stripe's copy of it.
+      const size = PACK_SIZES[type];
+      const rawIds = Array.isArray(body.report_ids) ? body.report_ids : [];
+      const ids = [...new Set(rawIds.filter((x): x is string => typeof x === "string"))];
+      if (ids.length !== size) {
+        return NextResponse.json(
+          { ok: false, error: `Select exactly ${size} verified listings.` },
+          { status: 400 }
+        );
+      }
+      const sb = getServiceSupabase();
+      const { data: reports, error: reportsErr } = await sb
+        .from("reports")
+        .select("id, verification_status")
+        .in("id", ids);
+      // NOTE: this table's key column is report_id, not id — filtering
+      // on "id" errors and returns no rows, which used to surface as
+      // the misleading "no longer has a business name" error for every
+      // selection (fixed Oct 30, 2026).
+      const { data: nameRows, error: namesErr } = await sb
+        .from("report_business_names")
+        .select("report_id, business_name")
+        .in("report_id", ids);
+      if (reportsErr || namesErr) {
+        return NextResponse.json(
+          { ok: false, error: "Could not verify the selected listings. Please try again." },
+          { status: 500 }
+        );
+      }
+      const allVerified =
+        reports?.length === ids.length &&
+        reports.every((r) => r.verification_status === "verified");
+      const allNamed =
+        nameRows?.length === ids.length &&
+        nameRows.every((r) => !isUnknownBusinessName(r.business_name as string));
+      if (!allVerified || !allNamed) {
+        return NextResponse.json(
+          { ok: false, error: "One of the selected listings no longer has a business name available. Please pick again." },
+          { status: 400 }
+        );
+      }
+      selectedReportIds = ids;
+      reportLabel = `${size} verified listings`;
+      // Cancel returns to the selection screen with the picks
+      // pre-checked, so a changed mind costs a re-pick, not a redo.
+      const back = new URLSearchParams({ pack: type, selected: ids.join(",") });
+      if (fromReportId) back.set("from", fromReportId);
+      cancelUrl = `${origin}/reveal/select?${back.toString()}`;
+    } else if (type === "single") {
       if (!reportId) {
         return NextResponse.json({ ok: false, error: "A report is required for a single reveal." }, { status: 400 });
       }
@@ -75,7 +137,9 @@ export async function POST(req: Request) {
       const slug = (categorySlugs as Record<string, string>)[report.category] ?? "browse";
       cancelUrl = `${origin}/${slug}`;
     } else {
-      cancelUrl = `${origin}/browse`;
+      // Unreachable after the type check above, but fail closed rather
+      // than sending a buyer to Stripe with no cancel target.
+      return NextResponse.json({ ok: false, error: "Invalid reveal type." }, { status: 400 });
     }
 
     const session = await createRevealCheckout({
@@ -84,6 +148,7 @@ export async function POST(req: Request) {
       reportId,
       reportLabel,
       cancelUrl,
+      selectedReportIds,
     });
     return NextResponse.json({ ok: true, url: session.url });
   } catch (err) {
