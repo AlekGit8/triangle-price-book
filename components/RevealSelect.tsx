@@ -67,6 +67,19 @@ export default function RevealSelect() {
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
 
+  // The listing the buyer came from pins to the top of the picker,
+  // checked, instead of sitting wherever the date sort puts it (it
+  // used to land at the very bottom). The rest keep the API's order —
+  // Array.sort is stable, so only the origin moves.
+  const orderedReports = useMemo(() => {
+    if (!reports || !from) return reports;
+    return [...reports].sort((a, b) => {
+      if (a.id === from) return -1;
+      if (b.id === from) return 1;
+      return 0;
+    });
+  }, [reports, from]);
+
   function toggle(id: string) {
     setSelected((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
@@ -154,7 +167,7 @@ export default function RevealSelect() {
       </p>
 
       <ul className="mt-6 space-y-3">
-        {reports.map((r) => {
+        {(orderedReports ?? reports).map((r) => {
           const checked = selectedSet.has(r.id);
           const disabled = !checked && selected.length >= size;
           return (
