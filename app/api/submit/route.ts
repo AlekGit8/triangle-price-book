@@ -5,6 +5,7 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { clientIp } from "@/lib/rate-limit";
 import { siteConfig } from "@/lib/site-config";
 import { isValidEmail } from "@/lib/validation";
+import { generateToken } from "@/lib/reveal";
 
 
 const MAX_INVOICE_BYTES = 8 * 1024 * 1024; // 8 MB
@@ -437,10 +438,12 @@ export async function POST(req: Request) {
       }
 
       if (!hasInvoice) {
+        // No document, so nothing verified — and no free-reveal grants.
         return NextResponse.json({
           ok: true,
           ids,
           results: ids.map((id, i) => ({ id, verified: verifiedFlags[i] })),
+          freeRevealTokens: [],
         });
       }
 
@@ -490,10 +493,38 @@ export async function POST(req: Request) {
           .in("id", usedReceiptIds);
       }
 
+      // Free-reveal grants (Nov 1, 2026): each report that verified
+      // against its receipt earns its submitter one free single reveal,
+      // claimable immediately — no admin step. One grant per verified
+      // report (a multi-quote document earns one per verified quote).
+      // A grant failure must never fail the submission itself, so it
+      // is logged, not thrown.
+      const freeRevealTokens: string[] = [];
+      const verifiedIds = ids.filter((_, i) => verifiedFlags[i]);
+      if (verifiedIds.length > 0) {
+        const { data: insertedGrants, error: grantErr } = await sb
+          .from("free_reveal_grants")
+          .insert(
+            verifiedIds.map((source_report_id) => ({
+              token: generateToken(),
+              source_report_id,
+            }))
+          )
+          .select("token");
+        if (grantErr) {
+          console.error("free reveal grant error:", grantErr);
+        } else {
+          freeRevealTokens.push(
+            ...((insertedGrants ?? []) as Array<{ token: string }>).map((g) => g.token)
+          );
+        }
+      }
+
       return NextResponse.json({
         ok: true,
         ids,
         results: ids.map((id, i) => ({ id, verified: verifiedFlags[i] })),
+        freeRevealTokens,
       });
     }
 

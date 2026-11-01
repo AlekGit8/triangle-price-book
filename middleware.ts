@@ -38,6 +38,8 @@ const API_LIMITS: ApiLimit[] = [
   // from a small set of IPs, and a limit there could drop fulfillments.
   { prefix: "/api/reveal/checkout", limit: 30, windowMs: HOUR },
   { prefix: "/api/reveal/activate", limit: 30, windowMs: HOUR },
+  // Free-reveal claims (abuse = grant-spend spam on someone else's token).
+  { prefix: "/api/reveal/free/claim", limit: 30, windowMs: HOUR },
   // Public read API; generous, but not unlimited (full-table scans).
   // 120/hr let one IP burn 120 Gemini calls an hour — 30/hr with a
   // 60/day cap is plenty for a human checking quotes, and the estimate
