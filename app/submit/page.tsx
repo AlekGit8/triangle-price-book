@@ -334,6 +334,10 @@ export default function SubmitPage() {
 
   // Multi-quote drafts from an uploaded document.
   const [drafts, setDrafts] = useState<DraftQuote[]>([]);
+  // Free-reveal grants earned by verified draft publishes (Nov 1,
+  // 2026): one token per verified report. Kept across "Upload another
+  // document" resets — the token links stay valid for the session.
+  const [freeRevealTokens, setFreeRevealTokens] = useState<string[]>([]);
   const [draftEmail, setDraftEmail] = useState("");
   const [draftsAgreed, setDraftsAgreed] = useState(false);
   const [publishingAll, setPublishingAll] = useState(false);
@@ -780,10 +784,14 @@ export default function SubmitPage() {
 
   /** Publish one or more drafts; the uploaded document verifies all of
       them whose amount still matches what was read from it. Returns the
-      per-report verified flags so each draft card can say so. */
+      per-report verified flags so each draft card can say so, plus any
+      free-reveal grant tokens earned (one per verified report). */
   async function publishDraftBatch(
     items: DraftQuote[]
-  ): Promise<Array<{ id: string; verified: boolean }>> {
+  ): Promise<{
+    results: Array<{ id: string; verified: boolean }>;
+    freeRevealTokens: string[];
+  }> {
     const form = new FormData();
     form.set(
       "reports",
@@ -807,7 +815,12 @@ export default function SubmitPage() {
       await getDraftsTurnstileToken();
     form.set("turnstileToken", draftsToken);
     let res: Response;
-    let json: { ok?: boolean; error?: string; results?: Array<{ id: string; verified: boolean }> };
+    let json: {
+      ok?: boolean;
+      error?: string;
+      results?: Array<{ id: string; verified: boolean }>;
+      freeRevealTokens?: string[];
+    };
     try {
       res = await fetch("/api/submit", { method: "POST", body: form });
       json = await res.json();
@@ -819,7 +832,10 @@ export default function SubmitPage() {
       clearDraftsTurnstileToken(draftsTokenSource);
     }
     if (!res.ok || !json.ok) throw new Error(json.error ?? "Submission failed");
-    return json.results ?? [];
+    return {
+      results: json.results ?? [],
+      freeRevealTokens: json.freeRevealTokens ?? [],
+    };
   }
 
   function draftValid(d: DraftQuote): string | null {
@@ -843,7 +859,10 @@ export default function SubmitPage() {
     }
     updateDraft(key, { status: "publishing", errorMsg: "" });
     try {
-      const results = await publishDraftBatch([d]);
+      const { results, freeRevealTokens: tokens } = await publishDraftBatch([d]);
+      if (tokens.length > 0) {
+        setFreeRevealTokens((prev) => [...prev, ...tokens]);
+      }
       updateDraft(key, { status: "done", verified: results[0]?.verified ?? false });
     } catch (err) {
       updateDraft(key, {
@@ -874,7 +893,10 @@ export default function SubmitPage() {
       )
     );
     try {
-      const results = await publishDraftBatch(pending);
+      const { results, freeRevealTokens: tokens } = await publishDraftBatch(pending);
+      if (tokens.length > 0) {
+        setFreeRevealTokens((prev) => [...prev, ...tokens]);
+      }
       setDrafts((ds) => {
         // Results come back in the same order as the submitted drafts.
         let i = -1;
@@ -1070,6 +1092,40 @@ export default function SubmitPage() {
           </p>
         )}
       </div>
+
+      {/* Free-reveal reward: shown the moment a verified draft publish
+          earns a grant — immediately, with no admin step. Outside the
+          drafts-length guard so it survives "Upload another document"
+          resets; the token links stay valid for the session. */}
+      {freeRevealTokens.length > 0 && (
+        <div className="mt-6 rounded-2xl border-2 border-black bg-white p-5 text-center">
+          <p className="font-bold text-ink">
+            🎉{" "}
+            {freeRevealTokens.length === 1
+              ? "You earned a free business reveal!"
+              : `You earned ${freeRevealTokens.length} free business reveals!`}
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            Pick any verified listing and see the business behind it — free, no
+            payment.
+          </p>
+          <div className="mt-3 flex flex-wrap justify-center gap-3">
+            {freeRevealTokens.map((token) => (
+              <a
+                key={token}
+                href={`/reveal/free/${token}`}
+                className="rounded-[10px] bg-black px-5 py-2 text-sm font-semibold text-white hover:bg-neutral-800"
+              >
+                Pick your free reveal →
+              </a>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            Bookmark the reveal page — its link is your access, like the paid
+            reveals.
+          </p>
+        </div>
+      )}
 
       {/* Detected quotes: review & publish each */}
       {drafts.length > 0 && (

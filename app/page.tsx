@@ -1,5 +1,6 @@
 import { getServiceAggregates, getApprovedReports, sortReportsByEffectiveDate } from "@/lib/data";
 import HomepageBody from "@/components/HomepageBody";
+import FreeRevealPromo from "@/components/FreeRevealPromo";
 import JsonLd from "@/components/JsonLd";
 import { faqJsonLd } from "@/lib/seo";
 import { FAQ } from "@/lib/faq";
@@ -27,6 +28,7 @@ export default async function HomePage() {
           shows (lib/faq.ts) — see lib/seo.ts. */}
       <JsonLd data={faqJsonLd(FAQ)} />
       <HomepageBody aggregates={aggregates} allReports={allReports} />
+      <FreeRevealPromo />
     </>
   );
 }
