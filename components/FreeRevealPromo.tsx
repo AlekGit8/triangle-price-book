@@ -36,18 +36,24 @@ export default function FreeRevealPromo() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] max-w-sm rounded-2xl border border-line bg-white p-5 shadow-xl dark:bg-neutral-900 relative">
-      <button
-        type="button"
-        onClick={dismiss}
-        aria-label="Dismiss"
-        className="absolute right-3 top-3 rounded-full px-2 py-1 text-sm text-muted hover:text-ink"
-      >
-        ✕
-      </button>
-      <p className="font-mono text-xs font-bold uppercase tracking-wide text-muted">
-        ✨ New feature
-      </p>
+    <div className="fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] max-w-sm rounded-2xl border border-line bg-white p-5 shadow-xl dark:bg-neutral-900">
+      {/* NOTE: no `relative` on this card — it would override `fixed`
+          in Tailwind's ordering and drop the card to the page bottom
+          (the Oct 31 bug: the popup only appeared after scrolling).
+          The dismiss button sits in normal flow instead. */}
+      <div className="flex items-start justify-between gap-2">
+        <p className="font-mono text-xs font-bold uppercase tracking-wide text-muted">
+          ✨ New feature
+        </p>
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label="Dismiss"
+          className="shrink-0 rounded-full px-2 py-1 text-sm text-muted hover:text-ink"
+        >
+          ✕
+        </button>
+      </div>
       <p className="mt-1 font-semibold text-ink">
         Submit a verified quote or invoice, reveal 1 business name for free.
       </p>
