@@ -148,6 +148,7 @@ function normalizeTown(raw: string): string {
     apex: "Apex",
     cary: "Cary",
     raleigh: "Raleigh",
+    westraleigh: "Raleigh",
     durham: "Durham",
     chapelhill: "Chapel Hill",
     carrboro: "Carrboro",
