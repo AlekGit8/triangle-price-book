@@ -1,37 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-
-const DISMISSED_KEY = "tpb-free-reveal-promo-dismissed";
 
 /**
  * Corner card on the homepage announcing the free-reveal reward
  * (Nov 1, 2026): submit a verified quote or invoice, reveal one
- * business name free. Shows on every visit until dismissed; the
- * dismissal persists in localStorage so it never nags. Rendered null
- * on the first pass (server + client) and only revealed by the
- * effect, so there is no hydration mismatch.
+ * business name free. Shows on EVERY homepage visit (Nov 1 decision):
+ * the ✕ only closes it for that page view — nothing is remembered,
+ * so a visitor who reflexively closes it still hears about the
+ * feature next time. (An earlier version persisted the dismissal in
+ * localStorage; that hid the card on return visits, which is not
+ * what the site wants for a new-feature announcement.)
  */
 export default function FreeRevealPromo() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    try {
-      if (!window.localStorage.getItem(DISMISSED_KEY)) setVisible(true);
-    } catch {
-      setVisible(true);
-    }
-  }, []);
+  const [visible, setVisible] = useState(true);
 
   if (!visible) return null;
 
   function dismiss() {
-    try {
-      window.localStorage.setItem(DISMISSED_KEY, "1");
-    } catch {
-      // Private mode or blocked storage: hiding for this visit is enough.
-    }
     setVisible(false);
   }
 
