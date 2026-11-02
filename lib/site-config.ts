@@ -31,7 +31,7 @@ export const siteConfig = {
   regionLongName: "Raleigh-Durham Triangle, North Carolina",
 
   /** Report categories. Keep in sync with the DB check constraint in 0001_init.sql. */
-  categories: ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Pools", "Septic Systems", "Garage Doors", "Crawl Spaces", "Gutter Guards", "Chimneys", "Garage Floors", "Concrete", "Cleaning", "Nanny", "Lawn Care", "Remodeling", "Handyman/Other"] as const,
+  categories: ["HVAC", "Plumbing", "Electrical", "Roofing", "Windows & Doors", "Painting", "Flooring", "Landscaping", "Fencing", "Tree Service", "Pools", "Septic Systems", "Garage Doors", "Crawl Spaces", "Gutter Guards", "Chimneys", "Garage Floors", "Concrete", "Cleaning", "Nanny", "Lawn Care", "Remodeling", "Trash/Recycling", "Handyman/Other"] as const,
 
   /**
    * Per-category intro copy for the category pages (Oct 28, 2026 SEO).
@@ -172,6 +172,12 @@ export const siteConfig = {
         "Kitchen, bathroom, and whole-home remodeling, including layout changes, fixtures, and finishes.",
       drivers:
         "Project scope, room size, material and fixture choices, and whether walls move or plumbing relocates drive the price.",
+    },
+    "Trash/Recycling": {
+      about:
+        "Trash and recycling pickup, junk removal, and dumpster rental.",
+      drivers:
+        "Pickup frequency, bin or dumpster size, volume and weight of material, and whether items need special handling drive the price.",
     },
     "Handyman/Other": {
       about:
@@ -455,6 +461,7 @@ export const categorySlugs = {
   "Nanny": "nanny",
   "Lawn Care": "lawn-care",
   "Remodeling": "remodeling",
+  "Trash/Recycling": "trash-recycling",
   "Handyman/Other": "handyman",
 } as const satisfies Record<Category, string>;
 
