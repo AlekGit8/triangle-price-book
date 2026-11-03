@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { siteConfig } from "@/lib/site-config";
-import TipJarIcon from "@/components/TipJarIcon";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const nav = [
@@ -12,7 +11,6 @@ const nav = [
   { href: "/how-it-works", label: "How This Works" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
-  { href: "/donate", label: "Tip Jar" },
   { href: "/submit", label: "Submit a Price" },
 ];
 
@@ -29,7 +27,7 @@ export default function SiteHeader() {
         </Link>
         <div className="flex items-center gap-1">
           {/* Desktop nav: hidden below lg, where the hamburger takes over.
-              Eight links overflow at md widths, so the breakpoint is lg. */}
+              Six links overflow at md widths, so the breakpoint is lg. */}
           <nav className="hidden lg:flex items-center gap-1 sm:gap-2 text-sm">
             {nav.map((item) =>
               item.href === "/submit" ? (
@@ -38,15 +36,6 @@ export default function SiteHeader() {
                   href={item.href}
                   className="whitespace-nowrap rounded-[10px] bg-black px-4 py-2 font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200"
                 >
-                  {item.label}
-                </Link>
-              ) : item.href === "/donate" ? (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="tip-jar-link whitespace-nowrap px-3 py-2 text-muted hover:text-ink font-medium flex items-center gap-1.5"
-                >
-                  <TipJarIcon className="h-[20px] w-[20px] shrink-0" />
                   {item.label}
                 </Link>
               ) : (
@@ -99,16 +88,6 @@ export default function SiteHeader() {
                   onClick={() => setOpen(false)}
                   className="mt-2 mb-2 rounded-[10px] bg-black px-4 py-3 text-center font-semibold text-white hover:bg-neutral-800 dark:hover:bg-neutral-200"
                 >
-                  {item.label}
-                </Link>
-              ) : item.href === "/donate" ? (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className="tip-jar-link px-3 py-3 text-muted hover:text-ink font-medium flex items-center gap-1.5"
-                >
-                  <TipJarIcon className="h-[20px] w-[20px] shrink-0" />
                   {item.label}
                 </Link>
               ) : (
