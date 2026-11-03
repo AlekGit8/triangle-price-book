@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { siteConfig } from "@/lib/site-config";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -43,22 +42,6 @@ export default function ContactPage() {
           </p>
         </Section>
 
-        <Section title="Who runs this site">
-          <p>
-            {siteConfig.siteName} is operated by{" "}
-            <a
-              href="https://longsitelabs.com"
-              className="font-semibold text-ink hover:underline"
-            >
-              {siteConfig.operatorName}
-            </a>
-            . Learn more about the site on the{" "}
-            <Link href="/about" className="font-semibold text-ink hover:underline">
-              About page
-            </Link>
-            .
-          </p>
-        </Section>
       </div>
     </div>
   );
