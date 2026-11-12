@@ -10,7 +10,7 @@ export default function PrivacyPage() {
   return (
     <div className="py-10 max-w-3xl mx-auto">
       <h1 className="text-3xl font-extrabold text-ink">Privacy Policy</h1>
-      <p className="mt-2 text-sm text-muted">Last updated: October 30, 2026</p>
+      <p className="mt-2 text-sm text-muted">Last updated: November 12, 2026</p>
       <p className="mt-4 text-[15px] leading-relaxed text-ink">
         {siteConfig.siteName} is operated by {siteConfig.operatorName} (&ldquo;we&rdquo;,
         &ldquo;us&rdquo;).
@@ -44,7 +44,7 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-bold text-ink">2. Information we collect</h2>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li><strong>Price report details:</strong> service, category, amount, whether it was paid or quoted, town, date, and optional notes. These are published anonymously. Please don&rsquo;t put names, addresses, phone numbers, or business names in notes; we remove them when we find them.</li>
-            <li><strong>Business names (verified entries only):</strong> when a document verifies an entry, we may store the business name from it, separately from the public listing. It is shown only to a visitor who pays for the reveal ($1.99 for one job, $4.99 for all verified listings — both one-time purchases). A business that believes a listing is inaccurate can contact us to dispute it.</li>
+            <li><strong>Business names (verified entries only):</strong> when a document verifies an entry, we may store the business name from it, separately from the public listing. It is shown only to a visitor who pays for the reveal ($2 for one job, $5 for any 3 verified listings, $8 for any 5 — all one-time purchases). A business that believes a listing is inaccurate can contact us to dispute it.</li>
             <li><strong>Quote or invoice uploads (optional):</strong> these documents may contain names, addresses, and business details. They are stored privately, visible only to moderators, and used only to verify the entry. They are never published. If you use the upload-and-auto-fill option, the document is also sent to Google&rsquo;s Gemini AI service to read the service details and price from it; Google processes it only to return that extraction to us.</li>
             <li><strong>Email address (optional):</strong> used only to follow up about your submission if needed.</li>
             <li><strong>Technical information:</strong> such as IP address, browser and device type, and pages visited, collected automatically by our hosting, analytics, and security tools.</li>
