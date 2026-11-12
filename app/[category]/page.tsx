@@ -4,10 +4,12 @@ import type { Metadata } from "next";
 import {
   siteConfig,
   categoryFromSlug,
+  MIN_CATEGORY_REPORTS_FOR_INDEXING,
 } from "@/lib/site-config";
 import {
   getServiceAggregates,
   getApprovedReports,
+  getCategoryReportCount,
   sortReportsByEffectiveDate,
 } from "@/lib/data";
 import { formatCents } from "@/lib/format";
@@ -32,9 +34,18 @@ export async function generateMetadata({
   if (!category) return {};
   const title = `${category} Prices in Raleigh-Durham, NC | ${siteConfig.siteName}`;
   const description = `Real ${category.toLowerCase()} prices reported by Triangle homeowners — see the price range, median, and individual reports before you hire. Crowdsourced and anonymous.`;
+  // Thin-page cleanup (Nov 12, 2026): categories with fewer than the
+  // indexing threshold of published reports stay live and shareable
+  // but ask search engines not to index them, so near-empty template
+  // pages don't count against the site. A null count (DB unreachable)
+  // fails open to indexable — see getCategoryReportCount.
+  const reportCount = await getCategoryReportCount(category);
+  const thinPage =
+    reportCount !== null && reportCount < MIN_CATEGORY_REPORTS_FOR_INDEXING;
   return {
     title,
     description,
+    ...(thinPage ? { robots: { index: false, follow: true } } : {}),
     alternates: { canonical: canonicalUrl(`/${slug}`) },
     openGraph: {
       title,
@@ -118,6 +129,10 @@ export default async function CategoryPage({
         <p className="mt-3 text-sm text-muted">
           <span className="font-semibold text-ink">What drives the price: </span>
           {siteConfig.categoryIntros[category].drivers}
+        </p>
+        <p className="mt-3 text-sm text-muted">
+          <span className="font-semibold text-ink">Before you hire: </span>
+          {siteConfig.categoryIntros[category].guide}
         </p>
       </section>
 

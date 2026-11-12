@@ -79,6 +79,31 @@ export async function getApprovedReports(category?: string): Promise<Report[]> {
   }
 }
 
+/**
+ * How many public reports a category has, for the indexing threshold
+ * (MIN_CATEGORY_REPORTS_FOR_INDEXING). Returns null — never 0 — when
+ * the count can't be determined, so callers fail OPEN (indexable)
+ * instead of noindexing every category page during a DB outage.
+ * Same visibility as getApprovedReports: rejected rows excluded,
+ * RLS decides the rest.
+ */
+export async function getCategoryReportCount(
+  category: string
+): Promise<number | null> {
+  try {
+    const sb = getAnonSupabase();
+    const { count, error } = await sb
+      .from("reports")
+      .select("id", { count: "exact", head: true })
+      .neq("verification_status", "rejected")
+      .eq("category", category);
+    if (error) return null;
+    return count;
+  } catch {
+    return null;
+  }
+}
+
 /** One public report by id, or null when missing, rejected, or unreachable.
     Used by the per-report page that marquee cards link to. */
 export async function getReportById(id: string): Promise<Report | null> {
