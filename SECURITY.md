@@ -5,7 +5,7 @@
 If you find a security issue in Triangle Price Book, please report it
 privately rather than opening a public issue:
 
-- **Email:** hello@longsitelabs.com
+- **Email:** trianglepricebook@gmail.com
 - Include a description of the issue, steps to reproduce it, and the
   impact you believe it has.
 
