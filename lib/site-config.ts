@@ -240,8 +240,8 @@ export const siteConfig = {
   /** Legal operator of the site, named in Terms, Privacy Policy, and footer. */
   operatorName: "Longsite Labs LLC",
 
-  /** Contact email placeholder (replace once a real inbox exists). */
-  contactEmail: "hello@trianglepricebook.com",
+  /** Contact email shown on the Contact page and Privacy Policy. */
+  contactEmail: "trianglepricebook@gmail.com",
 
   /**
    * Stripe Payment Link for tips (created Oct 25, 2026, livemode,
