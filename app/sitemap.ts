@@ -4,7 +4,7 @@ import {
   categorySlugs,
   MIN_CATEGORY_REPORTS_FOR_INDEXING,
 } from "@/lib/site-config";
-import { getApprovedReports, getCategoryReportCount } from "@/lib/data";
+import { getApprovedReports, getCategoryReportCounts } from "@/lib/data";
 
 /**
  * Sitemap with HONEST lastModified dates (Oct 28, 2026 SEO fix).
@@ -55,19 +55,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/privacy", priority: 0.3 },
   ];
 
-  const categoryCounts = await Promise.all(
-    Object.entries(categorySlugs).map(async ([category, slug]) => ({
-      category,
-      slug,
-      count: await getCategoryReportCount(category),
-    }))
-  );
-  const categoryPages = categoryCounts
+  // One grouped count query for all categories (CPU, Nov 24, 2026):
+  // the old version fired one head-count query per category — 24 round
+  // trips per sitemap hit, and the sitemap is never cached, so crawlers
+  // paid that on every visit. A null map (DB unreachable) fails open:
+  // every category stays in.
+  const counts = await getCategoryReportCounts();
+  const categoryPages = Object.entries(categorySlugs)
     .filter(
-      ({ count }) =>
-        count === null || count >= MIN_CATEGORY_REPORTS_FOR_INDEXING
+      ([category]) =>
+        counts === null ||
+        (counts.get(category) ?? 0) >= MIN_CATEGORY_REPORTS_FOR_INDEXING
     )
-    .map(({ category, slug }) => ({
+    .map(([category, slug]) => ({
       path: `/${slug}`,
       priority: 0.8,
       lastModified: latestByCategory.get(category),

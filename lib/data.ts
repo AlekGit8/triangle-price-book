@@ -104,6 +104,38 @@ export async function getCategoryReportCount(
   }
 }
 
+/**
+ * Published-report counts for EVERY category in one query (CPU, Nov 24,
+ * 2026): the sitemap used to fire one head-count query per category (24
+ * round trips per sitemap hit, and the sitemap is never cached, so
+ * crawlers paid that on every visit). One `select("category")` + a JS
+ * count is exact — same visibility as getCategoryReportCount, rejected
+ * rows excluded — and stays one round trip no matter how many categories
+ * the site grows to. Returns null on error so callers fail open.
+ */
+export async function getCategoryReportCounts(): Promise<Map<
+  string,
+  number
+> | null> {
+  try {
+    const sb = getAnonSupabase();
+    const { data, error } = await sb
+      .from("reports")
+      .select("category")
+      .neq("verification_status", "rejected")
+      .limit(5000);
+    if (error) return null;
+    const counts = new Map<string, number>();
+    for (const row of data ?? []) {
+      const category = (row as { category: string }).category;
+      counts.set(category, (counts.get(category) ?? 0) + 1);
+    }
+    return counts;
+  } catch {
+    return null;
+  }
+}
+
 /** One public report by id, or null when missing, rejected, or unreachable.
     Used by the per-report page that marquee cards link to. */
 export async function getReportById(id: string): Promise<Report | null> {
