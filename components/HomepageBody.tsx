@@ -24,6 +24,12 @@ function MarqueeCard({ report }: { report: Report }) {
   return (
     <Link
       href={`/report/${report.id}`}
+      // No prefetch (CPU, Nov 24, 2026): the marquee renders 15 cards x 3
+      // tiled copies, and Next prefetches in-viewport links — one homepage
+      // visit fired a burst of simultaneous full renders on a Worker
+      // whose free tier allows 10ms CPU per invocation (error 1102).
+      // Clicks still navigate normally; they just render on demand.
+      prefetch={false}
       className="block w-[300px] shrink-0 sm:w-[340px]"
       tabIndex={firstCopy ? undefined : -1}
       aria-label={`${report.service_name}, ${report.town}, details`}
@@ -142,6 +148,11 @@ export default function HomepageBody({
             <Link
               key={c}
               href={`/${categorySlugs[c]}`}
+              // No prefetch (CPU, Nov 24, 2026): 24 pills x in-viewport
+              // prefetching = a burst of simultaneous full renders on
+              // every homepage visit — see MarqueeCard above. Clicks
+              // still navigate normally; they just render on demand.
+              prefetch={false}
               className="rounded-full border border-line bg-white px-4 py-2 text-sm font-medium text-ink hover:border-black"
             >
               {c}
